@@ -40,7 +40,7 @@ function LatestReportCard({ report, onGenerate, generating }) {
           <div className="db-empty-hero__icon">✦</div>
           <h2 className="db-empty-hero__title">No reports yet</h2>
           <p className="db-empty-hero__desc">
-            Generate your first solvency report to get AI-powered financial insights
+            Generate your first self-serve credit report to take control of your financial data
             and lender matches tailored to your business.
           </p>
           <button
@@ -236,7 +236,7 @@ export default function Dashboard() {
           <div className="section-header">
             <div>
               <h1 className="section-title">Solvency Reports</h1>
-              <p className="section-subtitle">AI-powered financial intelligence for lender matching</p>
+              <p className="section-subtitle">Generate a bank-grade explainable credit report you can use to secure financing</p>
             </div>
             <button
               id="gen-report-btn"

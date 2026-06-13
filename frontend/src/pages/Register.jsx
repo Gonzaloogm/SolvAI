@@ -84,7 +84,7 @@ export default function Register() {
           <div className="auth-logo__mark">S</div>
           <div>
             <div className="auth-logo__name">SolvAI<span className="auth-logo__dot">.</span></div>
-            <div className="auth-logo__tagline">Alternative Solvency Intelligence</div>
+            <div className="auth-logo__tagline">Bank-grade credit AI, directly in your hands</div>
           </div>
         </div>
 
@@ -92,7 +92,7 @@ export default function Register() {
         <div className="auth-card card-glass">
           <div className="auth-card__header">
             <h1 className="auth-card__title">Create account</h1>
-            <p className="auth-card__subtitle">Start your free solvency intelligence journey</p>
+            <p className="auth-card__subtitle">Get the same transparent credit analysis used by large banks, built for the Stripe ecosystem</p>
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit} noValidate>

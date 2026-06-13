@@ -174,16 +174,46 @@ def _build_financial_summary(sources) -> dict:
     For MVP, this returns a realistic mock based on source type.
     In production this would call the Stripe / Xero / PayPal APIs.
     """
+    from app.services.stripe_service import fetch_stripe_metrics
+
     source_types = [s.type for s in sources]
     source_count = len(sources)
 
     # Mock aggregated metrics per source type
     avg_monthly_map = {
-        "STRIPE": 6_200,
         "XERO": 5_800,
         "PAYPAL": 3_400,
         "MANUAL_UPLOAD": 4_000,
     }
+
+    platform_breakdown = {}
+    mock_data = True
+
+    for t in source_types:
+        if t == "STRIPE":
+            mock_data = False
+            try:
+                metrics = fetch_stripe_metrics()
+                avg_monthly_map["STRIPE"] = metrics["avg_monthly"]
+                platform_breakdown["STRIPE"] = {
+                    "avg_monthly": metrics["avg_monthly"],
+                    "status": metrics["status"],
+                    "data_points": metrics["data_points"]
+                }
+            except Exception as e:
+                logger.error(f"Error fetching Stripe data: {e}")
+                avg_monthly_map["STRIPE"] = 0
+                platform_breakdown["STRIPE"] = {
+                    "avg_monthly": 0,
+                    "status": "ERROR",
+                    "data_points": 0
+                }
+        else:
+            platform_breakdown[t] = {
+                "avg_monthly": avg_monthly_map.get(t, 3_000),
+                "status": "CONNECTED",
+                "data_points": 52,
+            }
 
     avg_monthly = sum(avg_monthly_map.get(t, 3_000) for t in source_types)
     avg_monthly = avg_monthly if avg_monthly else 3_500
@@ -194,17 +224,10 @@ def _build_financial_summary(sources) -> dict:
         "avg_monthly_revenue": avg_monthly,
         "currency": "EUR",
         "analysis_period_months": 12,
-        "mock_data": True,
+        "mock_data": mock_data,
         "note": (
             "Financial figures are estimated from platform integrations. "
             "Production deployment uses live API data."
         ),
-        "platform_breakdown": {
-            t: {
-                "avg_monthly": avg_monthly_map.get(t, 3_000),
-                "status": "CONNECTED",
-                "data_points": 52,
-            }
-            for t in source_types
-        },
+        "platform_breakdown": platform_breakdown,
     }

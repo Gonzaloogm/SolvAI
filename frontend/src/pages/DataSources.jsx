@@ -426,7 +426,7 @@ export default function DataSources() {
                 <div className="ds-empty__icon">🔌</div>
                 <h2 className="ds-empty__title">No data sources connected</h2>
                 <p className="ds-empty__desc">
-                  Connect your financial accounts to enable AI-powered solvency analysis and lender matching.
+                  Connect your Stripe account to unlock transparent, traceable credit scoring—no black boxes.
                 </p>
                 <div className="ds-empty__sources">
                   {SOURCE_TYPES.map((s) => (
@@ -463,7 +463,7 @@ export default function DataSources() {
             <div className="ds-info-grid" style={{ marginTop: 'var(--space-8)' }}>
               {[
                 { icon: '🔒', title: 'Bank-grade security', desc: 'All credentials are encrypted at rest and never stored in plain text.' },
-                { icon: '🤖', title: 'AI-powered analysis', desc: 'Our AI analyses patterns across all connected sources for a holistic score.' },
+                { icon: '🤖', title: 'Bank-grade analysis', desc: 'Every factor in your score is traceable to your real transactions, giving you full transparency.' },
                 { icon: '⚡', title: 'Real-time updates', desc: 'Connected sources are re-analysed automatically with each new report.' },
               ].map((card) => (
                 <div key={card.title} className="ds-info-card card">

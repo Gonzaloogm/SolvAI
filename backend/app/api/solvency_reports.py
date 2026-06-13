@@ -12,8 +12,19 @@ from app.core.security import get_current_user
 from app.models.solvency_report import SolvencyReport
 from app.models.user import User
 from app.schemas.solvency_report import SolvencyReportCreateRequest, SolvencyReportResponse
+from app.services.stripe_service import get_raw_transactions
 
 router = APIRouter()
+
+@router.get(
+    "/demo-transactions",
+    summary="Get raw transactions for demo",
+)
+async def get_demo_transactions(
+    current_user: User = Depends(get_current_user),
+) -> list[dict]:
+    return get_raw_transactions()
+
 
 
 @router.post(
@@ -46,6 +57,25 @@ async def create_solvency_report(
     logger.info(f"Dispatched report generation task for report_id={report_id}")
 
     return SolvencyReportResponse.model_validate(report)
+@router.get(
+    "/",
+    response_model=list[SolvencyReportResponse],
+    summary="List all solvency reports for the current organization",
+)
+async def list_solvency_reports(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[SolvencyReportResponse]:
+    result = await db.execute(
+        select(SolvencyReport)
+        .where(
+            SolvencyReport.organization_id == current_user.organization_id,
+            SolvencyReport.is_deleted.is_(False),
+        )
+        .order_by(SolvencyReport.created_at.desc())
+    )
+    reports = result.scalars().all()
+    return [SolvencyReportResponse.model_validate(r) for r in reports]
 
 
 @router.get(

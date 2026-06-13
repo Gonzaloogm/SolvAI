@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # ── Stripe ────────────────────────────────────────────────────────────────
     STRIPE_SECRET_KEY: str = ""
+    STRIPE_TEST_SECRET_KEY: str = ""
 
     # ── Xero ─────────────────────────────────────────────────────────────────
     XERO_CLIENT_ID: str = ""

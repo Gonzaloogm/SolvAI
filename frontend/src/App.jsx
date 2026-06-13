@@ -6,6 +6,7 @@ import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ReportDetail from './pages/ReportDetail.jsx';
 import DataSources from './pages/DataSources.jsx';
+import DemoComparison from './pages/DemoComparison.jsx';
 
 // ─── Protected Route Wrapper ──────────────────────────────────────────────────
 function ProtectedRoute({ children }) {
@@ -49,6 +50,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <DataSources />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/demo"
+        element={
+          <ProtectedRoute>
+            <DemoComparison />
           </ProtectedRoute>
         }
       />

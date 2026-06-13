@@ -1,8 +1,8 @@
 # SolvAI
 
-**Alternative Solvency Intelligence for EU/UK Freelancers & Microbusinesses**
+**Self-Serve Explainable Credit AI for EU/UK Freelancers & Microbusinesses**
 
-SolvAI is an AI-powered platform that generates explainable alternative solvency reports from diverse financial data (Stripe, Xero, PayPal, manual uploads) and matches users with partner lenders to secure working capital.
+SolvAI brings the same explainable credit AI that today is only accessible to large banks (via enterprise vendors) directly to individual freelancers and microbusinesses in the Stripe ecosystem—as a self-serve report they can request for themselves, not something locked inside a bank's underwriting department.
 
 ---
 

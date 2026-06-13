@@ -42,27 +42,21 @@ export const auth = {
    * POST /auth/register
    */
   register: (email, password, org_name) =>
-    apiClient.post('/auth/register', { email, password, org_name }),
+    apiClient.post('/auth/register', { email, password, organization_name: org_name }),
 
   /**
-   * Login — returns { access_token, token_type, ... }
-   * POST /auth/token  (OAuth2 form-encoded or JSON depending on backend)
+   * Login — returns { access_token, refresh_token, token_type }
+   * POST /auth/login
    */
-  login: (email, password) => {
-    const formData = new URLSearchParams();
-    formData.append('username', email);
-    formData.append('password', password);
-    return apiClient.post('/auth/token', formData, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-  },
+  login: (email, password) =>
+    apiClient.post('/auth/login', { email, password }),
 
   /**
    * Refresh JWT.
-   * POST /auth/refresh
+   * POST /auth/refresh-token
    */
   refreshToken: (refreshToken) =>
-    apiClient.post('/auth/refresh', { refresh_token: refreshToken }),
+    apiClient.post('/auth/refresh-token', { refresh_token: refreshToken }),
 };
 
 // ─── Organizations ────────────────────────────────────────────────────────────
@@ -114,6 +108,12 @@ export const solvencyReports = {
    * GET /solvency-reports
    */
   list: () => apiClient.get('/solvency-reports'),
+
+  /**
+   * Get raw transactions for demo.
+   * GET /solvency-reports/demo-transactions
+   */
+  getDemoTransactions: () => apiClient.get('/solvency-reports/demo-transactions'),
 };
 
 // ─── Lender Matching ──────────────────────────────────────────────────────────

@@ -65,6 +65,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard',    to: '/',             icon: <IconDashboard />,   exact: true  },
   { label: 'Reports',      to: '/',             icon: <IconReports />,     exact: true  },
   { label: 'Data Sources', to: '/data-sources', icon: <IconDataSources />, exact: false },
+  { label: 'Demo Comparison', to: '/demo',      icon: <IconDashboard />,   exact: false },
   { label: 'Settings',     to: '/settings',     icon: <IconSettings />,    exact: false, disabled: true },
 ];
 

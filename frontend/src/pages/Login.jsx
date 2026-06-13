@@ -60,7 +60,7 @@ export default function Login() {
           <div className="auth-logo__mark">S</div>
           <div>
             <div className="auth-logo__name">SolvAI<span className="auth-logo__dot">.</span></div>
-            <div className="auth-logo__tagline">Alternative Solvency Intelligence</div>
+            <div className="auth-logo__tagline">Bank-grade credit AI, directly in your hands</div>
           </div>
         </div>
 
@@ -68,7 +68,7 @@ export default function Login() {
         <div className="auth-card card-glass">
           <div className="auth-card__header">
             <h1 className="auth-card__title">Welcome back</h1>
-            <p className="auth-card__subtitle">Sign in to your account to continue</p>
+            <p className="auth-card__subtitle">Sign in to access your self-serve explainable credit report</p>
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit} noValidate>

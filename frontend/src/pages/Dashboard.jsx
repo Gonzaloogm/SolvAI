@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge.jsx';
 import SolvencyGauge from '../components/SolvencyGauge.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import { solvencyReports } from '../api/client.js';
+import { IconSparkle, IconWarning } from '../components/Icons.jsx';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const formatDate = (iso) => {
@@ -38,11 +39,10 @@ function LatestReportCard({ report, onGenerate, generating }) {
     return (
       <div className="db-summary-card card-glass">
         <div className="db-empty-hero">
-          <div className="db-empty-hero__icon">✦</div>
+          <div className="db-empty-hero__icon"><IconSparkle size={48} /></div>
           <h2 className="db-empty-hero__title">No reports yet</h2>
           <p className="db-empty-hero__desc">
-            Generate your first self-serve credit report to take control of your financial data
-            and lender matches tailored to your business.
+            Self-serve explainable credit AI that traces every score factor to your real transactions.
           </p>
           <button
             id="gen-report-empty"
@@ -53,7 +53,7 @@ function LatestReportCard({ report, onGenerate, generating }) {
             {generating ? (
               <><LoadingSpinner size={16} inline /> Generating…</>
             ) : (
-              '⚡ Generate Your First Report'
+              'Generate Your First Report'
             )}
           </button>
         </div>
@@ -237,7 +237,7 @@ export default function Dashboard() {
           <div className="section-header">
             <div>
               <h1 className="section-title">Solvency Reports</h1>
-              <p className="section-subtitle">Generate a bank-grade explainable credit report you can use to secure financing</p>
+              <p className="section-subtitle">Self-serve explainable credit AI that traces every score factor to your real transactions.</p>
             </div>
             <button
               id="gen-report-btn"
@@ -248,14 +248,14 @@ export default function Dashboard() {
               {generating ? (
                 <><LoadingSpinner size={16} inline /> Generating…</>
               ) : (
-                '⚡ Generate New Report'
+                'Generate New Report'
               )}
             </button>
           </div>
 
           {genError && (
             <div className="error-message" style={{ marginBottom: 'var(--space-4)' }}>
-              <span>⚠</span> {genError}
+              <span><IconWarning size={16} /></span> {genError}
             </div>
           )}
 
@@ -264,7 +264,7 @@ export default function Dashboard() {
             <LoadingSpinner text="Loading your reports…" />
           ) : error ? (
             <div className="error-message">
-              <span>⚠</span> {error}
+              <span><IconWarning size={16} /></span> {error}
             </div>
           ) : (
             <>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import { IconClock } from '../components/Icons.jsx';
 import { solvencyReports } from '../api/client.js';
 
 export default function DemoComparison() {
@@ -145,8 +146,8 @@ export default function DemoComparison() {
                 </div>
                 <div style={{ width: '300px', padding: '1rem', background: 'var(--color-surface)', borderRadius: '8px' }}>
                   <h3>Manual Assessment Form</h3>
-                  <div id="manual-timer" style={{ fontSize: '2.5rem', fontFamily: 'monospace', color: 'var(--color-accent-primary)', marginBottom: '1rem', fontWeight: 700 }}>
-                    ⏱ {formatTime(manualTime)}
+                  <div id="manual-timer" style={{ fontSize: '2.5rem', fontFamily: 'monospace', color: 'var(--color-accent-primary)', marginBottom: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <IconClock size={32} /> {formatTime(manualTime)}
                   </div>
                   {!manualRunning && !manualDone ? (
                     <button id="start-manual" className="btn-primary" onClick={startManual} style={{ width: '100%' }}>Start Manual Review</button>
@@ -175,12 +176,12 @@ export default function DemoComparison() {
             {activeTab === 'ai' && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', padding: '2rem' }}>
                 <h3>Self-Serve Explainable AI Pipeline</h3>
-                <div id="ai-timer" style={{ fontSize: '4rem', fontFamily: 'monospace', color: 'var(--color-accent-primary)', fontWeight: 700 }}>
-                  ⏱ {formatTime(aiTime)}
+                <div id="ai-timer" style={{ fontSize: '4rem', fontFamily: 'monospace', color: 'var(--color-accent-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <IconClock size={48} /> {formatTime(aiTime)}
                 </div>
                 {!aiRunning && !aiDone ? (
                   <button id="start-ai" className="btn-primary" style={{ padding: '1rem 2rem', fontSize: '1.2rem' }} onClick={startAi}>
-                    ⚡ Run Gemini Pipeline
+                    Run Gemini Pipeline
                   </button>
                 ) : (
                   <div style={{ textAlign: 'center', maxWidth: '600px', width: '100%' }}>

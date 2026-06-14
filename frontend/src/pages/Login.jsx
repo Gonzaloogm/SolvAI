@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../api/client.js';
+import { IconWarning } from '../components/Icons.jsx';
 
 export default function Login() {
   const navigate  = useNavigate();
@@ -60,7 +61,7 @@ export default function Login() {
           <div className="auth-logo__mark">S</div>
           <div>
             <div className="auth-logo__name">SolvAI<span className="auth-logo__dot">.</span></div>
-            <div className="auth-logo__tagline">Bank-grade credit AI, directly in your hands</div>
+            <div className="auth-logo__tagline">Self-serve credit AI for freelancers</div>
           </div>
         </div>
 
@@ -68,13 +69,13 @@ export default function Login() {
         <div className="auth-card card-glass">
           <div className="auth-card__header">
             <h1 className="auth-card__title">Welcome back</h1>
-            <p className="auth-card__subtitle">Sign in to access your self-serve explainable credit report</p>
+            <p className="auth-card__subtitle">Enter your details to access your account</p>
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit} noValidate>
             {error && (
-              <div className="error-message" role="alert">
-                <span>⚠</span> {error}
+              <div className="error-message" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+                <span><IconWarning size={16} /></span> {error}
               </div>
             )}
 

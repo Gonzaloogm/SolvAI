@@ -3,13 +3,14 @@ import Sidebar from '../components/Sidebar.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import { dataSources } from '../api/client.js';
+import { IconWarning, IconPlug, IconLock, IconSearch, IconActivity, IconFolder, IconCreditCard, IconLightning, IconBarChart } from '../components/Icons.jsx';
 
 /* ── Source Config ───────────────────────────────────────────────────────── */
 const SOURCE_TYPES = [
   {
     id: 'stripe',
     label: 'Stripe',
-    icon: '⚡',
+    icon: <IconLightning size={16} />,
     description: 'Connect your Stripe account to share payment volume and transaction data.',
     inputLabel: 'Stripe API Key',
     inputPlaceholder: 'sk_live_…',
@@ -19,7 +20,7 @@ const SOURCE_TYPES = [
   {
     id: 'xero',
     label: 'Xero',
-    icon: '📊',
+    icon: <IconBarChart size={16} />,
     description: 'Share invoicing, expenses, and balance sheet data from Xero.',
     inputLabel: 'Xero Client ID',
     inputPlaceholder: 'Enter Xero client ID',
@@ -29,7 +30,7 @@ const SOURCE_TYPES = [
   {
     id: 'paypal',
     label: 'PayPal',
-    icon: '💳',
+    icon: <IconCreditCard size={16} />,
     description: 'Connect PayPal to analyse transaction history and cash flow.',
     inputLabel: 'PayPal API Key',
     inputPlaceholder: 'Enter PayPal API key',
@@ -39,7 +40,7 @@ const SOURCE_TYPES = [
   {
     id: 'manual',
     label: 'Manual Upload',
-    icon: '📁',
+    icon: <IconFolder size={16} />,
     description: 'Upload bank statements or invoices directly (PDF, CSV, XLSX).',
     inputLabel: 'File',
     inputPlaceholder: null,  // file input
@@ -49,10 +50,10 @@ const SOURCE_TYPES = [
 ];
 
 const SOURCE_ICONS = {
-  stripe: '⚡',
-  xero: '📊',
-  paypal: '💳',
-  manual: '📁',
+  stripe: <IconLightning size={16} />,
+  xero: <IconBarChart size={16} />,
+  paypal: <IconCreditCard size={16} />,
+  manual: <IconFolder size={16} />,
 };
 
 /* ── Connect Modal ───────────────────────────────────────────────────────── */
@@ -146,7 +147,7 @@ function ConnectModal({ onClose, onSuccess }) {
 
             {error && (
               <div className="error-message" style={{ margin: 'var(--space-4) 0' }}>
-                <span>⚠</span> {error}
+                <span><IconWarning size={16} /></span> {error}
               </div>
             )}
 
@@ -164,7 +165,7 @@ function ConnectModal({ onClose, onSuccess }) {
                     style={{ display: 'none' }}
                   />
                   <label htmlFor="ds-input" className="ds-file-drop__label">
-                    <span className="ds-file-drop__icon">📂</span>
+                    <span className="ds-file-drop__icon"><IconFolder size={24} /></span>
                     <span className="ds-file-drop__text">
                       {file ? file.name : 'Click to select file (PDF, CSV, XLSX)'}
                     </span>
@@ -285,7 +286,7 @@ function ConnectModal({ onClose, onSuccess }) {
 
 /* ── Source List Item ────────────────────────────────────────────────────── */
 function SourceItem({ source, onDisconnect }) {
-  const icon = SOURCE_ICONS[source.source_type?.toLowerCase()] ?? '🔌';
+  const icon = SOURCE_ICONS[source.source_type?.toLowerCase()] ?? <IconPlug size={16} />;
   const formatDate = (iso) => {
     if (!iso) return '—';
     try {
@@ -399,7 +400,7 @@ export default function DataSources() {
           <div className="section-header">
             <div>
               <h1 className="section-title">Data Sources</h1>
-              <p className="section-subtitle">Connect financial accounts to power your solvency analysis</p>
+              <p className="section-subtitle">Connect your platforms to build your transparent solvency profile</p>
             </div>
             <button
               id="connect-new-source-btn"
@@ -415,7 +416,7 @@ export default function DataSources() {
 
           {/* ── Error ── */}
           {!loading && error && (
-            <div className="error-message"><span>⚠</span> {error}</div>
+            <div className="error-message"><span><IconWarning size={16} /></span> {error}</div>
           )}
 
           {/* ── Sources List ── */}
@@ -423,10 +424,10 @@ export default function DataSources() {
             sources.length === 0 ? (
               /* ── Empty State ── */
               <div className="ds-empty card-glass">
-                <div className="ds-empty__icon">🔌</div>
+                <div className="ds-empty__icon"><IconPlug size={48} /></div>
                 <h2 className="ds-empty__title">No data sources connected</h2>
                 <p className="ds-empty__desc">
-                  Connect your Stripe account to unlock transparent, traceable credit scoring—no black boxes.
+                  Connect your Stripe account to generate a transparent, self-serve credit report. Every factor is traceable to your real transactions, helping you understand exactly where you stand before applying for financing.
                 </p>
                 <div className="ds-empty__sources">
                   {SOURCE_TYPES.map((s) => (
@@ -462,9 +463,9 @@ export default function DataSources() {
           {!loading && (
             <div className="ds-info-grid" style={{ marginTop: 'var(--space-8)' }}>
               {[
-                { icon: '🔒', title: 'Bank-grade security', desc: 'All credentials are encrypted at rest and never stored in plain text.' },
-                { icon: '🤖', title: 'Bank-grade analysis', desc: 'Every factor in your score is traceable to your real transactions, giving you full transparency.' },
-                { icon: '⚡', title: 'Real-time updates', desc: 'Connected sources are re-analysed automatically with each new report.' },
+                { icon: <IconLock size={20} />, title: 'Enterprise-grade security', desc: 'All credentials are encrypted at rest and never stored in plain text.' },
+                { icon: <IconSearch size={20} />, title: '100% Transparent', desc: 'Every factor in your score is traceable to your real transactions, giving you full clarity.' },
+                { icon: <IconActivity size={20} />, title: 'Actionable Insights', desc: 'Use your self-serve report to confidently apply for financing.' },
               ].map((card) => (
                 <div key={card.title} className="ds-info-card card">
                   <div className="ds-info-card__icon">{card.icon}</div>

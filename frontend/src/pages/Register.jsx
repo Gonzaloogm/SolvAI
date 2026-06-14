@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../api/client.js';
+import { IconWarning } from '../components/Icons.jsx';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -84,21 +85,21 @@ export default function Register() {
           <div className="auth-logo__mark">S</div>
           <div>
             <div className="auth-logo__name">SolvAI<span className="auth-logo__dot">.</span></div>
-            <div className="auth-logo__tagline">Bank-grade credit AI, directly in your hands</div>
+            <div className="auth-logo__tagline">Self-serve credit AI for freelancers</div>
           </div>
         </div>
 
         {/* Card */}
         <div className="auth-card card-glass">
           <div className="auth-card__header">
-            <h1 className="auth-card__title">Create account</h1>
-            <p className="auth-card__subtitle">Get the same transparent credit analysis used by large banks, built for the Stripe ecosystem</p>
+            <h1 className="auth-card__title">Create an Account</h1>
+            <p className="auth-card__subtitle">Get the same explainable credit analysis used by large banks, built directly for the Stripe ecosystem</p>
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit} noValidate>
             {error && (
-              <div className="error-message" role="alert">
-                <span>⚠</span> {error}
+              <div className="error-message" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+                <span><IconWarning size={16} /></span> {error}
               </div>
             )}
 

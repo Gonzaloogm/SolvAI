@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge.jsx';
 import SolvencyGauge from '../components/SolvencyGauge.jsx';
 import MetricCard from '../components/MetricCard.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import { IconWarning, IconSparkle, IconBuilding, IconSearch, IconLightning, IconUsers, IconLink, IconClipboard, IconActivity, IconBarChart, IconStar, IconTrendingUp } from '../components/Icons.jsx';
 import { solvencyReports, lenderMatching } from '../api/client.js';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -32,7 +33,7 @@ function NarrativeSection({ text }) {
   return (
     <div className="rd-narrative card-glass">
       <div className="rd-narrative__header">
-        <span className="rd-narrative__icon">✨</span>
+        <span className="rd-narrative__icon"><IconSparkle size={20} /></span>
         <h3 className="rd-narrative__title">AI Analysis Narrative</h3>
       </div>
       <div className={`rd-narrative__body ${expanded ? 'rd-narrative__body--expanded' : ''}`}>
@@ -74,12 +75,12 @@ function DataReferences({ refs }) {
 /* ── Lender Card ─────────────────────────────────────────────────────────── */
 function LenderCard({ lender }) {
   const typeIcon = {
-    bank: '🏦',
-    fintech: '⚡',
-    credit_union: '🤝',
-    p2p: '🔗',
-    invoice: '📋',
-  }[lender.type?.toLowerCase()] ?? '🏛';
+    bank: <IconBuilding size={16} />,
+    fintech: <IconLightning size={16} />,
+    credit_union: <IconUsers size={16} />,
+    p2p: <IconLink size={16} />,
+    invoice: <IconClipboard size={16} />,
+  }[lender.type?.toLowerCase()] ?? <IconBuilding size={16} />;
 
   return (
     <div className="rd-lender-card">
@@ -165,19 +166,19 @@ function LenderSection({ reportId, reportStatus }) {
             <h3>Find Financing Offers</h3>
             <p>Discover lenders matched to your solvency profile</p>
           </div>
-          <button id="find-lenders-btn" className="btn-primary" onClick={handleFetch}>
-            🏦 Find Financing Offers
+          <button id="find-lenders-btn" className="btn-primary" onClick={handleFetch} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <IconBuilding size={16} /> Find Financing Offers
           </button>
         </div>
       ) : (
         <div>
           <h3 className="rd-lenders__title">Matched Lenders</h3>
           {loading && <LoadingSpinner text="Finding your best lender matches…" />}
-          {error && <div className="error-message"><span>⚠</span> {error}</div>}
+          {error && <div className="error-message"><span><IconWarning size={16} /></span> {error}</div>}
           {lenders !== null && !loading && (
             lenders.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">🔍</div>
+                <div className="empty-state-icon"><IconSearch size={32} /></div>
                 <p className="empty-state-title">No matches found</p>
                 <p className="empty-state-description">Try generating a new report with more connected data sources.</p>
               </div>
@@ -272,25 +273,25 @@ export default function ReportDetail() {
       title: 'Income Stability',
       score: rd.income_stability?.score ?? rd.income_stability_score ?? rd.metrics?.income_stability ?? 0,
       description: rd.income_stability?.description ?? rd.income_stability_description ?? 'Consistency of income streams over time',
-      icon: '📊',
+      icon: <IconBarChart size={18} />,
     },
     {
       title: 'Growth Trend',
       score: rd.growth_trend?.score ?? rd.growth_trend_score ?? rd.metrics?.growth_trend ?? 0,
       description: rd.growth_trend?.description ?? rd.growth_trend_description ?? 'Revenue trajectory and business momentum',
-      icon: '📈',
+      icon: <IconTrendingUp size={18} />,
     },
     {
       title: 'Seasonality',
       score: rd.seasonality?.score ?? rd.seasonality_score ?? rd.metrics?.seasonality ?? 0,
       description: rd.seasonality?.description ?? rd.seasonality_description ?? 'Variance in earnings across periods',
-      icon: '🌊',
+      icon: <IconActivity size={18} />,
     },
     {
       title: 'Reputation Signals',
       score: rd.reputation_signals?.score ?? rd.reputation_score ?? rd.metrics?.reputation ?? 0,
       description: rd.reputation_signals?.description ?? rd.reputation_description ?? 'Professional and market trust indicators',
-      icon: '⭐',
+      icon: <IconStar size={18} />,
     },
   ];
 
@@ -316,7 +317,7 @@ export default function ReportDetail() {
           {/* ── Error ── */}
           {!loading && error && (
             <div className="error-message">
-              <span>⚠</span> {error}
+              <span><IconWarning size={16} /></span> {error}
             </div>
           )}
 
@@ -341,7 +342,7 @@ export default function ReportDetail() {
               {/* ── Failed State ── */}
               {isFailed && (
                 <div className="rd-failed card">
-                  <div className="rd-failed__icon">⚠️</div>
+                  <div className="rd-failed__icon"><IconWarning size={48} /></div>
                   <h2 className="rd-failed__title">Report generation failed</h2>
                   <p className="rd-failed__desc">
                     {report?.error_message ?? 'An error occurred while generating this report. Please connect more data sources and try again.'}
@@ -369,10 +370,10 @@ export default function ReportDetail() {
                         {score ?? '—'}
                         <span className="rd-score-section__max">/100</span>
                       </div>
-                      <p className="rd-score-section__rating">
-                        {(score ?? 0) >= 70 ? '🌟 Strong solvency profile'
-                          : (score ?? 0) >= 40 ? '📈 Developing profile'
-                          : '⚠️ Needs attention'}
+                      <p className="rd-score-section__rating" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {(score ?? 0) >= 70 ? <><IconSparkle size={16} /> Strong solvency profile</>
+                          : (score ?? 0) >= 40 ? <><IconTrendingUp size={16} /> Developing profile</>
+                          : <><IconWarning size={16} /> Needs attention</>}
                       </p>
                       <p className="rd-score-section__date">
                         Generated {formatDate(report.generated_at)}

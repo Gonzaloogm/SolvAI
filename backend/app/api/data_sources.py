@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, encrypt_dict
 from app.models.financial_data_source import FinancialDataSource
 from app.models.user import User
 from app.schemas.data_source import DataSourceConnectRequest, DataSourceResponse
@@ -47,7 +47,7 @@ async def connect_data_source(
         organization_id=current_user.organization_id,
         type=provider,
         status="CONNECTED",
-        connection_details=body.connection_details,
+        connection_details={"encrypted_data": encrypt_dict(body.connection_details)},
     )
     db.add(source)
     await db.flush()

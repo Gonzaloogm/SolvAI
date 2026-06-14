@@ -14,97 +14,32 @@ _gemini_model = None
 
 
 def _get_model():
+    """Lazily initialize the Gemini model to allow for missing API key in dev mode."""
     global _gemini_model
     if _gemini_model is None and settings.GEMINI_API_KEY:
         try:
             import google.generativeai as genai  # noqa: PLC0415
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            _gemini_model = genai.GenerativeModel("gemini-1.5-pro-latest")
-            logger.info("Gemini model initialised (gemini-1.5-pro-latest)")
+            _gemini_model = genai.GenerativeModel("gemini-2.5-flash")
+            logger.info("Gemini model initialised (gemini-2.5-flash)")
         except Exception as exc:
             logger.warning(f"Could not initialise Gemini model: {exc}")
     return _gemini_model
 
 
 # ── Mock report (returned when Gemini is unavailable) ────────────────────────
-def _build_mock_report(financial_summary: dict[str, Any]) -> dict[str, Any]:
-    source_count = financial_summary.get("data_source_count", 1)
-    avg_monthly = financial_summary.get("avg_monthly_revenue", 4500)
-    score = min(100, max(10, int(avg_monthly / 100) + source_count * 5))
-    score = min(score, 85)  # cap mock at 85 for realism
-
-    if score >= 70:
-        rating = "Strong"
-    elif score >= 40:
-        rating = "Developing"
-    else:
-        rating = "At Risk"
-
-    return {
-        "overall_score": score,
-        "rating": rating,
-        "income_stability": {
-            "score": max(10, score - 5),
-            "description": (
-                "Revenue streams show consistent monthly patterns with minor fluctuations "
-                "typical of freelance engagements."
-            ),
-        },
-        "growth_trend": {
-            "score": max(10, score - 10),
-            "description": (
-                "Positive quarter-on-quarter growth trajectory observed across connected "
-                "data sources, suggesting expanding client base."
-            ),
-        },
-        "seasonality": {
-            "pattern": "Mild Q1 dip, strong Q3–Q4",
-            "description": (
-                "A slight reduction in invoicing activity during January–February is "
-                "offset by peak performance in autumn months."
-            ),
-        },
-        "reputation_signals": {
-            "score": max(10, score + 3),
-            "description": (
-                "Payment completion rates and client retention ratios are above the "
-                "EU freelancer median benchmark."
-            ),
-        },
-        "narrative": (
-            f"Based on {source_count} connected financial data source(s), this alternative "
-            "solvency assessment evaluates the applicant's financial health using real-world "
-            "transaction and revenue signals rather than traditional credit metrics. "
-            f"The overall SolvAI score of {score}/100 ({rating}) reflects a thorough analysis "
-            "of income stability, growth trends, seasonal patterns, and reputation signals "
-            "drawn from connected platforms. "
-            "The freelancer demonstrates consistent revenue generation capacity with "
-            "manageable variance between billing periods. Income diversification across "
-            "multiple clients reduces concentration risk, a key positive indicator for "
-            "alternative lenders. "
-            "Growth metrics indicate the business is expanding its revenue base, "
-            "with a positive compound monthly growth rate over the observed period. "
-            "This trajectory suggests the applicant's debt-service capacity is likely "
-            "to improve over the loan term. "
-            "Seasonal adjustments have been applied to normalise for the typical Q1 "
-            "slowdown common in EU freelance markets. The adjusted figures support "
-            "the assigned rating. "
-            "This report is intended as a supplementary assessment tool for participating "
-            "lenders and does not constitute a regulated credit assessment under EU "
-            "Consumer Credit Directive 2023/2225."
-        ),
-        "data_references": [
-            f"Data source count: {source_count}",
-            f"Average monthly revenue (estimated): €{avg_monthly:,.0f}",
-            "Assessment methodology: SolvAI Alternative Scoring v1.0",
-            "Benchmark: EU Freelancer Financial Health Index 2024",
-        ],
-    }
+# Removed mock report generator
 
 
 # ── Prompt builder ────────────────────────────────────────────────────────────
 _SYSTEM_PROMPT = """You are SolvAI's financial analyst AI. Your task is to generate a structured
 alternative solvency report for an EU/UK freelancer based on their aggregated financial data.
+
+IMPORTANT: The financial_summary you receive contains pre-computed, verified facts
+(data_source_count, avg_monthly_revenue, platform_breakdown, etc.). Use these values
+directly in your narrative and data_references — do NOT re-estimate or override them.
+The avg_monthly_revenue is computed directly from real transaction data and must be
+referenced as-is (not as "estimated").
 
 Respond ONLY with a valid JSON object – no markdown fences, no extra text.
 
@@ -114,10 +49,10 @@ The JSON must have exactly these keys:
   "rating": <"Strong" | "Developing" | "At Risk">,
   "income_stability": {"score": <int 0-100>, "description": <string>},
   "growth_trend": {"score": <int 0-100>, "description": <string>},
-  "seasonality": {"pattern": <string>, "description": <string>},
+  "seasonality": {"score": <int 0-100>, "pattern": <string>, "description": <string>},
   "reputation_signals": {"score": <int 0-100>, "description": <string>},
   "narrative": <string 300-500 words explaining the score in plain English>,
-  "data_references": [<list of strings citing data points used>]
+  "data_references": [<list of strings citing the exact data points from the financial_summary>]
 }
 
 Score guidance:
@@ -168,8 +103,8 @@ async def generate_solvency_report(financial_summary: dict[str, Any]) -> dict[st
     """
     model = _get_model()
     if model is None:
-        logger.info("GEMINI_API_KEY not set – returning mock solvency report")
-        return _build_mock_report(financial_summary)
+        logger.error("GEMINI_API_KEY not set")
+        raise RuntimeError("GEMINI_API_KEY is not configured or model failed to initialize.")
 
     prompt = _build_user_prompt(financial_summary)
 
@@ -182,7 +117,7 @@ async def generate_solvency_report(financial_summary: dict[str, Any]) -> dict[st
                 f"{_SYSTEM_PROMPT}\n\n{prompt}",
                 generation_config={
                     "temperature": 0.2,
-                    "max_output_tokens": 2048,
+                    "max_output_tokens": 8192,
                 },
             ),
         )
@@ -195,10 +130,10 @@ async def generate_solvency_report(financial_summary: dict[str, Any]) -> dict[st
 
     except json.JSONDecodeError as exc:
         logger.error(f"Failed to parse Gemini JSON response: {exc}")
-        return _build_mock_report(financial_summary)
+        raise RuntimeError(f"Failed to parse Gemini response: {exc}")
     except Exception as exc:
         logger.error(f"Gemini API call failed: {exc}")
-        return _build_mock_report(financial_summary)
+        raise RuntimeError(f"Gemini API call failed: {exc}")
 
 
 # ── Synchronous wrapper for Celery tasks ─────────────────────────────────────

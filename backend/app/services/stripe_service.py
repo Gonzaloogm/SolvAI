@@ -37,12 +37,12 @@ def _generate_synthetic_transactions(months=6, count=40) -> list[dict]:
     transactions.sort(key=lambda x: x["created"], reverse=True)
     return transactions
 
-def get_raw_transactions(months=6) -> list[dict]:
-    if not settings.STRIPE_SECRET_KEY:
-        logger.warning("STRIPE_SECRET_KEY not set. Returning synthetic raw transactions.")
+def get_raw_transactions(months=6, api_key=None) -> list[dict]:
+    if not api_key:
+        logger.warning("No api_key provided. Returning synthetic raw transactions.")
         return _generate_synthetic_transactions(months=months)
         
-    stripe.api_key = settings.STRIPE_SECRET_KEY
+    stripe.api_key = api_key
     six_months_ago = int((datetime.now(timezone.utc) - relativedelta(months=months)).timestamp())
     
     transactions = []
@@ -84,21 +84,29 @@ def get_raw_transactions(months=6) -> list[dict]:
         # fallback to synthetic on error as well for the demo harness
         return _generate_synthetic_transactions(months=months)
 
-def fetch_stripe_metrics() -> dict:
+def fetch_stripe_metrics(api_key=None) -> dict:
     """
     Fetch Stripe metrics for the last 6 months using the test API key.
     Calculates total successful revenue and counts data points.
     Returns:
-        dict: {"avg_monthly": float, "data_points": int, "status": "CONNECTED"}
+        dict: {"avg_monthly": float, "data_points": int, "status": "CONNECTED", "transactions": list}
     """
-    transactions = get_raw_transactions()
+    transactions = get_raw_transactions(months=6, api_key=api_key)
     total_revenue_cents = 0
     data_points = 0
+    successful_txs = []
+    
     for charge in transactions:
         if charge["status"] == "succeeded" and charge["paid"]:
             net_amount = charge["amount"] - charge.get("amount_refunded", 0)
             total_revenue_cents += net_amount
             data_points += 1
+            successful_txs.append({
+                "id": charge["id"],
+                "date": datetime.fromtimestamp(charge["created"], timezone.utc).strftime("%Y-%m-%d"),
+                "amount_eur": net_amount / 100.0,
+                "description": charge.get("description", "")
+            })
             
     total_revenue_euros = total_revenue_cents / 100.0
     avg_monthly = total_revenue_euros / 6.0
@@ -106,5 +114,6 @@ def fetch_stripe_metrics() -> dict:
     return {
         "avg_monthly": avg_monthly,
         "data_points": data_points,
-        "status": "CONNECTED"
+        "status": "CONNECTED",
+        "transactions_sample": successful_txs[:15]  # send up to 15 txs to Gemini
     }

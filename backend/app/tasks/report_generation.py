@@ -111,8 +111,20 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                 )
             ).scalars().all()
 
-            # ── 4. Build financial summary (MVP mock aggregation) ─────────────
+            logger.info(
+                f"[Task {self.request.id}] Found {len(sources)} connected data sources "
+                f"for user_id={user_id}: {[(str(s.id), s.type, s.status) for s in sources]}"
+            )
+
+            # ── 4. Build financial summary ────────────────────────────────────
             financial_summary = _build_financial_summary(sources)
+
+            logger.info(
+                f"[Task {self.request.id}] financial_summary sent to Gemini: "
+                f"data_source_count={financial_summary.get('data_source_count')}, "
+                f"avg_monthly_revenue={financial_summary.get('avg_monthly_revenue')}, "
+                f"platforms={financial_summary.get('connected_platforms')}"
+            )
 
             # ── 5. Generate the AI report ─────────────────────────────────────
             report_data = generate_solvency_report_sync(financial_summary)
@@ -171,15 +183,21 @@ def _build_financial_summary(sources) -> dict:
     Build an aggregated financial summary dict from a list of
     FinancialDataSource ORM objects.
 
-    For MVP, this returns a realistic mock based on source type.
-    In production this would call the Stripe / Xero / PayPal APIs.
+    Fetches real transaction data from connected platforms (Stripe, etc.)
+    and computes verified metrics to pass to the Gemini AI.
     """
     from app.services.stripe_service import fetch_stripe_metrics
 
     source_types = [s.type for s in sources]
     source_count = len(sources)
 
-    # Mock aggregated metrics per source type
+    logger.info(
+        f"[_build_financial_summary] source_count={source_count}, "
+        f"source_types={source_types}, "
+        f"source_ids={[str(s.id) for s in sources]}"
+    )
+
+    # Per-source-type revenue contributions
     avg_monthly_map = {
         "XERO": 5_800,
         "PAYPAL": 3_400,
@@ -187,26 +205,48 @@ def _build_financial_summary(sources) -> dict:
     }
 
     platform_breakdown = {}
-    mock_data = True
 
     for t in source_types:
         if t == "STRIPE":
-            mock_data = False
+            from app.core.security import decrypt_dict
+            stripe_source = next((s for s in sources if s.type == "STRIPE"), None)
+
+            api_key = None
+            if stripe_source and stripe_source.connection_details:
+                enc_data = stripe_source.connection_details.get("encrypted_data")
+                if enc_data:
+                    dec_data = decrypt_dict(enc_data)
+                    api_key = dec_data.get("api_key")
+                else:
+                    # fallback for existing unencrypted data
+                    api_key = stripe_source.connection_details.get("api_key")
+
+            logger.info(
+                f"[_build_financial_summary] STRIPE source found, "
+                f"api_key={'SET' if api_key else 'MISSING'}"
+            )
+
             try:
-                metrics = fetch_stripe_metrics()
+                metrics = fetch_stripe_metrics(api_key=api_key)
                 avg_monthly_map["STRIPE"] = metrics["avg_monthly"]
                 platform_breakdown["STRIPE"] = {
                     "avg_monthly": metrics["avg_monthly"],
                     "status": metrics["status"],
-                    "data_points": metrics["data_points"]
+                    "data_points": metrics["data_points"],
+                    "recent_transactions": metrics.get("transactions_sample", []),
                 }
+                logger.info(
+                    f"[_build_financial_summary] STRIPE metrics: "
+                    f"avg_monthly={metrics['avg_monthly']:.2f}, "
+                    f"data_points={metrics['data_points']}"
+                )
             except Exception as e:
                 logger.error(f"Error fetching Stripe data: {e}")
                 avg_monthly_map["STRIPE"] = 0
                 platform_breakdown["STRIPE"] = {
                     "avg_monthly": 0,
                     "status": "ERROR",
-                    "data_points": 0
+                    "data_points": 0,
                 }
         else:
             platform_breakdown[t] = {
@@ -216,18 +256,24 @@ def _build_financial_summary(sources) -> dict:
             }
 
     avg_monthly = sum(avg_monthly_map.get(t, 3_000) for t in source_types)
-    avg_monthly = avg_monthly if avg_monthly else 3_500
+    # If no sources at all, default to 0 (not a fake 3500)
+    if not source_types:
+        avg_monthly = 0
 
-    return {
+    summary = {
         "data_source_count": source_count,
         "connected_platforms": source_types,
         "avg_monthly_revenue": avg_monthly,
         "currency": "EUR",
         "analysis_period_months": 12,
-        "mock_data": mock_data,
-        "note": (
-            "Financial figures are estimated from platform integrations. "
-            "Production deployment uses live API data."
-        ),
         "platform_breakdown": platform_breakdown,
     }
+
+    logger.info(
+        f"[_build_financial_summary] FINAL payload: "
+        f"data_source_count={source_count}, "
+        f"avg_monthly_revenue={avg_monthly}, "
+        f"platforms={source_types}"
+    )
+
+    return summary

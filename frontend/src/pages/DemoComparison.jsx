@@ -190,7 +190,7 @@ export default function DemoComparison() {
                       <div className="card-glass" style={{ padding: '2rem' }}>
                         <h2 style={{ color: 'var(--color-status-success)', marginBottom: '1rem' }}>Report Completed!</h2>
                         <div style={{ fontSize: '3rem', margin: '1rem 0', fontFamily: 'var(--font-data)', fontWeight: 700 }}>
-                          Score: {aiReport?.solvency_score ?? aiReport?.report_data?.solvency_score} / 100
+                          Score: {aiReport?.solvency_score ?? aiReport?.report_data?.solvency_score ?? aiReport?.report_data?.overall_score} / 100
                         </div>
                         <p style={{ color: 'var(--color-text-secondary)' }}>Generated automatically in {formatTime(aiTime)}</p>
                       </div>

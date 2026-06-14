@@ -259,7 +259,7 @@ export default function ReportDetail() {
 
   // ── Derived report data ──────────────────────────────────────────────────
   const status       = report?.status?.toUpperCase() ?? '';
-  const score        = report?.solvency_score ?? report?.report_data?.solvency_score ?? null;
+  const score        = report?.solvency_score ?? report?.report_data?.solvency_score ?? report?.report_data?.overall_score ?? null;
   const narrative    = report?.report_data?.narrative ?? report?.narrative ?? '';
   const dataRefs     = report?.report_data?.data_references ?? report?.data_references ?? [];
   const isGenerating = !TERMINAL_STATUSES.has(status) && status !== '';
@@ -270,26 +270,26 @@ export default function ReportDetail() {
   const metrics = [
     {
       title: 'Income Stability',
-      score: rd.income_stability_score ?? rd.metrics?.income_stability ?? 0,
-      description: rd.income_stability_description ?? 'Consistency of income streams over time',
+      score: rd.income_stability?.score ?? rd.income_stability_score ?? rd.metrics?.income_stability ?? 0,
+      description: rd.income_stability?.description ?? rd.income_stability_description ?? 'Consistency of income streams over time',
       icon: '📊',
     },
     {
       title: 'Growth Trend',
-      score: rd.growth_trend_score ?? rd.metrics?.growth_trend ?? 0,
-      description: rd.growth_trend_description ?? 'Revenue trajectory and business momentum',
+      score: rd.growth_trend?.score ?? rd.growth_trend_score ?? rd.metrics?.growth_trend ?? 0,
+      description: rd.growth_trend?.description ?? rd.growth_trend_description ?? 'Revenue trajectory and business momentum',
       icon: '📈',
     },
     {
       title: 'Seasonality',
-      score: rd.seasonality_score ?? rd.metrics?.seasonality ?? 0,
-      description: rd.seasonality_description ?? 'Variance in earnings across periods',
+      score: rd.seasonality?.score ?? rd.seasonality_score ?? rd.metrics?.seasonality ?? 0,
+      description: rd.seasonality?.description ?? rd.seasonality_description ?? 'Variance in earnings across periods',
       icon: '🌊',
     },
     {
       title: 'Reputation Signals',
-      score: rd.reputation_score ?? rd.metrics?.reputation ?? 0,
-      description: rd.reputation_description ?? 'Professional and market trust indicators',
+      score: rd.reputation_signals?.score ?? rd.reputation_score ?? rd.metrics?.reputation ?? 0,
+      description: rd.reputation_signals?.description ?? rd.reputation_description ?? 'Professional and market trust indicators',
       icon: '⭐',
     },
   ];

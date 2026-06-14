@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 10080  # 7 days
 
+    # ── Encryption ────────────────────────────────────────────────────────────
+    ENCRYPTION_KEY: str = "emjfFr1pAqyg28gVx6DNZbRCKjvMMpvFeqlXL9eoptk="
+
     # ── Google Gemini ─────────────────────────────────────────────────────────
     GEMINI_API_KEY: str = ""
 

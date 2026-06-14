@@ -21,15 +21,8 @@ def seed_stripe():
 
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    logger.info("Checking if Stripe account already has recent charges...")
-    try:
-        recent_charges = stripe.Charge.list(limit=1)
-        if len(recent_charges.data) > 0:
-            logger.info("Found existing charges. Skipping seeding to prevent duplicates.")
-            return
-    except Exception as e:
-        logger.error(f"Error communicating with Stripe: {e}")
-        return
+    logger.info("Checking if Stripe account already has recent charges... (Check disabled for forced seeding)")
+    # Removed the check for existing charges so we can force seed
 
     logger.info("No recent charges found. Seeding synthetic data...")
 

@@ -26,6 +26,7 @@ const scoreFromReport = (report) => {
   if (!report) return null;
   return report.solvency_score
     ?? report.report_data?.solvency_score
+    ?? report.report_data?.overall_score
     ?? null;
 };
 

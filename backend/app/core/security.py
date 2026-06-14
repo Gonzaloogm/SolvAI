@@ -18,12 +18,28 @@ if not hasattr(bcrypt, "__about__"):
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from cryptography.fernet import Fernet
+import json
 
 from app.core.config import settings
 from app.core.database import get_db
 
 # ── Password hashing ──────────────────────────────────────────────────────────
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ── Encryption ────────────────────────────────────────────────────────────────
+fernet = Fernet(settings.ENCRYPTION_KEY.encode())
+
+def encrypt_dict(data: dict) -> str:
+    """Encrypt a dictionary into a string."""
+    return fernet.encrypt(json.dumps(data).encode()).decode()
+
+def decrypt_dict(token: str) -> dict:
+    """Decrypt a string back into a dictionary."""
+    try:
+        return json.loads(fernet.decrypt(token.encode()).decode())
+    except Exception:
+        return {}
 
 # ── OAuth2 bearer scheme ─────────────────────────────────────────────────────
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")

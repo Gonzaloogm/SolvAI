@@ -17,6 +17,7 @@ build/
 # Environment
 .env
 .env.local
+.env.demo
 .env.*.local
 
 # Database

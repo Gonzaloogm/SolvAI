@@ -129,4 +129,4 @@ jobs:
         run: docker build -t solvai-api ./backend
 
       - name: Verify compose config
-        run: docker compose config
+        run: touch .env && docker compose config

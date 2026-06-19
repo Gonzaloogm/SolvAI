@@ -16,14 +16,9 @@ export default function SolvencyGauge({ score = 0, size = 200, showLabel = true 
 
   // Color based on score band
   const arcColor =
-    clampedScore >= 70 ? '#00f0ff'
-    : clampedScore >= 40 ? '#f59e0b'
-    : '#ef4444';
-
-  const glowColor =
-    clampedScore >= 70 ? 'rgba(0,240,255,0.35)'
-    : clampedScore >= 40 ? 'rgba(245,158,11,0.35)'
-    : 'rgba(239,68,68,0.35)';
+    clampedScore >= 70 ? '#10b981' // green
+    : clampedScore >= 40 ? '#f59e0b' // yellow
+    : '#ef4444'; // red
 
   const rating =
     clampedScore >= 70 ? 'Strong'
@@ -97,19 +92,6 @@ export default function SolvencyGauge({ score = 0, size = 200, showLabel = true 
 
   return (
     <div style={{ position: 'relative', display: 'inline-block', lineHeight: 0 }}>
-      {/* Glow layer behind SVG */}
-      {clampedScore > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: '50%',
-            pointerEvents: 'none',
-            boxShadow: `0 0 ${size * 0.2}px ${glowColor}`,
-            opacity: 0.6,
-          }}
-        />
-      )}
 
       <svg
         width={size}
@@ -118,16 +100,6 @@ export default function SolvencyGauge({ score = 0, size = 200, showLabel = true 
         aria-label={`Solvency score: ${clampedScore} — ${rating}`}
         role="img"
       >
-        <defs>
-          <filter id={`glow-${size}`}>
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
         {/* Background arc track */}
         <path
           d={bgPath}
@@ -146,7 +118,6 @@ export default function SolvencyGauge({ score = 0, size = 200, showLabel = true 
             stroke={arcColor}
             strokeWidth={stroke}
             strokeLinecap="round"
-            filter={`url(#glow-${size})`}
           />
         )}
 
@@ -174,7 +145,7 @@ export default function SolvencyGauge({ score = 0, size = 200, showLabel = true 
             dominantBaseline="middle"
             fill="rgba(113,113,122,0.9)"
             fontSize={ratingFontSize}
-            fontFamily="'DM Sans', system-ui, sans-serif"
+            fontFamily="'Inter', system-ui, sans-serif"
             fontWeight="500"
             letterSpacing="0.05em"
           >

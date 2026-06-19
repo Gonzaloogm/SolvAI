@@ -171,19 +171,19 @@ export default function Sidebar() {
         .sidebar__logo-mark {
           width: 32px;
           height: 32px;
-          background: linear-gradient(135deg, var(--color-accent-primary), #00b8cc);
+          background: #ffffff;
           border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: var(--glow-cyan-sm);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
           flex-shrink: 0;
         }
         .sidebar__logo-s {
           font-family: var(--font-body);
           font-weight: 800;
           font-size: 16px;
-          color: #030303;
+          color: #000000;
           line-height: 1;
         }
         .sidebar__logo-text {
@@ -227,10 +227,9 @@ export default function Sidebar() {
           color: var(--color-text-primary);
         }
         .sidebar__nav-item--active {
-          background: var(--color-accent-bg);
-          color: var(--color-accent-primary) !important;
-          border-left-color: var(--color-accent-primary);
-          box-shadow: inset 0 0 20px rgba(0,240,255,0.04);
+          background: var(--color-surface-elevated);
+          color: var(--color-text-primary) !important;
+          border-left-color: var(--color-text-primary);
         }
         .sidebar__nav-item--disabled {
           opacity: 0.35;
@@ -273,15 +272,15 @@ export default function Sidebar() {
         .sidebar__avatar {
           width: 30px;
           height: 30px;
-          background: linear-gradient(135deg, rgba(0,240,255,0.2), rgba(0,240,255,0.08));
-          border: 1px solid rgba(0,240,255,0.2);
+          background: var(--color-surface-elevated);
+          border: 1px solid var(--color-border);
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: var(--text-sm);
           font-weight: 600;
-          color: var(--color-accent-primary);
+          color: var(--color-text-primary);
           flex-shrink: 0;
         }
         .sidebar__user-info {

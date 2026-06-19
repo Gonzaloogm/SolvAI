@@ -39,11 +39,6 @@ export default function MetricCard({ title, score = 0, description, icon }) {
           style={{
             width: `${clampedScore}%`,
             background: barColor,
-            boxShadow: clampedScore >= 70
-              ? '0 0 8px rgba(0,240,255,0.4)'
-              : clampedScore >= 40
-              ? '0 0 8px rgba(245,158,11,0.4)'
-              : '0 0 8px rgba(239,68,68,0.4)',
           }}
         />
       </div>

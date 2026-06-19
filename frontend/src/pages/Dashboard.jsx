@@ -359,8 +359,6 @@ export default function Dashboard() {
           font-size: 48px;
           line-height: 1;
           color: var(--color-accent-primary);
-          text-shadow: 0 0 20px rgba(0,240,255,0.4);
-          animation: badge-pulse-cyan 3s ease-in-out infinite;
         }
         .db-empty-hero__title {
           font-size: var(--text-2xl);

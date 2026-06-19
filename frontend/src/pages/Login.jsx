@@ -50,8 +50,6 @@ export default function Login() {
     <div className="auth-page">
       {/* Decorative background */}
       <div className="auth-bg">
-        <div className="auth-bg__glow auth-bg__glow--1" />
-        <div className="auth-bg__glow auth-bg__glow--2" />
         <div className="auth-bg__grid" />
       </div>
 
@@ -157,23 +155,14 @@ export default function Login() {
           inset: 0;
           pointer-events: none;
         }
-        .auth-bg__glow {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(80px);
-          opacity: 0.08;
-        }
-        .auth-bg__glow--1 {
-          width: 600px; height: 600px;
-          background: var(--color-accent-primary);
-          top: -200px; left: -200px;
-        }
-        .auth-bg__glow--2 {
-          width: 400px; height: 400px;
-          background: #7c3aed;
-          bottom: -100px; right: -100px;
-        }
         .auth-bg__grid {
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+          background-size: 48px 48px;
+        }
           position: absolute;
           inset: 0;
           background-image:
@@ -202,15 +191,15 @@ export default function Login() {
         }
         .auth-logo__mark {
           width: 44px; height: 44px;
-          background: linear-gradient(135deg, var(--color-accent-primary), #00b8cc);
+          background: #ffffff;
           border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 22px;
           font-weight: 800;
-          color: #030303;
-          box-shadow: var(--glow-cyan);
+          color: #000000;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
           flex-shrink: 0;
         }
         .auth-logo__name {
@@ -262,8 +251,8 @@ export default function Login() {
         }
         .auth-spinner {
           width: 16px; height: 16px;
-          border: 2px solid rgba(3,3,3,0.3);
-          border-top-color: #030303;
+          border: 2px solid rgba(0,0,0,0.1);
+          border-top-color: #000000;
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
         }

@@ -1,0 +1,128 @@
+steps:
+# 1. Build Backend Image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest', './backend']
+
+# 2. Push Backend Image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest']
+
+# 3. Deploy API to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+    - 'run'
+    - 'deploy'
+    - 'solvai-api'
+    - '--image'
+    - 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest'
+    - '--region'
+    - 'europe-west1'
+    - '--vpc-connector'
+    - 'solvai-connector'
+    - '--allow-unauthenticated'
+    - '--set-secrets=DATABASE_URL=solvai-database-url:latest,REDIS_URL=solvai-redis-url:latest,JWT_SECRET=solvai-jwt-secret:latest,ENCRYPTION_KEY=solvai-encryption-key:latest,STRIPE_SECRET_KEY=solvai-stripe-secret-key:latest,GEMINI_API_KEY=solvai-gemini-api-key:latest'
+
+# 4. Run Alembic Migrations
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+    - 'run'
+    - 'jobs'
+    - 'create'
+    - 'solvai-migrate'
+    - '--image'
+    - 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest'
+    - '--region'
+    - 'europe-west1'
+    - '--vpc-connector'
+    - 'solvai-connector'
+    - '--set-secrets=DATABASE_URL=solvai-database-url:latest,REDIS_URL=solvai-redis-url:latest,JWT_SECRET=solvai-jwt-secret:latest,ENCRYPTION_KEY=solvai-encryption-key:latest,STRIPE_SECRET_KEY=solvai-stripe-secret-key:latest'
+    - '--command=alembic'
+    - '--args=upgrade,head'
+
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+    - 'run'
+    - 'jobs'
+    - 'execute'
+    - 'solvai-migrate'
+    - '--region'
+    - 'europe-west1'
+    - '--wait'
+
+# 5. Deploy Celery Worker
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+    - 'run'
+    - 'deploy'
+    - 'solvai-worker'
+    - '--image'
+    - 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest'
+    - '--region'
+    - 'europe-west1'
+    - '--vpc-connector'
+    - 'solvai-connector'
+    - '--no-allow-unauthenticated'
+    - '--min-instances'
+    - '1'
+    - '--max-instances'
+    - '1'
+    - '--no-cpu-throttling'
+    - '--command=celery'
+    - '--args=-A,app.celery_app,worker,--loglevel=info,--concurrency=2'
+    - '--set-secrets=DATABASE_URL=solvai-database-url:latest,REDIS_URL=solvai-redis-url:latest,JWT_SECRET=solvai-jwt-secret:latest,ENCRYPTION_KEY=solvai-encryption-key:latest,STRIPE_SECRET_KEY=solvai-stripe-secret-key:latest,GEMINI_API_KEY=solvai-gemini-api-key:latest'
+
+# 6. Retrieve API URL to build frontend
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      API_URL=$$(gcloud run services describe solvai-api --region=europe-west1 --format="value(status.url)")
+      echo $$API_URL > /workspace/api_url.txt
+      echo "API_URL is $$API_URL"
+
+# 7. Build Frontend Image (passing the API URL)
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      API_URL=$$(cat /workspace/api_url.txt)
+      docker build --build-arg VITE_API_BASE_URL=$$API_URL -t europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-frontend:latest ./frontend
+
+# 8. Push Frontend Image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-frontend:latest']
+
+# 9. Deploy Frontend to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+    - 'run'
+    - 'deploy'
+    - 'solvai-frontend'
+    - '--image'
+    - 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-frontend:latest'
+    - '--region'
+    - 'europe-west1'
+    - '--allow-unauthenticated'
+
+# 10. Update API CORS with Frontend URL
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      FRONTEND_URL=$$(gcloud run services describe solvai-frontend --region=europe-west1 --format="value(status.url)")
+      gcloud run services update solvai-api --region=europe-west1 --update-env-vars="CORS_ORIGINS=$$FRONTEND_URL\,http://localhost:5173"
+
+images:
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest'
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-frontend:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

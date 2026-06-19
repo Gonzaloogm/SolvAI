@@ -86,7 +86,7 @@ export const dataSources = {
    * List all data sources for current org.
    * GET /data-sources
    */
-  list: () => apiClient.get('/data-sources'),
+  list: () => apiClient.get('/data-sources/'),
 };
 
 // ─── Solvency Reports ─────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ export const solvencyReports = {
    * Trigger new report generation.
    * POST /solvency-reports
    */
-  create: () => apiClient.post('/solvency-reports'),
+  create: () => apiClient.post('/solvency-reports/'),
 
   /**
    * Get a single report.
@@ -107,7 +107,7 @@ export const solvencyReports = {
    * List all reports for current org.
    * GET /solvency-reports
    */
-  list: () => apiClient.get('/solvency-reports'),
+  list: () => apiClient.get('/solvency-reports/'),
 
   /**
    * Get raw transactions for demo.

@@ -293,6 +293,12 @@ export default function ReportDetail() {
       description: rd.reputation_signals?.description ?? rd.reputation_description ?? 'Professional and market trust indicators',
       icon: <IconStar size={18} />,
     },
+    {
+      title: 'Client Concentration',
+      score: rd.client_concentration?.score ?? rd.concentration_score ?? rd.metrics?.concentration ?? 0,
+      description: rd.client_concentration?.description ?? rd.concentration_description ?? 'Revenue dependency on top clients',
+      icon: <IconUsers size={18} />,
+    },
   ];
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -325,7 +331,7 @@ export default function ReportDetail() {
           {!loading && report && (
             <>
               {/* ── Header ── */}
-              <div className="rd-header section-header" style={{ alignItems: 'flex-start' }}>
+              <div className="rd-header section-header" style={{ alignItems: 'flex-start', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
                   <div className="rd-header__meta">
                     <StatusBadge status={report.status} />
@@ -334,6 +340,36 @@ export default function ReportDetail() {
                   <h1 className="rd-header__title">Solvency Report</h1>
                   <p className="rd-header__date">{formatDate(report.generated_at ?? report.created_at)}</p>
                 </div>
+                {status === 'COMPLETED' && (
+                  <button 
+                    className="btn-secondary" 
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('solvai_token');
+                        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+                        const res = await fetch(`${baseUrl}/api/solvency-reports/${report.id}/pdf`, {
+                          headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `solvency_report_${report.id}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      } catch (e) {
+                        console.error('PDF download failed:', e);
+                        alert('Failed to download PDF. Please try again.');
+                      }
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+                  >
+                    <IconClipboard size={16} /> Download PDF
+                  </button>
+                )}
               </div>
 
               {/* ── Generating State ── */}

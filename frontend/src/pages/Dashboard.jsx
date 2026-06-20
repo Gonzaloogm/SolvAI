@@ -236,8 +236,8 @@ export default function Dashboard() {
           {/* ── Page Header ── */}
           <div className="section-header">
             <div>
-              <h1 className="section-title">Solvency Reports</h1>
-              <p className="section-subtitle">Self-serve explainable credit AI that traces every score factor to your real transactions.</p>
+              <h1 className="section-title">Dashboard</h1>
+              <p className="section-subtitle">Your financial health overview at a glance.</p>
             </div>
             <button
               id="gen-report-btn"
@@ -275,10 +275,29 @@ export default function Dashboard() {
                 generating={generating}
               />
 
-              {/* ── Reports Table ── */}
+              {/* ── Quick Actions ── */}
               {reports.length > 0 && (
-                <div style={{ marginTop: 'var(--space-6)' }}>
-                  <ReportsTable reports={reports} />
+                <div className="db-quick-actions" style={{ marginTop: 'var(--space-6)' }}>
+                  <div className="db-quick-actions__row">
+                    <div className="db-quick-action card">
+                      <h3 className="db-quick-action__title">All Reports</h3>
+                      <p className="db-quick-action__desc">
+                        {reports.length} report{reports.length !== 1 ? 's' : ''} generated
+                      </p>
+                      <Link to="/reports" className="btn-ghost btn-sm">
+                        View all reports →
+                      </Link>
+                    </div>
+                    <div className="db-quick-action card">
+                      <h3 className="db-quick-action__title">Data Sources</h3>
+                      <p className="db-quick-action__desc">
+                        Manage your connected platforms
+                      </p>
+                      <Link to="/data-sources" className="btn-ghost btn-sm">
+                        Manage sources →
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               )}
             </>
@@ -446,6 +465,27 @@ export default function Dashboard() {
           color: var(--color-text-secondary);
           font-size: var(--text-sm);
           white-space: nowrap;
+        }
+
+        /* ── Quick Actions ── */
+        .db-quick-actions__row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: var(--space-4);
+        }
+        .db-quick-action {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-2);
+        }
+        .db-quick-action__title {
+          font-size: var(--text-md);
+          font-weight: 600;
+        }
+        .db-quick-action__desc {
+          font-size: var(--text-sm);
+          color: var(--color-text-secondary);
+          margin-bottom: var(--space-2);
         }
       `}</style>
     </div>

@@ -57,6 +57,8 @@ async def create_solvency_report(
     logger.info(f"Dispatched report generation task for report_id={report_id}")
 
     return SolvencyReportResponse.model_validate(report)
+
+
 @router.get(
     "/",
     response_model=list[SolvencyReportResponse],
@@ -76,6 +78,52 @@ async def list_solvency_reports(
     )
     reports = result.scalars().all()
     return [SolvencyReportResponse.model_validate(r) for r in reports]
+
+
+# ── PDF endpoint MUST come BEFORE the /{id} catch-all ──────────────────────
+@router.get(
+    "/{id}/pdf",
+    summary="Download a solvency report as PDF",
+)
+async def download_solvency_report_pdf(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from fastapi.responses import StreamingResponse
+    from app.services.pdf_service import generate_solvency_pdf
+
+    result = await db.execute(
+        select(SolvencyReport).where(
+            SolvencyReport.id == id,
+            SolvencyReport.is_deleted.is_(False),
+        )
+    )
+    report = result.scalar_one_or_none()
+
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Solvency report not found",
+        )
+    if report.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this report",
+        )
+    if report.status != "COMPLETED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Report is not completed yet",
+        )
+
+    pdf_buffer = generate_solvency_pdf(report)
+
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=solvency_report_{id}.pdf"}
+    )
 
 
 @router.get(

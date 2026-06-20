@@ -205,6 +205,12 @@ def _build_financial_summary(sources) -> dict:
     }
 
     platform_breakdown = {}
+    
+    # Store extracted metrics at root level for the prompt
+    monthly_revenue_series = []
+    computed_growth_trend = "Stable"
+    computed_seasonality_signal = "No significant seasonality"
+    client_concentration = None
 
     for t in source_types:
         if t == "STRIPE":
@@ -235,6 +241,12 @@ def _build_financial_summary(sources) -> dict:
                     "data_points": metrics["data_points"],
                     "recent_transactions": metrics.get("transactions_sample", []),
                 }
+                
+                # Assign root level metrics
+                monthly_revenue_series = metrics.get("monthly_revenue", [])
+                computed_growth_trend = metrics.get("growth_trend_signal", "Stable")
+                computed_seasonality_signal = metrics.get("seasonality_signal", "No significant seasonality")
+                client_concentration = metrics.get("client_concentration", None)
                 logger.info(
                     f"[_build_financial_summary] STRIPE metrics: "
                     f"avg_monthly={metrics['avg_monthly']:.2f}, "
@@ -267,6 +279,10 @@ def _build_financial_summary(sources) -> dict:
         "currency": "EUR",
         "analysis_period_months": 12,
         "platform_breakdown": platform_breakdown,
+        "monthly_revenue_series": monthly_revenue_series,
+        "computed_growth_trend": computed_growth_trend,
+        "computed_seasonality_signal": computed_seasonality_signal,
+        "client_concentration": client_concentration
     }
 
     logger.info(

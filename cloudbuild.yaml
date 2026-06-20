@@ -119,7 +119,7 @@ steps:
     - '-c'
     - |
       FRONTEND_URL=$$(gcloud run services describe solvai-frontend --region=europe-west1 --format="value(status.url)")
-      gcloud run services update solvai-api --region=europe-west1 --update-env-vars="^@^CORS_ORIGINS=[\"$$FRONTEND_URL\", \"http://localhost:5173\"]"
+      gcloud run services update solvai-api --region=europe-west1 --update-env-vars="^@^CORS_ORIGINS=[\"$$FRONTEND_URL\", \"https://solvai-frontend-879357866699.europe-west1.run.app\", \"http://localhost:5173\"]"
 
 images:
   - 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest'

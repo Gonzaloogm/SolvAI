@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SolvAI Report - {{ report_id }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+        /* ── Page Setup ── */
+        @page {
+            size: A4;
+            margin: 20mm;
+            @bottom-center {
+                content: "SolvAI Confidential  |  Page " counter(page) " of " counter(pages);
+                font-family: 'Inter', sans-serif;
+                font-size: 9px;
+                color: #71717a;
+            }
+        }
+
+        @page :first {
+            @bottom-center {
+                content: "";
+            }
+        }
+
+        /* ── Base Styles ── */
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #000000;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ── Typography ── */
+        h1, h2, h3 {
+            font-weight: 700;
+            color: #111111;
+            margin-top: 2em;
+            margin-bottom: 0.5em;
+        }
+
+        h1 {
+            font-size: 24pt;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 16pt;
+            border-bottom: 1px solid #e4e4e7;
+            padding-bottom: 4px;
+        }
+
+        h3 {
+            font-size: 13pt;
+        }
+
+        p {
+            margin-top: 0;
+            margin-bottom: 1em;
+            color: #3f3f46;
+        }
+
+        .text-sm {
+            font-size: 9pt;
+        }
+
+        .text-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ── Brand Colors & Accents ── */
+        .brand-accent {
+            color: #6366f1; /* Indigo */
+        }
+
+        .bg-surface {
+            background-color: #f4f4f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* ── Score Badges ── */
+        .score-gauge-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 40px 0;
+        }
+
+        .score-gauge {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 12px solid #e4e4e7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Colored border based on score */
+        .score-success { border-color: #10b981; color: #10b981; }
+        .score-warning { border-color: #f59e0b; color: #f59e0b; }
+        .score-error   { border-color: #ef4444; color: #ef4444; }
+
+        .score-value {
+            font-size: 36pt;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 10pt;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #71717a;
+            margin-top: 5px;
+        }
+
+        /* ── Mini Progress Bars ── */
+        .metric-row {
+            margin-bottom: 15px;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-weight: 600;
+            font-size: 10pt;
+            color: #111111;
+        }
+
+        .metric-bar-bg {
+            background-color: #e4e4e7;
+            border-radius: 4px;
+            height: 8px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .metric-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        /* ── Charts / Data Section ── */
+        .chart-container {
+            width: 100%;
+            margin-top: 20px;
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 9pt;
+        }
+
+        .data-table th, .data-table td {
+            border: 1px solid #e4e4e7;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #f4f4f5;
+            font-weight: 600;
+        }
+
+        /* ── Cover Page Layout ── */
+        .cover-page {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            page-break-after: always;
+        }
+
+        .cover-header {
+            margin-top: 40px;
+        }
+
+        .cover-logo {
+            font-size: 28pt;
+            font-weight: 700;
+            color: #111111;
+            margin-bottom: 10px;
+        }
+
+        .cover-subtitle {
+            font-size: 14pt;
+            color: #6366f1;
+            margin-bottom: 50px;
+        }
+
+        .cover-details table {
+            font-size: 11pt;
+        }
+
+        .cover-details td {
+            padding-bottom: 10px;
+        }
+
+        .cover-details td:first-child {
+            font-weight: 600;
+            color: #71717a;
+            width: 150px;
+        }
+
+        .cover-footer {
+            border-top: 2px solid #e4e4e7;
+            padding-top: 20px;
+            font-size: 9pt;
+            color: #71717a;
+        }
+
+        /* Helper Utilities */
+        .text-right { text-align: right; }
+        .mt-4 { margin-top: 1.5em; }
+        .page-break { page-break-before: always; }
+    </style>
+</head>
+<body>
+
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <div>
+            <div class="cover-header">
+                <div class="cover-logo">Solv<span class="brand-accent">AI</span></div>
+                <div class="cover-subtitle">Freelancer Solvency Assessment</div>
+            </div>
+
+            <div class="cover-details">
+                <table style="border: none;">
+                    <tr>
+                        <td>Applicant:</td>
+                        <td><strong>{{ data.applicant_name | default('Confidential') }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Organization:</td>
+                        <td>{{ data.organization_name | default('SolvAI Assessment Partner') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Report ID:</td>
+                        <td class="text-mono">{{ report_id }}</td>
+                    </tr>
+                    <tr>
+                        <td>Generated On:</td>
+                        <td>{{ generated_at }}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="score-gauge-container">
+                {% set sc = data.overall_score %}
+                {% set sc_class = 'score-success' if sc >= 70 else ('score-warning' if sc >= 40 else 'score-error') %}
+                <div class="score-gauge {{ sc_class }}">
+                    <div class="score-value">{{ sc }}</div>
+                    <div class="score-label">OVERALL</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cover-footer">
+            <strong>STRICTLY CONFIDENTIAL</strong><br>
+            This document contains proprietary financial analysis generated by SolvAI. It is intended solely for the use of the organization evaluating the applicant. Do not distribute without authorization.
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <h2>1. Executive Summary</h2>
+    <div class="bg-surface">
+        <p><strong>Rating:</strong> <span class="brand-accent" style="font-size: 14pt; font-weight: 700;">{{ data.rating }}</span></p>
+        <p style="margin-bottom: 0;">{{ data.narrative }}</p>
+    </div>
+
+    <!-- Component Scores -->
+    <div class="page-break"></div>
+    <h2>2. Component Analysis</h2>
+    <p>The overall solvency score is derived from the following key dimensions:</p>
+
+    {% macro metric_bar(label, data_obj) %}
+    <div class="metric-row">
+        <div class="metric-header">
+            <span>{{ label }}</span>
+            <span>{{ data_obj.score }} / 100</span>
+        </div>
+        <div class="metric-bar-bg">
+            {% set c_class = 'background-color: #10b981;' if data_obj.score >= 70 else ('background-color: #f59e0b;' if data_obj.score >= 40 else 'background-color: #ef4444;') %}
+            <div class="metric-bar-fill" style="width: {{ data_obj.score }}%; {{ c_class }}"></div>
+        </div>
+        <p class="text-sm" style="margin-top: 5px;">{{ data_obj.description }}</p>
+        {% if data_obj.lender_implications %}
+        <div style="background-color: #f8fafc; padding: 10px; border-left: 3px solid #6366f1; font-size: 8.5pt; color: #334155; margin-top: 8px;">
+            <strong>Lender Implications:</strong> {{ data_obj.lender_implications }}
+        </div>
+        {% endif %}
+    </div>
+    {% endmacro %}
+
+    {{ metric_bar('Income Stability', data.income_stability) }}
+    {{ metric_bar('Growth Trend', data.growth_trend) }}
+    {{ metric_bar('Seasonality', data.seasonality) }}
+    {{ metric_bar('Client Concentration', data.client_concentration) }}
+    {{ metric_bar('Reputation Signals', data.reputation_signals) }}
+
+    <!-- Risk Flags and Recommendations -->
+    <hr style="border: 0; border-top: 1px solid #e4e4e7; margin: 30px 0;">
+    <div style="page-break-inside: avoid;">
+        <h2 style="color: #b91c1c;">3. Risk Flags</h2>
+        {% if data.risk_flags and data.risk_flags|length > 0 %}
+        <ul style="color: #ef4444; background-color: #fef2f2; border: 1px solid #fca5a5; padding: 15px 15px 15px 35px; border-radius: 4px; font-size: 9.5pt;">
+            {% for flag in data.risk_flags %}
+            <li style="margin-bottom: 5px;"><strong>{{ flag }}</strong></li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No major risk flags detected in the current data.</p>
+        {% endif %}
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #e4e4e7; margin: 30px 0;">
+    <div style="page-break-inside: avoid;">
+        <h2 style="color: #15803d;">4. Recommendations</h2>
+        {% if data.recommendations and data.recommendations|length > 0 %}
+        <ul style="background-color: #f0fdf4; border: 1px solid #86efac; padding: 15px 15px 15px 35px; border-radius: 4px; font-size: 9.5pt; color: #166534;">
+            {% for rec in data.recommendations %}
+            <li style="margin-bottom: 5px;">{{ rec }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>Maintain current financial practices.</p>
+        {% endif %}
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Financial Data Summary -->
+    <h2>5. Financial Data & Evidence</h2>
+    <p>Analysis is based on aggregated financial data from {{ raw_data.data_source_count }} verified platforms ({{ raw_data.connected_platforms | join(', ') }}), spanning <strong>{{ raw_data.analysis_period_months }} months</strong>.</p>
+    
+    <div class="chart-container">
+        <h3>Average Monthly Revenue</h3>
+        <p style="font-size: 18pt; font-weight: bold; color: #10b981;">&euro; {{ "{:,.2f}".format(raw_data.avg_monthly_revenue) }}</p>
+    </div>
+
+    <h3>Monthly Revenue Series</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th class="text-right">Transactions</th>
+                <th class="text-right">Total Revenue (EUR)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in raw_data.monthly_revenue_series %}
+            <tr>
+                <td class="text-mono">{{ item.month }}</td>
+                <td class="text-right">{{ item.transaction_count }}</td>
+                <td class="text-right">&euro; {{ "{:,.2f}".format(item.total) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="chart-container">
+        <h3>Client Concentration Profile</h3>
+        <p>Total Distinct Clients: <strong>{{ raw_data.client_concentration.distinct_clients }}</strong></p>
+        
+        <div class="metric-row">
+            <div class="metric-header">
+                <span>Top Client Contribution</span>
+                <span>{{ raw_data.client_concentration.top_client_percent }}%</span>
+            </div>
+            <div class="metric-bar-bg">
+                <!-- Inverted color logic: high concentration is bad -->
+                {% set conc = raw_data.client_concentration.top_client_percent %}
+                {% set c_class = 'background-color: #ef4444;' if conc >= 50 else ('background-color: #f59e0b;' if conc >= 25 else 'background-color: #10b981;') %}
+                <div class="metric-bar-fill" style="width: {{ conc }}%; {{ c_class }}"></div>
+            </div>
+        </div>
+
+        <div class="metric-row">
+            <div class="metric-header">
+                <span>Top 3 Clients Contribution</span>
+                <span>{{ raw_data.client_concentration.top_3_clients_percent }}%</span>
+            </div>
+            <div class="metric-bar-bg">
+                {% set conc3 = raw_data.client_concentration.top_3_clients_percent %}
+                {% set c_class = 'background-color: #ef4444;' if conc3 >= 80 else ('background-color: #f59e0b;' if conc3 >= 50 else 'background-color: #10b981;') %}
+                <div class="metric-bar-fill" style="width: {{ conc3 }}%; {{ c_class }}"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Appendix / References -->
+    <h2>Appendix: Data References</h2>
+    <ul>
+        {% for ref in data.data_references %}
+        <li class="text-sm" style="margin-bottom: 5px;">{{ ref }}</li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>

@@ -14,11 +14,14 @@ During the demo, when you are prompted to connect a Stripe account, do **not** u
 
 ### Why this key?
 
-This test mode key corresponds to a specifically seeded Stripe account that contains 50 realistic transactions spanning the last 30 days.
+This test mode key corresponds to a specifically seeded Stripe account that contains realistic transactions spanning exactly the last 12 months, with realistic clients and normal growth patterns.
+
+**Note:** The demo account was completely wiped and freshly re-seeded with clean 12-month data on **June 20, 2026**.
+**CRITICAL:** Do NOT run `seed_stripe.py` or any other seeding script again before the hackathon demo! Layering multiple seed runs will cause massive outliers and pollute the data.
 
 By pasting this key into the UI:
 1. The backend will securely encrypt and store it.
-2. The Celery worker will decrypt it and securely query Stripe's live API directly.
+2. The Celery worker will securely query Stripe's live API directly.
 3. The AI will ingest the real transaction data to generate a realistic solvency score and explainable narrative.
 
 ## Demo Flow Outline

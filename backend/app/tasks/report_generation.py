@@ -128,6 +128,7 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
 
             # ── 5. Generate the AI report ─────────────────────────────────────
             report_data = generate_solvency_report_sync(financial_summary)
+            report_data["financial_summary"] = financial_summary
 
             # ── 6. Persist results ────────────────────────────────────────────
             report.status = "COMPLETED"
@@ -156,22 +157,27 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
 
         except Exception as exc:
             db.rollback()
-            logger.error(
-                f"[Task {self.request.id}] Report generation failed for {report_id}: {exc}",
-                exc_info=True,
+            logger.exception(
+                "[Task {}] Report generation failed for {}: {}",
+                self.request.id,
+                report_id,
+                str(exc)
             )
 
-            # Mark report as FAILED
-            try:
-                report = db.execute(
-                    select(SolvencyReport).where(SolvencyReport.id == uuid.UUID(report_id))
-                ).scalar_one_or_none()
-                if report:
-                    report.status = "FAILED"
-                    report.updated_at = datetime.now(timezone.utc)
-                    db.commit()
-            except Exception as inner_exc:
-                logger.error(f"Could not mark report as FAILED: {inner_exc}")
+            # If it's a quota issue or we hit max retries, fail the report immediately
+            if "temporarily unavailable" in str(exc) or self.request.retries >= 3:
+                try:
+                    report = db.execute(
+                        select(SolvencyReport).where(SolvencyReport.id == uuid.UUID(report_id))
+                    ).scalar_one_or_none()
+                    if report:
+                        report.status = "FAILED"
+                        report.report_data = {"error": "AI analysis temporarily unavailable, please try again later."}
+                        report.updated_at = datetime.now(timezone.utc)
+                        db.commit()
+                except Exception as inner_exc:
+                    logger.error(f"Could not mark report as FAILED: {inner_exc}")
+                return {"status": "failed", "error": str(exc)}
 
             # Exponential back-off retry: 60s, 120s, 240s
             countdown = 60 * (2 ** self.request.retries)
@@ -212,6 +218,7 @@ def _build_financial_summary(sources) -> dict:
     computed_seasonality_signal = "No significant seasonality"
     client_concentration = None
 
+    span_months = 12
     for t in source_types:
         if t == "STRIPE":
             from app.core.security import decrypt_dict
@@ -247,6 +254,7 @@ def _build_financial_summary(sources) -> dict:
                 computed_growth_trend = metrics.get("growth_trend_signal", "Stable")
                 computed_seasonality_signal = metrics.get("seasonality_signal", "No significant seasonality")
                 client_concentration = metrics.get("client_concentration", None)
+                span_months = metrics.get("span_months", 12) or 1
                 logger.info(
                     f"[_build_financial_summary] STRIPE metrics: "
                     f"avg_monthly={metrics['avg_monthly']:.2f}, "
@@ -277,7 +285,7 @@ def _build_financial_summary(sources) -> dict:
         "connected_platforms": source_types,
         "avg_monthly_revenue": avg_monthly,
         "currency": "EUR",
-        "analysis_period_months": 12,
+        "analysis_period_months": span_months,
         "platform_breakdown": platform_breakdown,
         "monthly_revenue_series": monthly_revenue_series,
         "computed_growth_trend": computed_growth_trend,

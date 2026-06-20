@@ -49,12 +49,14 @@ The JSON must have exactly these keys:
 {
   "overall_score": <integer 0-100>,
   "rating": <"Strong" | "Developing" | "At Risk">,
-  "income_stability": {"score": <int 0-100>, "description": <string>},
-  "growth_trend": {"score": <int 0-100>, "description": <string>},
-  "seasonality": {"score": <int 0-100>, "pattern": <string>, "description": <string>},
-  "client_concentration": {"score": <int 0-100>, "description": <string>},
-  "reputation_signals": {"score": <int 0-100>, "description": <string>},
+  "income_stability": {"score": <int 0-100>, "description": <string>, "lender_implications": <string 2-3 sentences explaining what this score means practically for a lender>},
+  "growth_trend": {"score": <int 0-100>, "description": <string>, "lender_implications": <string 2-3 sentences explaining what this score means practically for a lender>},
+  "seasonality": {"score": <int 0-100>, "pattern": <string>, "description": <string>, "lender_implications": <string 2-3 sentences explaining what this score means practically for a lender>},
+  "client_concentration": {"score": <int 0-100>, "description": <string>, "lender_implications": <string 2-3 sentences explaining what this score means practically for a lender, e.g. what to ask for if risk is high>},
+  "reputation_signals": {"score": <int 0-100>, "description": <string>, "lender_implications": <string 2-3 sentences explaining what this score means practically for a lender>},
   "narrative": <string 300-500 words explaining the score in plain English, citing real concentration numbers if available>,
+  "risk_flags": [<list of strings. YOU MUST populate this if ANY component score is < 60, or if top client concentration > 40%, or top 3 > 70%. Explicitly quote the exact numbers and percentages from the data in your flags.>],
+  "recommendations": [<list of strings. YOU MUST provide 2-3 concrete next steps tied directly to the actual numbers from the risk flags (e.g., 'reduce top client dependency below 40%', 'build cash reserve to smooth months below X EUR').>],
   "data_references": [<list of strings citing the exact data points from the financial_summary, including monthly breakdown>]
 }
 
@@ -62,6 +64,10 @@ Score guidance:
 - 70-100 → Strong: reliable, growing, diversified income
 - 40-69  → Developing: adequate but with notable variability
 - 0-39   → At Risk: high variance, declining, high concentration, or insufficient data
+
+Weighting Rules:
+- The overall_score should be primarily driven by Income Stability (40%) and Growth Trend (30%).
+- Client Concentration should act as a modifier (max penalty -15 points), it should not single-handedly drop a Strong score to At Risk unless revenue is extremely unstable.
 """
 
 
@@ -78,12 +84,11 @@ def _extract_json(raw: str) -> dict[str, Any]:
     Extract a JSON object from raw text.
     Handles responses wrapped in markdown code fences.
     """
+    # Since we set response_mime_type='application/json', it should be pure JSON
     # Strip markdown fences if present
     cleaned = re.sub(r"```(?:json)?", "", raw).strip()
-    # Find the outermost JSON object
-    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-    if match:
-        return json.loads(match.group())
+    # Strip trailing backticks
+    cleaned = re.sub(r"```", "", cleaned).strip()
     return json.loads(cleaned)
 
 
@@ -136,9 +141,9 @@ async def generate_solvency_report(financial_summary: dict[str, Any]) -> dict[st
         raise RuntimeError(f"Failed to parse Gemini response: {exc}")
     except Exception as exc:
         logger.error(f"Gemini API call failed: {exc}")
+        if "429" in str(exc):
+            raise RuntimeError("AI analysis temporarily unavailable, please try again later")
         raise RuntimeError(f"Gemini API call failed: {exc}")
-
-
 # ── Synchronous wrapper for Celery tasks ─────────────────────────────────────
 def generate_solvency_report_sync(financial_summary: dict[str, Any]) -> dict[str, Any]:
     """Synchronous wrapper suitable for use inside Celery tasks."""

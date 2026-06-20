@@ -1,0 +1,232 @@
+{
+  "id": "884b4bcc-b4d6-43ca-af8d-c57784a370c9",
+  "user_id": "6c9fc6e2-aec0-4695-990f-3ca555af6e0a",
+  "organization_id": "2b7c57c2-36fc-4f9f-812a-3aa5b1a1c25b",
+  "status": "COMPLETED",
+  "report_data": {
+    "rating": "Developing",
+    "narrative": "This report provides an alternative solvency assessment for an EU/UK freelancer, based on 12 months of aggregated financial data from a single connected platform, STRIPE. The freelancer demonstrates a 'Developing' solvency profile with an overall score of 68 out of 100. This rating reflects a generally stable revenue trend and moderate client diversification, balanced against notable monthly income variability.\n\nOver the past 12 months, the freelancer has maintained a strong average monthly revenue of 7224.31 EUR. However, income stability is a key area for attention, scoring 60. Monthly revenues have shown significant fluctuations, ranging from a low of 3730.41 EUR in October 2025 to a high of 10550.21 EUR in July 2025. This variability, represented by a coefficient of variation of 25.8%, suggests that while the overall earning potential is good, cash flow can be inconsistent.\n\nDespite these fluctuations, the growth trend is assessed as 'Stable' with a score of 75, indicating that the freelancer's business is maintaining a consistent performance level without significant decline. Seasonality is present, scoring 65, with July 2025 identified as a high-performing month and October 2025 as a low-performing month. Lenders should consider these patterns when assessing repayment capacity.\n\nClient concentration is a positive aspect of this profile, scoring 85. The top client contributes 25.7% of the total revenue, and the top three clients account for 45.8%. With 10 distinct clients, the freelancer has a reasonably diversified client base, which mitigates the risk of over-reliance on a single source of income. No specific reputation signals were available, resulting in a neutral score of 70.\n\nIn summary, the freelancer exhibits a solid foundation with a stable revenue trend and good client diversification. The primary area for improvement lies in managing income variability and seasonality to ensure more predictable cash flow. Addressing these aspects would further strengthen the freelancer's financial resilience and solvency profile.",
+    "risk_flags": [],
+    "seasonality": {
+      "score": 65,
+      "pattern": "Identifiable seasonal peaks and troughs.",
+      "description": "Analysis reveals an identifiable seasonal pattern, with July 2025 being a high-performing month (10550.21 EUR) and October 2025 being a low-performing month (3730.41 EUR). This indicates periods of higher and lower revenue generation.",
+      "lender_implications": "Lenders should be aware of these seasonal fluctuations when assessing repayment capacity, particularly during anticipated low-income periods. It may be prudent to structure repayment schedules to align with higher earning months or ensure the freelancer has adequate reserves to cover leaner periods."
+    },
+    "growth_trend": {
+      "score": 75,
+      "description": "The freelancer's revenue has demonstrated a stable trend over the past 12 months, indicating consistent performance without significant decline or rapid acceleration.",
+      "lender_implications": "A stable growth trend provides confidence in the freelancer's ongoing earning potential, suggesting a reliable base for repayment. This reduces the risk associated with declining income streams and supports a positive outlook for future earnings."
+    },
+    "overall_score": 68,
+    "data_references": [
+      "Average monthly revenue: 7224.31 EUR",
+      "Analysis period: 12 months",
+      "Connected platform: STRIPE",
+      "Monthly revenue series: 2025-07 (10550.21 EUR), 2025-08 (6592.55 EUR), 2025-09 (6722.18 EUR), 2025-10 (3730.41 EUR), 2025-11 (8244.72 EUR), 2025-12 (8105.69 EUR), 2026-01 (6162.26 EUR), 2026-02 (6358.35 EUR), 2026-03 (6452.14 EUR), 2026-04 (7880.48 EUR), 2026-05 (7603.56 EUR), 2026-06 (8289.13 EUR)",
+      "Computed growth trend: Stable",
+      "Computed seasonality signal: High performing months: 2025-07. Low performing months: 2025-10.",
+      "Client concentration: Top client 25.7%, Top 3 clients 45.8%, 10 distinct clients"
+    ],
+    "recommendations": [
+      "Given the monthly revenue fluctuations, with a low of 3730.41 EUR in October 2025, it is recommended to build a cash reserve equivalent to at least 2-3 months of average expenses (approx. 14,448 - 21,672 EUR) to ensure financial stability during leaner periods.",
+      "While client concentration is moderate, further diversification is advisable. Aim to reduce the top client's contribution from 25.7% to below 20% to enhance long-term income resilience.",
+      "Implement proactive strategies, such as targeted marketing or project scheduling, during historically low-performing months like October (3730.41 EUR) to smooth out seasonal revenue dips."
+    ],
+    "income_stability": {
+      "score": 60,
+      "description": "Revenue exhibits moderate variability, with monthly totals ranging from a low of 3730.41 EUR in October 2025 to a high of 10550.21 EUR in July 2025, representing a coefficient of variation of 25.8% over the 12-month period.",
+      "lender_implications": "This level of income variability suggests that while the average revenue of 7224.31 EUR is substantial, there can be significant fluctuations in monthly cash flow. Lenders should consider the freelancer's ability to manage periods of lower income and may require a larger cash reserve or a longer repayment term to mitigate this risk."
+    },
+    "financial_summary": {
+      "currency": "EUR",
+      "data_source_count": 1,
+      "platform_breakdown": {
+        "STRIPE": {
+          "status": "CONNECTED",
+          "avg_monthly": 7224.306666666666,
+          "data_points": 106,
+          "recent_transactions": [
+            {
+              "id": "ch_3TkNW6DkuwjSfJyU3N01rBrr",
+              "date": "2026-03-10",
+              "amount_eur": 664.98,
+              "description": "Synthetic Freelance Invoice #106"
+            },
+            {
+              "id": "ch_3TkNW6DkuwjSfJyU3ii0szzN",
+              "date": "2025-07-10",
+              "amount_eur": 785.93,
+              "description": "Synthetic Freelance Invoice #105"
+            },
+            {
+              "id": "ch_3TkNW5DkuwjSfJyU1jCNif6s",
+              "date": "2025-07-16",
+              "amount_eur": 806.39,
+              "description": "Synthetic Freelance Invoice #104"
+            },
+            {
+              "id": "ch_3TkNW4DkuwjSfJyU2Y53Ytxg",
+              "date": "2025-09-30",
+              "amount_eur": 679.76,
+              "description": "Synthetic Freelance Invoice #103"
+            },
+            {
+              "id": "ch_3TkNW3DkuwjSfJyU4zBjQWTQ",
+              "date": "2026-03-12",
+              "amount_eur": 485.53,
+              "description": "Synthetic Freelance Invoice #102"
+            },
+            {
+              "id": "ch_3TkNW2DkuwjSfJyU2ybmt48i",
+              "date": "2026-05-06",
+              "amount_eur": 1284.11,
+              "description": "Synthetic Freelance Invoice #101"
+            },
+            {
+              "id": "ch_3TkNW1DkuwjSfJyU2fhf8CU0",
+              "date": "2026-02-16",
+              "amount_eur": 1334.25,
+              "description": "Synthetic Freelance Invoice #100"
+            },
+            {
+              "id": "ch_3TkNW0DkuwjSfJyU4gjgXH50",
+              "date": "2025-12-31",
+              "amount_eur": 799.84,
+              "description": "Synthetic Freelance Invoice #99"
+            },
+            {
+              "id": "ch_3TkNVzDkuwjSfJyU1LhGG7xM",
+              "date": "2026-01-03",
+              "amount_eur": 714.67,
+              "description": "Synthetic Freelance Invoice #98"
+            },
+            {
+              "id": "ch_3TkNVzDkuwjSfJyU4lOZWk3Y",
+              "date": "2026-06-08",
+              "amount_eur": 1165.08,
+              "description": "Synthetic Freelance Invoice #97"
+            },
+            {
+              "id": "ch_3TkNVxDkuwjSfJyU33TakZPJ",
+              "date": "2026-05-04",
+              "amount_eur": 1258.32,
+              "description": "Synthetic Freelance Invoice #96"
+            },
+            {
+              "id": "ch_3TkNVwDkuwjSfJyU0qnRmUn7",
+              "date": "2026-05-13",
+              "amount_eur": 1532.41,
+              "description": "Synthetic Freelance Invoice #95"
+            },
+            {
+              "id": "ch_3TkNVwDkuwjSfJyU0W2igWN5",
+              "date": "2026-06-05",
+              "amount_eur": 1262.9,
+              "description": "Synthetic Freelance Invoice #94"
+            },
+            {
+              "id": "ch_3TkNVvDkuwjSfJyU459ZpGX2",
+              "date": "2025-09-20",
+              "amount_eur": 612.91,
+              "description": "Synthetic Freelance Invoice #93"
+            },
+            {
+              "id": "ch_3TkNVuDkuwjSfJyU3cdLL0gz",
+              "date": "2026-04-10",
+              "amount_eur": 787.15,
+              "description": "Synthetic Freelance Invoice #92"
+            }
+          ]
+        }
+      },
+      "avg_monthly_revenue": 7224.306666666666,
+      "connected_platforms": [
+        "STRIPE"
+      ],
+      "client_concentration": {
+        "distinct_clients": 10,
+        "top_client_percent": 25.7,
+        "top_3_clients_percent": 45.8
+      },
+      "computed_growth_trend": "Stable",
+      "analysis_period_months": 12,
+      "monthly_revenue_series": [
+        {
+          "month": "2025-07",
+          "total": 10550.21,
+          "transaction_count": 13
+        },
+        {
+          "month": "2025-08",
+          "total": 6592.55,
+          "transaction_count": 8
+        },
+        {
+          "month": "2025-09",
+          "total": 6722.18,
+          "transaction_count": 11
+        },
+        {
+          "month": "2025-10",
+          "total": 3730.41,
+          "transaction_count": 6
+        },
+        {
+          "month": "2025-11",
+          "total": 8244.72,
+          "transaction_count": 10
+        },
+        {
+          "month": "2025-12",
+          "total": 8105.69,
+          "transaction_count": 8
+        },
+        {
+          "month": "2026-01",
+          "total": 6162.26,
+          "transaction_count": 9
+        },
+        {
+          "month": "2026-02",
+          "total": 6358.35,
+          "transaction_count": 6
+        },
+        {
+          "month": "2026-03",
+          "total": 6452.14,
+          "transaction_count": 11
+        },
+        {
+          "month": "2026-04",
+          "total": 7880.48,
+          "transaction_count": 11
+        },
+        {
+          "month": "2026-05",
+          "total": 7603.56,
+          "transaction_count": 6
+        },
+        {
+          "month": "2026-06",
+          "total": 8289.13,
+          "transaction_count": 7
+        }
+      ],
+      "computed_seasonality_signal": "High performing months: 2025-07. Low performing months: 2025-10."
+    },
+    "reputation_signals": {
+      "score": 70,
+      "description": "No specific reputation signals were available for analysis. Assuming a neutral standing based on the absence of negative indicators.",
+      "lender_implications": "Without specific reputation data, lenders typically rely on other financial metrics. The absence of negative signals is positive, but further qualitative checks might be considered for a comprehensive assessment if deemed necessary."
+    },
+    "client_concentration": {
+      "score": 85,
+      "description": "Client concentration is moderate, with the top client contributing 25.7% of total revenue and the top three clients accounting for 45.8%. The freelancer serves 10 distinct clients, indicating a reasonably diversified client base.",
+      "lender_implications": "The moderate client concentration is a positive indicator, reducing the risk of significant revenue loss from the departure of a single client. Lenders can be confident in the freelancer's ability to maintain a diversified income stream, though continued diversification is always beneficial."
+    }
+  },
+  "generated_at": "2026-06-20T11:59:46.103209Z",
+  "created_at": "2026-06-20T11:59:00.611752Z",
+  "updated_at": "2026-06-20T11:59:46.103215Z"
+}

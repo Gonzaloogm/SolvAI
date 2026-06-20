@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import re
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
@@ -119,10 +121,20 @@ async def download_solvency_report_pdf(
 
     pdf_buffer = generate_solvency_pdf(report)
 
+    from app.models.organization import Organization
+    org_res = await db.execute(select(Organization).where(Organization.id == current_user.organization_id))
+    org_obj = org_res.scalar_one_or_none()
+    org_name = org_obj.name if org_obj else "unknown-org"
+
+    slug = re.sub(r'[^a-z0-9]+', '-', org_name.lower()).strip('-')
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    short_id = str(id)[:4]
+    filename = f"solvai-report_{slug}_{date_str}_{short_id}.pdf"
+
     return StreamingResponse(
         pdf_buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=solvency_report_{id}.pdf"}
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
 

@@ -21,38 +21,71 @@ def seed_stripe():
 
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    logger.info("Checking if Stripe account already has recent charges... (Check disabled for forced seeding)")
-    # Removed the check for existing charges so we can force seed
-
-    logger.info("No recent charges found. Seeding synthetic data...")
+    logger.info("Seeding synthetic data for exactly 12 months with realistic constraints...")
 
     now = datetime.now(timezone.utc)
     
-    # Generate around 40 transactions over the last 6 months
-    num_transactions = 40
+    # Target average ~6700 EUR per month for 12 months => ~80,400 EUR total
+    # We'll generate transactions month by month to control the distribution.
     
-    for i in range(num_transactions):
-        # Random date within the last 180 days
-        days_ago = random.randint(1, 180)
-        created_time = int((now - timedelta(days=days_ago)).timestamp())
+    # 10 distinct clients
+    # Top client (client1) gets ~30% of transactions/revenue
+    clients = [f"client{i}@example.com" for i in range(1, 11)]
+    weights = [0.30] + [0.70 / 9] * 9
+
+    # Generate dates within the last 360 days to strictly fit in a 12-month window
+    # starting from the beginning of the month 11 months ago to avoid spanning 13 months.
+    
+    start_date = (now.replace(day=1) - timedelta(days=330)).replace(day=1)
+    if start_date < now - timedelta(days=360):
+        start_date = now - timedelta(days=350)
         
-        # Random amount between 500 and 4000 euros
-        amount_cents = random.randint(50000, 400000)
+    transactions_to_create = []
+    
+    for month_offset in range(12):
+        # Base monthly revenue around 6700, with some volatility (e.g., 4000 to 9500)
+        monthly_target = random.randint(4000, 9500)
         
-        logger.info(f"Creating charge for €{amount_cents/100:.2f} ({days_ago} days ago)...")
+        current_month_date = start_date + timedelta(days=30 * month_offset)
+        
+        # Determine number of transactions for this month (e.g. 5 to 12)
+        num_tx = random.randint(5, 12)
+        
+        for _ in range(num_tx):
+            # Assign client based on weights
+            client = random.choices(clients, weights=weights, k=1)[0]
+            
+            # Random date within the month
+            tx_date = current_month_date + timedelta(days=random.randint(0, 27))
+            if tx_date > now:
+                tx_date = now
+                
+            amount_cents = int((monthly_target / num_tx) * 100 * random.uniform(0.8, 1.2))
+            
+            transactions_to_create.append({
+                "amount": amount_cents,
+                "created": int(tx_date.timestamp()),
+                "email": client
+            })
+            
+    # Shuffle transactions
+    random.shuffle(transactions_to_create)
+    
+    for i, tx in enumerate(transactions_to_create):
+        logger.info(f"Creating charge for €{tx['amount']/100:.2f} ({datetime.fromtimestamp(tx['created'], timezone.utc).strftime('%Y-%m-%d')})...")
         
         try:
-            # In test mode, we can use a test token like 'tok_visa'
             charge = stripe.Charge.create(
-                amount=amount_cents,
+                amount=tx["amount"],
                 currency="eur",
                 source="tok_visa",
                 description=f"Synthetic Freelance Invoice #{i+1}",
+                receipt_email=tx["email"],
+                metadata={"historical_created": str(tx["created"])},
                 capture=True,
             )
-            
-            # Occasionally refund (about 5% chance)
-            if random.random() < 0.05:
+            # Occasional refund (very rare, 1%)
+            if random.random() < 0.01:
                 logger.info(f"Refunding charge {charge.id}...")
                 stripe.Refund.create(charge=charge.id)
                 

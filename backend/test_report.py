@@ -25,7 +25,11 @@ async def main():
                 "data_points": metrics["data_points"],
                 "recent_transactions": metrics.get("transactions_sample", [])
             }
-        }
+        },
+        "monthly_revenue_series": metrics.get("monthly_revenue", []),
+        "computed_growth_trend": metrics.get("growth_trend_signal", "Stable"),
+        "computed_seasonality_signal": metrics.get("seasonality_signal", "No significant seasonality"),
+        "client_concentration": metrics.get("client_concentration", None)
     }
     
     print("Generating report via Gemini...")

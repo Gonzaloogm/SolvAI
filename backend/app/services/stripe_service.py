@@ -41,8 +41,8 @@ def _generate_synthetic_transactions(months=6, count=40) -> list[dict]:
 
 def get_raw_transactions(months=6, api_key=None) -> list[dict]:
     if not api_key:
-        logger.warning("No api_key provided. Returning synthetic raw transactions.")
-        return _generate_synthetic_transactions(months=months)
+        logger.error("No Stripe api_key provided for data retrieval.")
+        raise ValueError("No Stripe API key provided.")
         
     stripe.api_key = api_key
     six_months_ago = int((datetime.now(timezone.utc) - relativedelta(months=months)).timestamp())
@@ -53,9 +53,10 @@ def get_raw_transactions(months=6, api_key=None) -> list[dict]:
         starting_after = None
         
         while has_more:
+            # We fetch all charges because Stripe's `created` filter won't work on our artificial timestamps
+            # We'll filter them manually below
             kwargs = {
                 "limit": 100,
-                "created": {"gte": six_months_ago}
             }
             if starting_after:
                 kwargs["starting_after"] = starting_after
@@ -63,18 +64,27 @@ def get_raw_transactions(months=6, api_key=None) -> list[dict]:
             charges = stripe.Charge.list(**kwargs)
             
             for charge in charges.data:
-                transactions.append({
-                    "id": charge.id,
-                    "amount": charge.amount,
-                    "amount_refunded": charge.amount_refunded,
-                    "currency": charge.currency,
-                    "created": charge.created,
-                    "status": charge.status,
-                    "paid": charge.paid,
-                    "description": charge.description,
-                    "customer": getattr(charge, 'customer', None),
-                    "receipt_email": getattr(charge, 'receipt_email', None)
-                })
+                actual_created = charge.created
+                if charge.metadata and "historical_created" in charge.metadata:
+                    try:
+                        actual_created = int(charge.metadata["historical_created"])
+                    except ValueError:
+                        pass
+                
+                # Only include charges within our requested months span
+                if actual_created >= six_months_ago:
+                    transactions.append({
+                        "id": charge.id,
+                        "amount": charge.amount,
+                        "amount_refunded": charge.amount_refunded,
+                        "currency": charge.currency,
+                        "created": actual_created,
+                        "status": charge.status,
+                        "paid": charge.paid,
+                        "description": charge.description,
+                        "customer": getattr(charge, 'customer', None),
+                        "receipt_email": getattr(charge, 'receipt_email', None)
+                    })
             
             has_more = charges.has_more
             if has_more and len(charges.data) > 0:
@@ -85,17 +95,16 @@ def get_raw_transactions(months=6, api_key=None) -> list[dict]:
         return transactions
     except Exception as e:
         logger.error(f"Failed to fetch Stripe metrics: {e}")
-        # fallback to synthetic on error as well for the demo harness
-        return _generate_synthetic_transactions(months=months)
+        raise RuntimeError(f"Failed to fetch Stripe metrics: {e}")
 
 def fetch_stripe_metrics(api_key=None) -> dict:
     """
-    Fetch Stripe metrics for the last 6 months using the test API key.
+    Fetch Stripe metrics for the last 12 months using the test API key.
     Calculates total successful revenue and counts data points.
     Returns:
         dict: {"avg_monthly": float, "data_points": int, "status": "CONNECTED", "transactions": list}
     """
-    transactions = get_raw_transactions(months=6, api_key=api_key)
+    transactions = get_raw_transactions(months=12, api_key=api_key)
     total_revenue_cents = 0
     data_points = 0
     successful_txs = []
@@ -106,6 +115,9 @@ def fetch_stripe_metrics(api_key=None) -> dict:
     for charge in transactions:
         if charge["status"] == "succeeded" and charge["paid"]:
             net_amount = charge["amount"] - charge.get("amount_refunded", 0)
+            if net_amount <= 0:
+                continue
+                
             total_revenue_cents += net_amount
             data_points += 1
             
@@ -129,15 +141,28 @@ def fetch_stripe_metrics(api_key=None) -> dict:
             client_data[client_id] += amount_eur
             
     total_revenue_euros = total_revenue_cents / 100.0
-    avg_monthly = total_revenue_euros / 6.0
     
     monthly_revenue = []
-    for month in sorted(monthly_data.keys()):
-        monthly_revenue.append({
-            "month": month,
-            "total": round(monthly_data[month]["total"], 2),
-            "transaction_count": monthly_data[month]["transaction_count"]
-        })
+    if monthly_data:
+        min_month = min(monthly_data.keys())
+        max_month = max(monthly_data.keys())
+        min_dt = datetime.strptime(min_month, "%Y-%m")
+        max_dt = datetime.strptime(max_month, "%Y-%m")
+        
+        current_dt = min_dt
+        while current_dt <= max_dt:
+            month_str = current_dt.strftime("%Y-%m")
+            monthly_revenue.append({
+                "month": month_str,
+                "total": round(monthly_data[month_str]["total"], 2),
+                "transaction_count": monthly_data[month_str]["transaction_count"]
+            })
+            current_dt += relativedelta(months=1)
+            
+        span_months = len(monthly_revenue)
+        avg_monthly = total_revenue_euros / span_months
+    else:
+        avg_monthly = 0.0
         
     growth_trend = "Stable"
     seasonality = "No significant seasonality"
@@ -190,5 +215,6 @@ def fetch_stripe_metrics(api_key=None) -> dict:
         "monthly_revenue": monthly_revenue,
         "growth_trend_signal": growth_trend,
         "seasonality_signal": seasonality,
-        "client_concentration": client_concentration
+        "client_concentration": client_concentration,
+        "span_months": span_months if monthly_data else 0
     }

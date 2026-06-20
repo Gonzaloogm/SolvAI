@@ -18,6 +18,8 @@ steps:
     - 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest'
     - '--region'
     - 'europe-west1'
+    - '--memory'
+    - '1024Mi'
     - '--vpc-connector'
     - 'solvai-connector'
     - '--allow-unauthenticated'

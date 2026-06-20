@@ -346,8 +346,8 @@ export default function ReportDetail() {
                     onClick={async () => {
                       try {
                         const token = localStorage.getItem('solvai_token');
-                        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-                        const res = await fetch(`${baseUrl}/api/solvency-reports/${report.id}/pdf`, {
+                        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+                        const res = await fetch(`${baseUrl}/solvency-reports/${report.id}/pdf`, {
                           headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (!res.ok) throw new Error(`HTTP ${res.status}`);

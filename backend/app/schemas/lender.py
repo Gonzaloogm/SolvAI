@@ -20,3 +20,15 @@ class LenderMatchingResponse(BaseModel):
     report_id: uuid.UUID
     score: int
     matches: List[LenderMatch]
+
+
+class LenderManifestoCreate(BaseModel):
+    name: str
+    risk_tier: str
+    raw_criteria: dict
+
+
+class LenderManifestoResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    status: str

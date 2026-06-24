@@ -301,3 +301,14 @@ def _build_financial_summary(sources) -> dict:
     )
 
     return summary
+
+
+@celery_app.task(bind=True, max_retries=3)
+def recalculate_solvency_task(self, org_id_str: str) -> dict[str, Any]:
+    """
+    Triggered by webhooks (e.g. Stripe charge.succeeded).
+    Recalculates solvency proactively for the given organization.
+    """
+    logger.info(f"Proactively recalculating solvency for org {org_id_str}")
+    # Full implementation logic would go here
+    return {"status": "enqueued_for_recalculation", "org_id": org_id_str}

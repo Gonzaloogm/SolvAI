@@ -56,6 +56,7 @@ async def create_solvency_report(
     # from app.tasks.report_generation import generate_solvency_report_task  # noqa: PLC0415
 
     # generate_solvency_report_task.delay(report_id, user_id)
+    logger.info(f"Report {report_id} created as PENDING. Waiting for WebSocket connection to start orchestrator.")
 
     return SolvencyReportResponse.model_validate(report)
 

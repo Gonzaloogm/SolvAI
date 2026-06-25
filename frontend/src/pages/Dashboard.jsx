@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import SolvencyGauge from '../components/SolvencyGauge.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import IntelligenceTerminal from '../components/IntelligenceTerminal.jsx';
 import { solvencyReports } from '../api/client.js';
 import { IconSparkle, IconWarning } from '../components/Icons.jsx';
 
@@ -274,6 +275,11 @@ export default function Dashboard() {
                 onGenerate={handleGenerate}
                 generating={generating}
               />
+
+              {/* ── Intelligence Terminal ── */}
+              {generating && (
+                <IntelligenceTerminal />
+              )}
 
               {/* ── Quick Actions ── */}
               {reports.length > 0 && (

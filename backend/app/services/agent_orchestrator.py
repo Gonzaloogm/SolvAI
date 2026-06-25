@@ -45,6 +45,11 @@ Previous Auditor Feedback: {state.get("auditor_feedback", "None. This is the fir
 
 Ensure your report is fully backed by the provided data.
 You MUST include "overall_score" (number 0-100) and "recommendation" ("Approve" or "Reject") in your JSON.
+
+CRITICAL REQUIREMENTS:
+1. For every identified weakness or risk, you MUST include a comprehensive "Actionable Remediation Plan" outlining step-by-step actions to improve solvency.
+2. You MUST include an "Industry Context" section analyzing how the applicant's metrics compare to the broader macroeconomic freelance/startup market.
+3. Make the report extremely dense, detailed, and professional. Ensure the output is large enough to span multiple pages when rendered.
 """
     try:
         tasks = [
@@ -96,7 +101,11 @@ def auditor_node(state: AgentState) -> AgentState:
     
     if not settings.GEMINI_API_KEY:
          logger.warning("GEMINI_API_KEY not set. Mocking Auditor.")
-         return {"is_approved": True, "iterations": iterations, "final_report": {"mock": True}}
+         try:
+             final_report = json.loads(state.get("draft_report", "{}").replace('```json', '').replace('```', '').strip())
+         except:
+             final_report = {"overall_score": 85, "recommendation": "Approve", "mock": True}
+         return {"is_approved": True, "iterations": iterations, "final_report": final_report}
          
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
@@ -106,7 +115,8 @@ Review the following Draft Report against the raw Financial Summary.
 Financial Summary: {json.dumps(state.get("financial_summary", {}))}
 Draft Report: {state.get("draft_report", "")}
 
-If the draft makes claims not mathematically supported by the summary, FAIL it and provide critique.
+1. If the draft makes claims not mathematically supported by the summary, FAIL it and provide critique.
+2. If the draft is missing a detailed "Actionable Remediation Plan" or an "Industry Context" section, FAIL it.
 Respond ONLY with a JSON object: {{"is_approved": true/false, "critique": "your feedback"}}
 """
     try:
@@ -124,8 +134,8 @@ Respond ONLY with a JSON object: {{"is_approved": true/false, "critique": "your 
             "iterations": iterations
         }
         
-        if is_approved or iterations >= 3:
-             # Finalize if approved or max retries reached
+        if is_approved or iterations >= 3 or state.get("requires_human_review"):
+             # Finalize if approved or max retries reached or human review required
              try:
                  final_report = json.loads(state.get("draft_report", "{}").replace('```json', '').replace('```', '').strip())
                  

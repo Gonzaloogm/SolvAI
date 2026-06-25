@@ -9,16 +9,17 @@ import React from 'react';
  *   description string   short explanation
  *   icon        string   emoji or icon character
  */
-export default function MetricCard({ title, score = 0, description, icon }) {
-  const clampedScore = Math.min(100, Math.max(0, score));
+export default function MetricCard({ title, score = null, description, icon }) {
+  const isMissing = score === null || score === undefined || score === 'N/A';
+  const clampedScore = isMissing ? 0 : Math.min(100, Math.max(0, score));
 
-  const barColor =
-    clampedScore >= 70 ? 'var(--color-accent-primary)'
+  const barColor = isMissing ? 'var(--color-border-subtle, #4b5563)'
+    : clampedScore >= 70 ? 'var(--color-accent-primary)'
     : clampedScore >= 40 ? 'var(--color-status-warning)'
     : 'var(--color-status-error)';
 
-  const textColor =
-    clampedScore >= 70 ? 'var(--color-accent-primary)'
+  const textColor = isMissing ? 'var(--color-text-disabled, #6b7280)'
+    : clampedScore >= 70 ? 'var(--color-accent-primary)'
     : clampedScore >= 40 ? 'var(--color-status-warning)'
     : 'var(--color-status-error)';
 
@@ -28,17 +29,18 @@ export default function MetricCard({ title, score = 0, description, icon }) {
         {icon && <span className="metric-card__icon">{icon}</span>}
         <span className="metric-card__title">{title}</span>
         <span className="metric-card__score" style={{ color: textColor }}>
-          {clampedScore}
+          {isMissing ? 'N/A' : clampedScore}
         </span>
       </div>
 
       {/* Progress bar */}
-      <div className="progress-bar-track" style={{ margin: '8px 0' }}>
+      <div className="progress-bar-track" style={{ margin: '8px 0', background: 'var(--color-surface, #1f2937)' }}>
         <div
           className="progress-bar-fill"
           style={{
-            width: `${clampedScore}%`,
+            width: isMissing ? '100%' : `${clampedScore}%`,
             background: barColor,
+            opacity: isMissing ? 0.3 : 1
           }}
         />
       </div>

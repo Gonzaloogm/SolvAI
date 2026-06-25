@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge.jsx';
 import SolvencyGauge from '../components/SolvencyGauge.jsx';
 import MetricCard from '../components/MetricCard.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import IntelligenceTerminal from '../components/IntelligenceTerminal.jsx';
 import { IconWarning, IconSparkle, IconBuilding, IconSearch, IconLightning, IconUsers, IconLink, IconClipboard, IconActivity, IconBarChart, IconStar, IconTrendingUp } from '../components/Icons.jsx';
 import { solvencyReports, lenderMatching } from '../api/client.js';
 
@@ -196,28 +197,7 @@ function LenderSection({ reportId, reportStatus }) {
   );
 }
 
-/* ── Generating State ────────────────────────────────────────────────────── */
-function GeneratingState() {
-  return (
-    <div className="rd-generating">
-      <div className="rd-generating__ring">
-        <div className="rd-generating__spinner" />
-      </div>
-      <h2 className="rd-generating__title">Report generation in progress</h2>
-      <p className="rd-generating__subtitle">
-        Our AI is analysing your financial data. This usually takes 30–60 seconds.
-      </p>
-      <div className="rd-generating__steps">
-        {['Collecting data sources', 'Analysing transactions', 'Computing solvency score', 'Generating narrative'].map((step, i) => (
-          <div key={step} className="rd-generating__step">
-            <div className="rd-generating__step-dot" style={{ animationDelay: `${i * 0.4}s` }} />
-            <span>{step}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+/* ── Removed static GeneratingState, using IntelligenceTerminal ── */
 
 /* ── Main Page ───────────────────────────────────────────────────────────── */
 export default function ReportDetail() {
@@ -228,6 +208,8 @@ export default function ReportDetail() {
   const [report,   setReport]   = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState(null);
 
   const fetchReport = useCallback(async () => {
     try {
@@ -271,31 +253,31 @@ export default function ReportDetail() {
   const metrics = [
     {
       title: 'Income Stability',
-      score: rd.income_stability?.score ?? rd.income_stability_score ?? rd.metrics?.income_stability ?? 0,
+      score: rd.income_stability?.score ?? rd.income_stability_score ?? rd.metrics?.income_stability ?? null,
       description: rd.income_stability?.description ?? rd.income_stability_description ?? 'Consistency of income streams over time',
       icon: <IconBarChart size={18} />,
     },
     {
       title: 'Growth Trend',
-      score: rd.growth_trend?.score ?? rd.growth_trend_score ?? rd.metrics?.growth_trend ?? 0,
+      score: rd.growth_trend?.score ?? rd.growth_trend_score ?? rd.metrics?.growth_trend ?? null,
       description: rd.growth_trend?.description ?? rd.growth_trend_description ?? 'Revenue trajectory and business momentum',
       icon: <IconTrendingUp size={18} />,
     },
     {
       title: 'Seasonality',
-      score: rd.seasonality?.score ?? rd.seasonality_score ?? rd.metrics?.seasonality ?? 0,
+      score: rd.seasonality?.score ?? rd.seasonality_score ?? rd.metrics?.seasonality ?? null,
       description: rd.seasonality?.description ?? rd.seasonality_description ?? 'Variance in earnings across periods',
       icon: <IconActivity size={18} />,
     },
     {
       title: 'Reputation Signals',
-      score: rd.reputation_signals?.score ?? rd.reputation_score ?? rd.metrics?.reputation ?? 0,
+      score: rd.reputation_signals?.score ?? rd.reputation_score ?? rd.metrics?.reputation ?? null,
       description: rd.reputation_signals?.description ?? rd.reputation_description ?? 'Professional and market trust indicators',
       icon: <IconStar size={18} />,
     },
     {
       title: 'Client Concentration',
-      score: rd.client_concentration?.score ?? rd.concentration_score ?? rd.metrics?.concentration ?? 0,
+      score: rd.client_concentration?.score ?? rd.concentration_score ?? rd.metrics?.concentration ?? null,
       description: rd.client_concentration?.description ?? rd.concentration_description ?? 'Revenue dependency on top clients',
       icon: <IconUsers size={18} />,
     },
@@ -341,39 +323,60 @@ export default function ReportDetail() {
                   <p className="rd-header__date">{formatDate(report.generated_at ?? report.created_at)}</p>
                 </div>
                 {status === 'COMPLETED' && (
-                  <button 
-                    className="btn-secondary" 
-                    onClick={async () => {
-                      try {
-                        const token = localStorage.getItem('solvai_token');
-                        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-                        const res = await fetch(`${baseUrl}/solvency-reports/${report.id}/pdf`, {
-                          headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                        const blob = await res.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `solvency_report_${report.id}.pdf`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        URL.revokeObjectURL(url);
-                      } catch (e) {
-                        console.error('PDF download failed:', e);
-                        alert('Failed to download PDF. Please try again.');
-                      }
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
-                  >
-                    <IconClipboard size={16} /> Download PDF
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <button 
+                      className="btn-secondary" 
+                      disabled={isDownloadingPdf}
+                      onClick={async () => {
+                        setIsDownloadingPdf(true);
+                        setPdfError(null);
+                        try {
+                          const token = localStorage.getItem('solvai_token');
+                          const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+                          const res = await fetch(`${baseUrl}/solvency-reports/${report.id}/pdf`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `solvency_report_${report.id}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                        } catch (e) {
+                          console.error('PDF download failed:', e);
+                          setPdfError('Failed to generate or download PDF.');
+                        } finally {
+                          setIsDownloadingPdf(false);
+                        }
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+                    >
+                      {isDownloadingPdf ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div className="rd-generating__spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
+                          Generating...
+                        </span>
+                      ) : (
+                        <><IconClipboard size={16} /> Download PDF</>
+                      )}
+                    </button>
+                    {pdfError && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-status-error)' }}>{pdfError}</div>}
+                  </div>
                 )}
               </div>
 
-              {/* ── Generating State ── */}
-              {isGenerating && !isFailed && <GeneratingState />}
+              {/* ── Generating State (Intelligence Terminal) ── */}
+              {isGenerating && !isFailed && (
+                <div style={{ padding: 'var(--space-8) 0', width: '100%', minHeight: '500px' }}>
+                  <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '700', marginBottom: 'var(--space-2)', textAlign: 'center' }}>Live Orchestration</h2>
+                  <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', marginBottom: 'var(--space-6)' }}>Mixture of Experts analyzing your financial data in real-time.</p>
+                  <IntelligenceTerminal />
+                </div>
+              )}
 
               {/* ── Failed State ── */}
               {isFailed && (

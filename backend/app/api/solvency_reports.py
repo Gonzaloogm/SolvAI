@@ -53,10 +53,9 @@ async def create_solvency_report(
     user_id = str(current_user.id)
 
     # Dispatch background task (import here to avoid circular imports)
-    from app.tasks.report_generation import generate_solvency_report_task  # noqa: PLC0415
+    # from app.tasks.report_generation import generate_solvency_report_task  # noqa: PLC0415
 
-    generate_solvency_report_task.delay(report_id, user_id)
-    logger.info(f"Dispatched report generation task for report_id={report_id}")
+    # generate_solvency_report_task.delay(report_id, user_id)
 
     return SolvencyReportResponse.model_validate(report)
 
@@ -131,8 +130,10 @@ async def download_solvency_report_pdf(
     short_id = str(id)[:4]
     filename = f"solvai-report_{slug}_{date_str}_{short_id}.pdf"
 
+    pdf_buffer.seek(0)
+    
     return StreamingResponse(
-        pdf_buffer,
+        iter([pdf_buffer.getvalue()]),
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )

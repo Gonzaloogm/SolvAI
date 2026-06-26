@@ -28,7 +28,9 @@ export default function IntelligenceTerminal({ reportId }) {
           return;
         }
 
-        let wsUrl = `${import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000'}/ws/terminal/${orgId}`;
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        const defaultWsUrl = apiBaseUrl.replace(/^http/, 'ws');
+        let wsUrl = `${import.meta.env.VITE_WS_BASE_URL || defaultWsUrl}/ws/terminal/${orgId}`;
         if (reportId) {
             wsUrl += `?report_id=${reportId}`;
         }

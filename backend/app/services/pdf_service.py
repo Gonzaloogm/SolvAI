@@ -360,12 +360,12 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
         "strengths": strengths,
         "risk_flags": risk_flags,
         "recommendations": clean_recs,
-        "data_references": ["STRIPE API", "BANK API v2"]
+        "data_references": rd.get("financial_summary", {}).get("connected_platforms", ["STRIPE"])
     }
 
     raw_data_for_template = {
-        "data_source_count": 2,
-        "connected_platforms": ["STRIPE", "BANK_API"],
+        "data_source_count": find_key(rd, ['data_source_count'], 1),
+        "connected_platforms": rd.get("financial_summary", {}).get("connected_platforms", ["STRIPE"]),
         "analysis_period_months": find_key(rd, ['analysis_period_months'], 24),
         "avg_monthly_revenue": avg_rev,
         "monthly_revenue_series": monthly_series,

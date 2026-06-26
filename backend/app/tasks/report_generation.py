@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.celery_app import celery_app
 from app.core.config import settings
-from app.services.gemini_service import generate_solvency_report_sync
+from app.services.agent_orchestrator import run_orchestrator_stream
 
 # ── Synchronous DB engine for Celery (uses psycopg2 instead of asyncpg) ──────
 _SYNC_DATABASE_URL = settings.DATABASE_URL.replace(
@@ -126,8 +126,47 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                 f"platforms={financial_summary.get('connected_platforms')}"
             )
 
-            # ── 5. Generate the AI report ─────────────────────────────────────
-            report_data = generate_solvency_report_sync(financial_summary)
+            # ── 5. Generate the AI report via LangGraph & Publish ─────────────────────────────────────
+            import redis.asyncio as aioredis
+            import json
+
+            async def _run_and_publish():
+                redis_client = await aioredis.from_url(settings.REDIS_URL)
+                channel = f"solvai:telemetry:{report_id}"
+                
+                initial_state = {
+                    "transactions": [],
+                    "financial_summary": financial_summary,
+                    "quant_metrics": {},
+                    "draft_report": "",
+                    "auditor_feedback": "",
+                    "is_approved": False,
+                    "iterations": 0,
+                    "final_report": {},
+                    "requires_human_review": False
+                }
+                
+                final_data = None
+                
+                try:
+                    async for payload in run_orchestrator_stream(initial_state):
+                        # Publish telemetry to Redis
+                        await redis_client.publish(channel, json.dumps(payload))
+                        
+                        if payload.get("status") == "completed":
+                            final_data = payload.get("payload", {}).get("final_report", {})
+                            # Include score in root for easy access
+                            if final_data and "overall_score" in final_data:
+                                final_data["overall_score"] = payload.get("payload", {}).get("overall_score")
+                finally:
+                    await redis_client.close()
+                return final_data
+
+            report_data = asyncio.run(_run_and_publish())
+            
+            if not report_data:
+                raise ValueError("Orchestrator failed to produce a final report.")
+                
             report_data["financial_summary"] = financial_summary
 
             # ── 6. Persist results ────────────────────────────────────────────

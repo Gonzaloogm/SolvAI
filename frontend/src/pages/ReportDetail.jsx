@@ -374,7 +374,7 @@ export default function ReportDetail() {
                 <div style={{ padding: 'var(--space-8) 0', width: '100%', minHeight: '500px' }}>
                   <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: '700', marginBottom: 'var(--space-2)', textAlign: 'center' }}>Live Orchestration</h2>
                   <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', marginBottom: 'var(--space-6)' }}>Mixture of Experts analyzing your financial data in real-time.</p>
-                  <IntelligenceTerminal />
+                  <IntelligenceTerminal reportId={report?.id} />
                 </div>
               )}
 

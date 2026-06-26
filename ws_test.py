@@ -36,7 +36,7 @@ async def test_websocket_orchestrator():
     print(f"Report created: {report['id']}, Status: {report['status']}")
     
     print("5. Connecting to WebSocket...")
-    uri = f"{WS_URL}/{org_id}"
+    uri = f"{WS_URL}/{org_id}?report_id={report['id']}"
     try:
         async with websockets.connect(uri) as websocket:
             print("Connected!")

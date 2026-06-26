@@ -53,10 +53,10 @@ async def create_solvency_report(
     user_id = str(current_user.id)
 
     # Dispatch background task (import here to avoid circular imports)
-    # from app.tasks.report_generation import generate_solvency_report_task  # noqa: PLC0415
+    from app.tasks.report_generation import generate_solvency_report_task  # noqa: PLC0415
 
-    # generate_solvency_report_task.delay(report_id, user_id)
-    logger.info(f"Report {report_id} created as PENDING. Waiting for WebSocket connection to start orchestrator.")
+    generate_solvency_report_task.delay(report_id, user_id)
+    logger.info(f"Report {report_id} created as PENDING. Triggered Celery task.")
 
     return SolvencyReportResponse.model_validate(report)
 

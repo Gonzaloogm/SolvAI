@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { users } from '../api/client.js';
 
-export default function IntelligenceTerminal() {
+export default function IntelligenceTerminal({ reportId }) {
   const [logs, setLogs] = useState([]);
   const [finalScore, setFinalScore] = useState(null);
   const [error, setError] = useState(null);
@@ -28,7 +28,10 @@ export default function IntelligenceTerminal() {
           return;
         }
 
-        const wsUrl = `${import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000'}/ws/terminal/${orgId}`;
+        let wsUrl = `${import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000'}/ws/terminal/${orgId}`;
+        if (reportId) {
+            wsUrl += `?report_id=${reportId}`;
+        }
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 

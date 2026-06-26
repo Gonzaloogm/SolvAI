@@ -44,12 +44,28 @@ Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}
 Previous Auditor Feedback: {state.get("auditor_feedback", "None. This is the first draft.")}
 
 Ensure your report is fully backed by the provided data.
-You MUST include "overall_score" (number 0-100) and "recommendation" ("Approve" or "Reject") in your JSON.
+
+The JSON MUST have exactly these keys:
+{{
+  "overall_score": <integer 0-100>,
+  "recommendation": <"Approve" or "Reject">,
+  "rating": <"Strong" | "Developing" | "At Risk">,
+  "income_stability": {{"score": <int 0-100>, "description": <string>, "lender_implications": <string>}},
+  "growth_trend": {{"score": <int 0-100>, "description": <string>, "lender_implications": <string>}},
+  "seasonality": {{"score": <int 0-100>, "pattern": <string>, "description": <string>, "lender_implications": <string>}},
+  "client_concentration": {{"score": <int 0-100>, "description": <string>, "lender_implications": <string>}},
+  "reputation_signals": {{"score": <int 0-100>, "description": <string>, "lender_implications": <string>}},
+  "narrative": <string 300-500 words explaining the score in plain English>,
+  "risk_flags": [<list of strings>],
+  "recommendations": [<list of strings>],
+  "data_references": [<list of strings>]
+}}
 
 CRITICAL REQUIREMENTS:
-1. For every identified weakness or risk, you MUST include a comprehensive "Actionable Remediation Plan" outlining step-by-step actions to improve solvency.
-2. You MUST include an "Industry Context" section analyzing how the applicant's metrics compare to the broader macroeconomic freelance/startup market.
-3. Make the report extremely dense, detailed, and professional. Ensure the output is large enough to span multiple pages when rendered.
+1. For every identified weakness or risk, you MUST include a comprehensive "Actionable Remediation Plan" in the recommendations outlining step-by-step actions.
+2. You MUST include an "Industry Context" section in the narrative analyzing how the metrics compare to the broader macroeconomic freelance/startup market.
+3. RISK FLAG LOGIC: You MUST populate the "risk_flags" array with specific, explicitly quoted numbers if ANY component score is < 60, or if top client concentration > 40%. You must not generate generic risk flags; tie them directly to the metrics.
+4. Make the report extremely dense, detailed, and professional.
 """
     try:
         tasks = [

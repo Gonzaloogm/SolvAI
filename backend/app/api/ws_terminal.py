@@ -35,7 +35,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 @router.websocket("/{org_id}")
-async def websocket_terminal(websocket: WebSocket, org_id: str):
+async def websocket_terminal(websocket: WebSocket, org_id: str, report_id: str | None = None):
     await manager.connect(websocket, org_id)
     
     # We create an asyncio Event to allow the background task to know when to stop 
@@ -44,109 +44,62 @@ async def websocket_terminal(websocket: WebSocket, org_id: str):
     client_connected.set()
     
     async def run_and_stream():
-        # Create a dedicated DB session for the background task
-        async with AsyncSessionLocal() as db:
-            try:
-                # 1. Fetch the latest pending/generating report for this org
-                result = await db.execute(
-                    select(SolvencyReport)
-                    .where(
-                        SolvencyReport.organization_id == uuid.UUID(org_id),
-                        SolvencyReport.status.in_(["PENDING", "GENERATING"]),
-                        SolvencyReport.is_deleted.is_(False)
-                    )
-                    .order_by(SolvencyReport.created_at.desc())
-                )
-                report = result.scalars().first()
-                
-                if not report:
-                    logger.warning(f"No PENDING/GENERATING report found for org {org_id}")
-                    if client_connected.is_set():
-                        await manager.send_personal_message({
-                            "agent": "system",
-                            "status": "error",
-                            "message": "No pending report found for this organization.",
-                            "payload": {}
-                        }, websocket)
-                    return
-                
-                # Update status to GENERATING if it was PENDING
-                if report.status == "PENDING":
-                    report.status = "GENERATING"
-                    report.updated_at = datetime.now(timezone.utc)
-                    await db.commit()
+        import redis.asyncio as aioredis
+        import json
+        redis_client = None
+        pubsub = None
+        
+        try:
+            from app.core.config import settings
+            redis_client = await aioredis.from_url(settings.REDIS_URL)
+            pubsub = redis_client.pubsub()
+            
+            # Subscribing to the telemetry channel for this report
+            channel = f"solvai:telemetry:{report_id}" if report_id else f"solvai:telemetry:org:{org_id}"
+            await pubsub.subscribe(channel)
+            logger.info(f"Subscribed to Redis channel: {channel}")
+            
+            async for message in pubsub.listen():
+                if not client_connected.is_set():
+                    break
                     
-                # 2. Fetch connected data sources
-                sources_result = await db.execute(
-                    select(FinancialDataSource).where(
-                        FinancialDataSource.user_id == report.user_id,
-                        FinancialDataSource.is_deleted.is_(False),
-                        FinancialDataSource.status == "CONNECTED",
-                    )
-                )
-                sources = sources_result.scalars().all()
-                
-                # 3. Build financial summary (run in threadpool since it's synchronous)
-                financial_summary = await asyncio.to_thread(_build_financial_summary, sources)
-                
-                # 4. Set initial state for orchestrator
-                initial_state = {
-                    "transactions": [],
-                    "financial_summary": financial_summary,
-                    "quant_metrics": {},
-                    "draft_report": "",
-                    "auditor_feedback": "",
-                    "is_approved": False,
-                    "iterations": 0,
-                    "final_report": {},
-                    "requires_human_review": False
-                }
-                
-                # 5. Stream from orchestrator
-                final_report_data = None
-                async for payload in run_orchestrator_stream(initial_state):
-                    if payload.get("status") == "completed":
-                        final_report_data = payload.get("payload", {}).get("final_report", {})
-                        
-                    if client_connected.is_set():
-                        try:
-                            await manager.send_personal_message(payload, websocket)
-                        except RuntimeError: # Catch if socket was closed mid-send
-                            client_connected.clear()
-                            
-                # 6. Save final report to DB
-                if final_report_data:
-                    report.status = "COMPLETED"
-                    report.report_data = final_report_data
-                    report.generated_at = datetime.now(timezone.utc)
-                    report.updated_at = datetime.now(timezone.utc)
-                    await db.commit()
-                    logger.info(f"Saved COMPLETED report {report.id} to DB via WS orchestrator")
-
-            except Exception as e:
-                logger.error(f"Error in orchestrator background task: {e}")
-                if client_connected.is_set():
+                if message['type'] == 'message':
+                    data = message['data'].decode('utf-8')
                     try:
-                        await manager.send_personal_message({
-                            "agent": "system",
-                            "status": "error",
-                            "message": str(e),
-                            "payload": {}
-                        }, websocket)
-                    except:
+                        payload = json.loads(data)
+                        await manager.send_personal_message(payload, websocket)
+                        
+                        # Stop listening if completed or error
+                        if payload.get("status") in ("completed", "error"):
+                            break
+                    except json.JSONDecodeError:
                         pass
-                # Optional: mark report as FAILED if we have a report object
+                    except RuntimeError:
+                        # WebSocket closed
+                        client_connected.clear()
+                        break
+                        
+        except Exception as e:
+            logger.error(f"Error in Redis subscriber task: {e}")
+            if client_connected.is_set():
                 try:
-                    if 'report' in locals() and report:
-                        report.status = "FAILED"
-                        report.report_data = {"error": str(e)}
-                        report.updated_at = datetime.now(timezone.utc)
-                        await db.commit()
-                except Exception as inner_e:
-                    logger.error(f"Failed to mark report as FAILED: {inner_e}")
+                    await manager.send_personal_message({
+                        "agent": "system",
+                        "status": "error",
+                        "message": "Lost connection to orchestration telemetry.",
+                        "payload": {}
+                    }, websocket)
+                except:
+                    pass
+        finally:
+            if pubsub:
+                await pubsub.unsubscribe()
+                await pubsub.close()
+            if redis_client:
+                await redis_client.close()
 
-    # Run the orchestrator in a background task so it can finish if the user disconnects
-    orchestrator_task = asyncio.create_task(run_and_stream())
+    # Run the subscriber in a background task
+    subscriber_task = asyncio.create_task(run_and_stream())
 
     try:
         while True:

@@ -1,0 +1,18 @@
+{
+  "models": [
+    {
+      "title": "NVIDIA NIM",
+      "provider": "openai",
+      "model": "meta/llama-3.1-405b-instruct",
+      "apiKey": "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",
+      "apiBase": "https://integrate.api.nvidia.com/v1"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "NVIDIA Autocomplete",
+    "provider": "openai",
+    "model": "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",
+    "apiKey": "nvapi-TU_CLAVE_REAL_AQUI",
+    "apiBase": "https://integrate.api.nvidia.com/v1"
+  }
+}

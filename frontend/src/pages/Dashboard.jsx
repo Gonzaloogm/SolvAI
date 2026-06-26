@@ -5,7 +5,7 @@ import StatusBadge from '../components/StatusBadge.jsx';
 import SolvencyGauge from '../components/SolvencyGauge.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import IntelligenceTerminal from '../components/IntelligenceTerminal.jsx';
-import { solvencyReports } from '../api/client.js';
+import { solvencyReports, billing } from '../api/client.js';
 import { IconSparkle, IconWarning } from '../components/Icons.jsx';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -194,14 +194,19 @@ export default function Dashboard() {
   const [error,      setError]      = useState('');
   const [generating, setGenerating] = useState(false);
   const [genError,   setGenError]   = useState('');
+  const [subscription, setSubscription] = useState(null);
 
   const fetchReports = useCallback(async () => {
     try {
-      const res = await solvencyReports.list();
+      const [res, subRes] = await Promise.all([
+        solvencyReports.list(),
+        billing.getSubscription().catch(() => ({ data: { plan: 'free' } }))
+      ]);
       const data = Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
       // Sort newest first
       data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setReports(data);
+      setSubscription(subRes.data);
     } catch (err) {
       setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to load reports.');
     } finally {
@@ -254,9 +259,24 @@ export default function Dashboard() {
             </button>
           </div>
 
+          {subscription?.plan === 'free' && reports.length >= 1 && (
+            <div className="bg-indigo-900/40 border border-indigo-500/50 rounded-xl p-4 mb-6 flex flex-col md:flex-row items-center justify-between text-white">
+              <div>
+                <h4 className="font-semibold text-lg mb-1">Free Plan Limit Reached</h4>
+                <p className="text-indigo-200 text-sm">You have generated your 1 free report. Upgrade to Pro to generate unlimited reports and download PDFs.</p>
+              </div>
+              <Link to="/pricing" className="mt-4 md:mt-0 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap">
+                Upgrade to Pro
+              </Link>
+            </div>
+          )}
+
           {genError && (
             <div className="error-message" style={{ marginBottom: 'var(--space-4)' }}>
               <span><IconWarning size={16} /></span> {genError}
+              {genError.includes('limit reached') && (
+                <Link to="/pricing" className="ml-4 underline text-indigo-400 hover:text-indigo-300">Upgrade now</Link>
+              )}
             </div>
           )}
 

@@ -36,6 +36,13 @@ const IconSettings = () => (
   </svg>
 );
 
+const IconAccount = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+    <circle cx="12" cy="7" r="4"></circle>
+  </svg>
+);
+
 const IconLogout = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -66,7 +73,8 @@ const NAV_ITEMS = [
   { label: 'Reports',      to: '/reports',      icon: <IconReports />,     exact: false },
   { label: 'Data Sources', to: '/data-sources', icon: <IconDataSources />, exact: false },
   { label: 'Demo Comparison', to: '/demo',      icon: <IconDashboard />,   exact: false },
-  { label: 'Settings',     to: '/settings',     icon: <IconSettings />,    exact: false, disabled: true },
+  { label: 'Account',      to: '/account',      icon: <IconAccount />,     exact: false },
+  { label: 'Settings',     to: '/settings',     icon: <IconSettings />,    exact: false },
 ];
 
 /* ── Component ───────────────────────────────────────────────────────────── */

@@ -83,6 +83,8 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
     from app.models.financial_data_source import FinancialDataSource  # noqa: PLC0415
     from app.models.solvency_report import SolvencyReport  # noqa: PLC0415
     from app.models.user import User  # noqa: PLC0415
+    from app.models.organization import Organization
+    from sqlalchemy import func
 
     logger.info(f"[Task {self.request.id}] Starting report generation for report_id={report_id}")
 
@@ -96,6 +98,28 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
             if report is None:
                 logger.error(f"Report {report_id} not found – aborting task")
                 return {"status": "error", "detail": "report not found"}
+                
+            # ── 1.5 Billing check ─────────────────────────────────────────────
+            org = db.execute(
+                select(Organization).where(Organization.id == report.organization_id)
+            ).scalar_one_or_none()
+            
+            if org and (org.plan == "free" or org.status in ["past_due", "canceled"]):
+                # Count completed reports
+                count = db.execute(
+                    select(func.count()).select_from(SolvencyReport).where(
+                        SolvencyReport.organization_id == org.id,
+                        SolvencyReport.status == "COMPLETED"
+                    )
+                ).scalar()
+                
+                if count and count >= 1:
+                    report.status = "FAILED"
+                    report.report_data = {"error": "Free plan limit reached. Upgrade to Pro to generate unlimited reports."}
+                    report.updated_at = datetime.now(timezone.utc)
+                    db.commit()
+                    logger.warning(f"Report {report_id} blocked: free limit reached")
+                    return {"status": "failed", "detail": "free limit reached"}
 
             # ── 2. Mark as GENERATING ─────────────────────────────────────────
             report.status = "GENERATING"

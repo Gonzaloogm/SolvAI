@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
-import { solvencyReports } from '../api/client.js';
+import { solvencyReports, billing } from '../api/client.js';
 import { IconWarning, IconSparkle } from '../components/Icons.jsx';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -38,13 +38,18 @@ export default function Reports() {
   const [error,      setError]      = useState('');
   const [generating, setGenerating] = useState(false);
   const [genError,   setGenError]   = useState('');
+  const [subscription, setSubscription] = useState(null);
 
   const fetchReports = useCallback(async () => {
     try {
-      const res = await solvencyReports.list();
+      const [res, subRes] = await Promise.all([
+        solvencyReports.list(),
+        billing.getSubscription().catch(() => ({ data: { plan: 'free' } }))
+      ]);
       const data = Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
       data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setReports(data);
+      setSubscription(subRes.data);
     } catch (err) {
       setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to load reports.');
     } finally {
@@ -98,6 +103,9 @@ export default function Reports() {
           {genError && (
             <div className="error-message" style={{ marginBottom: 'var(--space-4)' }}>
               <span><IconWarning size={16} /></span> {genError}
+              {genError.includes('limit reached') && (
+                <a href="/pricing" className="ml-4 underline text-indigo-400 hover:text-indigo-300">Upgrade now</a>
+              )}
             </div>
           )}
 

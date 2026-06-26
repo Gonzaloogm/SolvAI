@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     STRIPE_TEST_SECRET_KEY: str = ""
     STRIPE_API_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_BILLING_WEBHOOK_SECRET: str = ""
+    STRIPE_PRO_PRICE_ID: str = ""
+    STRIPE_BUSINESS_PRICE_ID: str = ""
 
     # ── Xero ─────────────────────────────────────────────────────────────────
     XERO_CLIENT_ID: str = ""

@@ -7,7 +7,7 @@ import MetricCard from '../components/MetricCard.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import IntelligenceTerminal from '../components/IntelligenceTerminal.jsx';
 import { IconWarning, IconSparkle, IconBuilding, IconSearch, IconLightning, IconUsers, IconLink, IconClipboard, IconActivity, IconBarChart, IconStar, IconTrendingUp } from '../components/Icons.jsx';
-import { solvencyReports, lenderMatching } from '../api/client.js';
+import { solvencyReports, lenderMatching, billing } from '../api/client.js';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const formatDate = (iso) => {
@@ -210,11 +210,16 @@ export default function ReportDetail() {
   const [error,    setError]    = useState('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState(null);
+  const [subscription, setSubscription] = useState(null);
 
   const fetchReport = useCallback(async () => {
     try {
-      const res = await solvencyReports.get(id);
+      const [res, subRes] = await Promise.all([
+        solvencyReports.get(id),
+        billing.getSubscription().catch(() => ({ data: { plan: 'free' } }))
+      ]);
       setReport(res.data);
+      setSubscription(subRes.data);
 
       // Stop polling once terminal status reached
       if (TERMINAL_STATUSES.has(res.data?.status?.toUpperCase())) {
@@ -324,46 +329,56 @@ export default function ReportDetail() {
                 </div>
                 {status === 'COMPLETED' && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                    <button 
-                      className="btn-secondary" 
-                      disabled={isDownloadingPdf}
-                      onClick={async () => {
-                        setIsDownloadingPdf(true);
-                        setPdfError(null);
-                        try {
-                          const token = localStorage.getItem('solvai_token');
-                          const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-                          const res = await fetch(`${baseUrl}/solvency-reports/${report.id}/pdf`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                          });
-                          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                          const blob = await res.blob();
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `solvency_report_${report.id}.pdf`;
-                          document.body.appendChild(a);
-                          a.click();
-                          a.remove();
-                          URL.revokeObjectURL(url);
-                        } catch (e) {
-                          console.error('PDF download failed:', e);
-                          setPdfError('Failed to generate or download PDF.');
-                        } finally {
-                          setIsDownloadingPdf(false);
-                        }
-                      }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
-                    >
-                      {isDownloadingPdf ? (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div className="rd-generating__spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
-                          Generating...
-                        </span>
-                      ) : (
-                        <><IconClipboard size={16} /> Download PDF</>
-                      )}
-                    </button>
+                    {subscription?.plan === 'free' ? (
+                      <Link 
+                        to="/pricing"
+                        className="btn-primary" 
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', background: 'var(--color-accent-primary)', color: 'black' }}
+                      >
+                        <IconSparkle size={16} /> Upgrade to Pro to Download PDF
+                      </Link>
+                    ) : (
+                      <button 
+                        className="btn-secondary" 
+                        disabled={isDownloadingPdf}
+                        onClick={async () => {
+                          setIsDownloadingPdf(true);
+                          setPdfError(null);
+                          try {
+                            const token = localStorage.getItem('solvai_token');
+                            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+                            const res = await fetch(`${baseUrl}/solvency-reports/${report.id}/pdf`, {
+                              headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `solvency_report_${report.id}.pdf`;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            URL.revokeObjectURL(url);
+                          } catch (e) {
+                            console.error('PDF download failed:', e);
+                            setPdfError('Failed to generate or download PDF.');
+                          } finally {
+                            setIsDownloadingPdf(false);
+                          }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+                      >
+                        {isDownloadingPdf ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div className="rd-generating__spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
+                            Generating...
+                          </span>
+                        ) : (
+                          <><IconClipboard size={16} /> Download PDF</>
+                        )}
+                      </button>
+                    )}
                     {pdfError && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-status-error)' }}>{pdfError}</div>}
                   </div>
                 )}

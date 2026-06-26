@@ -77,3 +77,18 @@ async def authenticate_user(
 
     logger.info(f"User '{email}' authenticated successfully")
     return user
+
+
+async def change_password(
+    db: AsyncSession,
+    user: User,
+    current_password: str,
+    new_password: str,
+) -> None:
+    if not verify_password(current_password, user.hashed_password):
+        raise ValueError("Incorrect current password")
+    
+    user.hashed_password = get_password_hash(new_password)
+    # The caller (router) should commit the transaction
+    db.add(user)
+    logger.info(f"User '{user.email}' changed their password")

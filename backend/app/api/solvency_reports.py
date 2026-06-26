@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse, StreamingResponse
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +41,29 @@ async def create_solvency_report(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SolvencyReportResponse:
+    from app.models.organization import Organization
+    from sqlalchemy import func
+    org_res = await db.execute(select(Organization).where(Organization.id == current_user.organization_id))
+    org_obj = org_res.scalar_one_or_none()
+    
+    if org_obj and (org_obj.plan == "free" or org_obj.status in ["past_due", "canceled"]):
+        count_res = await db.execute(
+            select(func.count()).select_from(SolvencyReport).where(
+                SolvencyReport.organization_id == org_obj.id,
+                SolvencyReport.status == "COMPLETED"
+            )
+        )
+        count = count_res.scalar()
+        if count and count >= 1:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "report_limit_reached",
+                    "message": "Free plan limit reached. Please upgrade to Pro.",
+                    "upgrade_url": "/pricing"
+                }
+            )
+
     report = SolvencyReport(
         id=uuid.uuid4(),
         user_id=current_user.id,
@@ -119,11 +143,21 @@ async def download_solvency_report_pdf(
             detail="Report is not completed yet",
         )
 
-    pdf_buffer = generate_solvency_pdf(report)
-
     from app.models.organization import Organization
     org_res = await db.execute(select(Organization).where(Organization.id == current_user.organization_id))
     org_obj = org_res.scalar_one_or_none()
+    
+    if org_obj and (org_obj.plan == "free" or org_obj.status in ["past_due", "canceled"]):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "pdf_requires_pro",
+                "message": "PDF export requires a Pro or Business plan",
+                "upgrade_url": "/pricing"
+            }
+        )
+
+    pdf_buffer = generate_solvency_pdf(report)
     org_name = org_obj.name if org_obj else "unknown-org"
 
     slug = re.sub(r'[^a-z0-9]+', '-', org_name.lower()).strip('-')

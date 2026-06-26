@@ -125,4 +125,13 @@ export const lenderMatching = {
   get: (reportId) => apiClient.get(`/lender-matching/${reportId}`),
 };
 
+// ─── Billing ────────────────────────────────────────────────────────────────
+export const billing = {
+  /**
+   * Get subscription details
+   * GET /billing/subscription
+   */
+  getSubscription: () => apiClient.get('/billing/subscription'),
+};
+
 export default apiClient;

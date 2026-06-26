@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from app.core.config import settings
-from app.api import auth, data_sources, lender_matching, organizations, solvency_reports, users, webhooks, ws_terminal
+from app.api import auth, data_sources, lender_matching, organizations, solvency_reports, users, webhooks, ws_terminal, billing
 
 # ── Loguru configuration ──────────────────────────────────────────────────────
 # Remove default handler and add a clean one
@@ -79,6 +79,7 @@ app.include_router(data_sources.router, prefix="/data-sources", tags=["Data Sour
 app.include_router(solvency_reports.router, prefix="/solvency-reports", tags=["Solvency Reports"])
 app.include_router(lender_matching.router, prefix="/lender-matching", tags=["Lender Matching"])
 app.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
+app.include_router(billing.router, prefix="/billing", tags=["Billing"])
 app.include_router(ws_terminal.router, prefix="/ws/terminal", tags=["WebSockets Terminal"])
 
 

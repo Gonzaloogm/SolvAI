@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import create_access_token, create_refresh_token
-from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
+from app.core.security import create_access_token, create_refresh_token, get_current_user
+from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, ChangePasswordRequest
 from app.services import auth_service
 
 router = APIRouter()
@@ -110,3 +110,27 @@ async def refresh_token(
         access_token=create_access_token(token_payload),
         refresh_token=create_refresh_token(token_payload),
     )
+
+
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_200_OK,
+    summary="Change user password",
+)
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await auth_service.change_password(
+            db=db,
+            user=current_user,
+            current_password=body.current_password,
+            new_password=body.new_password,
+        )
+        await db.commit()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    
+    return {"detail": "Password changed successfully"}

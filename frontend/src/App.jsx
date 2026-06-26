@@ -8,6 +8,10 @@ import ReportDetail from './pages/ReportDetail.jsx';
 import DataSources from './pages/DataSources.jsx';
 import DemoComparison from './pages/DemoComparison.jsx';
 import Reports from './pages/Reports.jsx';
+import Pricing from './pages/Pricing.jsx';
+import Account from './pages/Account.jsx';
+import Settings from './pages/Settings.jsx';
+import CheckoutSuccess from './pages/CheckoutSuccess.jsx';
 
 // ─── Protected Route Wrapper ──────────────────────────────────────────────────
 function ProtectedRoute({ children }) {
@@ -23,13 +27,30 @@ function ProtectedRoute({ children }) {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem('solvai_theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+  }, []);
+
   return (
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/checkout/success" element={<CheckoutSuccess />} />
 
       {/* Protected routes */}
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <Account />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/"
         element={
@@ -67,6 +88,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <DemoComparison />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />

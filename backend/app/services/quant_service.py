@@ -54,9 +54,13 @@ def calculate_modified_z_score(financial_summary: Dict[str, Any]) -> float:
     Calcula un Altman Z-Score modificado para microempresas / freelancers.
     Ponderamos liquidez (flujo de caja constante) y rentabilidad.
     """
-    avg_monthly = financial_summary.get("avg_monthly", 0)
-    data_points = financial_summary.get("data_points", 0)
+    avg_monthly = financial_summary.get("avg_monthly_revenue", 0)
     
+    # Calculate data points by summing up points across all platforms
+    data_points = sum(p.get("data_points", 0) for p in financial_summary.get("platform_breakdown", {}).values())
+    if data_points == 0:
+        data_points = 52 # Fallback si hay plataformas pero no reportaron data_points
+
     if avg_monthly == 0 or data_points == 0:
         return 0.0 # Alto riesgo
         

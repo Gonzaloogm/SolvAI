@@ -170,7 +170,7 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
         avg_rev = sum(m['total'] for m in monthly_series) / len(monthly_series)
     
     # Client Concentration Data
-    cc_data = find_key(rd, ['client_concentration_analysis', 'client_concentration'], {})
+    cc_data = rd.get('financial_summary', {}).get('client_concentration') or {}
     dist_clients = cc_data.get('distinct_clients_count', cc_data.get('distinct_clients', 0)) if isinstance(cc_data, dict) else 0
     top_1 = cc_data.get('top_client_percentage', cc_data.get('top_client_percent', 0.0)) if isinstance(cc_data, dict) else 0.0
     top_3 = cc_data.get('top_3_clients_percentage', cc_data.get('top_3_clients_percent', 0.0)) if isinstance(cc_data, dict) else 0.0

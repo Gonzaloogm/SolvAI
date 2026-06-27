@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FileText,
   Database,
@@ -9,11 +9,23 @@ import {
   Cloud,
   FileSpreadsheet,
   Globe,
+  RefreshCw,
 } from 'lucide-react';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
-export default function DashboardPage() {
+export default function DashboardPage({ onNavigate }) {
+  const [syncingSources, setSyncingSources] = useState({});
+  const [syncedSources, setSyncedSources] = useState({});
+
+  const handleSync = (name) => {
+    setSyncingSources((prev) => ({ ...prev, [name]: true }));
+    setTimeout(() => {
+      setSyncingSources((prev) => ({ ...prev, [name]: false }));
+      setSyncedSources((prev) => ({ ...prev, [name]: true }));
+    }, 2000);
+  };
+
   const statCards = [
     {
       label: 'Total Reports',
@@ -152,23 +164,23 @@ export default function DashboardPage() {
   ];
 
   const typeBadgeStyles = {
-    Financial: 'bg-[#eff6ff] text-[#0570de]',
-    Risk: 'bg-[#fffbeb] text-[#c9870c]',
-    Compliance: 'bg-[#ecfdf5] text-[#1a9e6e]',
+    Financial: 'bg-[#eff6ff] dark:bg-[#0570de]/20 text-[#0570de] dark:text-[#60a5fa]',
+    Risk: 'bg-[#fffbeb] dark:bg-[#c9870c]/20 text-[#c9870c] dark:text-[#fcd34d]',
+    Compliance: 'bg-[#ecfdf5] dark:bg-[#1a9e6e]/20 text-[#1a9e6e] dark:text-[#34d399]',
   };
 
   const statusBadgeStyles = {
-    Complete: 'bg-[#ecfdf5] text-[#1a9e6e]',
-    Processing: 'bg-[#fffbeb] text-[#c9870c]',
-    Failed: 'bg-[#fef2f2] text-[#df1b41]',
+    Complete: 'bg-[#ecfdf5] dark:bg-[#1a9e6e]/20 text-[#1a9e6e] dark:text-[#34d399]',
+    Processing: 'bg-[#fffbeb] dark:bg-[#c9870c]/20 text-[#c9870c] dark:text-[#fcd34d]',
+    Failed: 'bg-[#fef2f2] dark:bg-[#df1b41]/20 text-[#df1b41] dark:text-[#f87171]',
   };
 
   return (
     <div className="page-enter">
       {/* Page Header */}
       <div>
-        <h1 className="text-xl font-semibold text-[#0a2540]">Dashboard</h1>
-        <p className="text-sm text-[#697386]">
+        <h1 className="text-xl font-semibold text-[#0a2540] dark:text-[#f5f5f5]">Dashboard</h1>
+        <p className="text-sm text-[#697386] dark:text-[#666666]">
           Overview of your AI explainability platform
         </p>
       </div>
@@ -180,37 +192,37 @@ export default function DashboardPage() {
           return (
             <div
               key={card.label}
-              className="bg-white border border-[#e3e8ef] rounded-lg p-5 px-6"
+              className="bg-white dark:bg-[#111111] border border-[#e3e8ef] dark:border-[#1f1f1f] rounded-lg p-5 px-6 transition-colors hover:border-[#cbd5e1] dark:hover:border-[#333333]"
             >
               <div className="flex justify-between">
-                <span className="text-xs font-medium text-[#697386] uppercase tracking-wider">
+                <span className="text-xs font-medium text-[#697386] dark:text-[#666666] uppercase tracking-wider">
                   {card.label}
                 </span>
-                <Icon className="text-[#697386] w-5 h-5" />
+                <Icon className="text-[#697386] dark:text-[#666666] w-5 h-5" />
               </div>
-              <div className="text-2xl font-semibold text-[#0a2540] mt-2">
+              <div className="text-2xl font-semibold text-[#0a2540] dark:text-[#f5f5f5] mt-2">
                 {card.value}
               </div>
               <div className="mt-1">
                 {card.trend && (
-                  <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#ecfdf5] text-[#1a9e6e]">
+                  <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#ecfdf5] dark:bg-[#1a9e6e]/20 text-[#1a9e6e] dark:text-[#34d399]">
                     {card.trend}
                   </span>
                 )}
                 {card.subtitle && (
-                  <span className="text-sm text-[#697386]">
+                  <span className="text-sm text-[#697386] dark:text-[#666666]">
                     {card.subtitle}
                   </span>
                 )}
                 {card.badge && (
-                  <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#ecfdf5] text-[#1a9e6e]">
+                  <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#ecfdf5] dark:bg-[#1a9e6e]/20 text-[#1a9e6e] dark:text-[#34d399]">
                     {card.badge}
                   </span>
                 )}
                 {card.progress !== undefined && (
-                  <div className="h-1.5 bg-[#e3e8ef] rounded-full mt-1">
+                  <div className="h-1.5 bg-[#e3e8ef] dark:bg-[#2a2a2a] rounded-full mt-1">
                     <div
-                      className="bg-[#0570de] rounded-full h-full"
+                      className="bg-[#0570de] dark:bg-[#3b82f6] rounded-full h-full"
                       style={{ width: `${card.progress}%` }}
                     />
                   </div>
@@ -224,35 +236,38 @@ export default function DashboardPage() {
       {/* Main Grid */}
       <div className="grid grid-cols-5 gap-6 mt-6">
         {/* Left: Recent Reports */}
-        <div className="col-span-3 bg-white border border-[#e3e8ef] rounded-lg p-5 px-6">
+        <div className="col-span-3 bg-white dark:bg-[#111111] border border-[#e3e8ef] dark:border-[#1f1f1f] rounded-lg p-5 px-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-base font-semibold text-[#0a2540]">
+            <h2 className="text-base font-semibold text-[#0a2540] dark:text-[#f5f5f5]">
               Recent reports
             </h2>
-            <span className="text-sm text-[#0570de] hover:underline cursor-pointer">
+            <button
+              onClick={() => onNavigate && onNavigate('reports')}
+              className="text-sm text-[#0570de] dark:text-[#60a5fa] hover:underline cursor-pointer bg-transparent border-none p-0"
+            >
               View all reports →
-            </span>
+            </button>
           </div>
           <div className="w-full overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-[#f6f8fa]">
-                  <th className="text-left text-xs font-medium text-[#697386] uppercase tracking-wider py-3 px-4">
+                <tr className="bg-[#f6f8fa] dark:bg-[#161616]">
+                  <th className="text-left text-xs font-medium text-[#697386] dark:text-[#666666] uppercase tracking-wider py-3 px-4">
                     Report name
                   </th>
-                  <th className="text-left text-xs font-medium text-[#697386] uppercase tracking-wider py-3 px-4">
+                  <th className="text-left text-xs font-medium text-[#697386] dark:text-[#666666] uppercase tracking-wider py-3 px-4">
                     Type
                   </th>
-                  <th className="text-left text-xs font-medium text-[#697386] uppercase tracking-wider py-3 px-4">
+                  <th className="text-left text-xs font-medium text-[#697386] dark:text-[#666666] uppercase tracking-wider py-3 px-4">
                     Status
                   </th>
-                  <th className="text-left text-xs font-medium text-[#697386] uppercase tracking-wider py-3 px-4">
+                  <th className="text-left text-xs font-medium text-[#697386] dark:text-[#666666] uppercase tracking-wider py-3 px-4">
                     Created
                   </th>
-                  <th className="text-right text-xs font-medium text-[#697386] uppercase tracking-wider py-3 px-4">
+                  <th className="text-right text-xs font-medium text-[#697386] dark:text-[#666666] uppercase tracking-wider py-3 px-4">
                     Accuracy
                   </th>
-                  <th className="text-right text-xs font-medium text-[#697386] uppercase tracking-wider py-3 px-4">
+                  <th className="text-right text-xs font-medium text-[#697386] dark:text-[#666666] uppercase tracking-wider py-3 px-4">
                     Actions
                   </th>
                 </tr>
@@ -261,13 +276,14 @@ export default function DashboardPage() {
                 {reports.map((report, index) => (
                   <tr
                     key={report.name}
+                    onClick={() => onNavigate && onNavigate('reports')}
                     className={cn(
-                      'hover:bg-[#f6f8fa] transition-colors',
+                      'hover:bg-[#f6f8fa] dark:hover:bg-[#1a1a1a] transition-colors cursor-pointer',
                       index < reports.length - 1 &&
-                        'border-b border-[#e3e8ef]'
+                        'border-b border-[#e3e8ef] dark:border-[#1f1f1f]'
                     )}
                   >
-                    <td className="py-3 px-4 text-sm font-medium text-[#0a2540]">
+                    <td className="py-3 px-4 text-sm font-medium text-[#0a2540] dark:text-[#f5f5f5]">
                       {report.name}
                     </td>
                     <td className="py-3 px-4">
@@ -290,23 +306,23 @@ export default function DashboardPage() {
                         {report.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm text-[#697386]">
+                    <td className="py-3 px-4 text-sm text-[#697386] dark:text-[#666666]">
                       {report.created}
                     </td>
                     <td className="py-3 px-4 text-right text-sm">
                       {report.accuracy ? (
-                        <span className="text-[#1a9e6e] font-medium">
+                        <span className="text-[#1a9e6e] dark:text-[#34d399] font-medium">
                           {report.accuracy}
                         </span>
                       ) : (
-                        <span className="text-[#697386]">—</span>
+                        <span className="text-[#697386] dark:text-[#666666]">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2 justify-end">
-                        <Eye className="w-4 h-4 text-[#697386] hover:text-[#0a2540] cursor-pointer" />
+                        <Eye className="w-4 h-4 text-[#697386] dark:text-[#666666] hover:text-[#0a2540] dark:hover:text-[#f5f5f5] cursor-pointer" />
                         {report.hasDownload && (
-                          <Download className="w-4 h-4 text-[#697386] hover:text-[#0a2540] cursor-pointer" />
+                          <Download className="w-4 h-4 text-[#697386] dark:text-[#666666] hover:text-[#0a2540] dark:hover:text-[#f5f5f5] cursor-pointer" />
                         )}
                       </div>
                     </td>
@@ -320,8 +336,8 @@ export default function DashboardPage() {
         {/* Right: Two stacked cards */}
         <div className="col-span-2 flex flex-col gap-6">
           {/* Data Sources Card */}
-          <div className="bg-white border border-[#e3e8ef] rounded-lg p-5 px-6">
-            <h2 className="text-base font-semibold text-[#0a2540] mb-4">
+          <div className="bg-white dark:bg-[#111111] border border-[#e3e8ef] dark:border-[#1f1f1f] rounded-lg p-5 px-6">
+            <h2 className="text-base font-semibold text-[#0a2540] dark:text-[#f5f5f5] mb-4">
               Data sources
             </h2>
             <div>
@@ -333,7 +349,7 @@ export default function DashboardPage() {
                     className={cn(
                       'flex items-center justify-between py-3',
                       index < dataSources.length - 1 &&
-                        'border-b border-[#e3e8ef]'
+                        'border-b border-[#e3e8ef] dark:border-[#1f1f1f]'
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -345,7 +361,7 @@ export default function DashboardPage() {
                       >
                         <SourceIcon className="w-4 h-4" />
                       </div>
-                      <span className="text-sm font-medium text-[#0a2540]">
+                      <span className="text-sm font-medium text-[#0a2540] dark:text-[#f5f5f5]">
                         {source.name}
                       </span>
                     </div>
@@ -354,13 +370,28 @@ export default function DashboardPage() {
                         className={cn(
                           'w-2 h-2 rounded-full',
                           source.connected
-                            ? 'bg-[#1a9e6e]'
-                            : 'bg-[#df1b41]'
+                            ? 'bg-[#1a9e6e] dark:bg-[#34d399]'
+                            : 'bg-[#df1b41] dark:bg-[#f87171]'
                         )}
                       />
-                      <span className="text-xs text-[#697386]">
-                        {source.lastSync}
+                      <span className="text-xs text-[#697386] dark:text-[#666666]">
+                        {syncingSources[source.name]
+                          ? 'Syncing...'
+                          : syncedSources[source.name]
+                          ? 'Just now'
+                          : source.lastSync}
                       </span>
+                      {source.connected && (
+                        <button
+                          onClick={() => handleSync(source.name)}
+                          disabled={syncingSources[source.name]}
+                          className="ml-1 p-1 text-[#697386] dark:text-[#666666] hover:text-[#0a2540] dark:hover:text-[#f5f5f5] rounded-md transition-colors"
+                        >
+                          <RefreshCw
+                            className={cn('w-3 h-3', syncingSources[source.name] && 'animate-spin')}
+                          />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -369,8 +400,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Usage This Month Card */}
-          <div className="bg-white border border-[#e3e8ef] rounded-lg p-5 px-6">
-            <h2 className="text-base font-semibold text-[#0a2540] mb-4">
+          <div className="bg-white dark:bg-[#111111] border border-[#e3e8ef] dark:border-[#1f1f1f] rounded-lg p-5 px-6">
+            <h2 className="text-base font-semibold text-[#0a2540] dark:text-[#f5f5f5] mb-4">
               Usage this month
             </h2>
             <div>
@@ -392,16 +423,16 @@ export default function DashboardPage() {
                     )}
                   >
                     <div className="flex justify-between text-sm">
-                      <span className="text-[#425466]">{item.label}</span>
-                      <span className="text-[#697386]">
+                      <span className="text-[#425466] dark:text-[#a0a0a0]">{item.label}</span>
+                      <span className="text-[#697386] dark:text-[#666666]">
                         {currentDisplay}
                         {item.unit} / {maxDisplay}
                         {item.unit}
                       </span>
                     </div>
-                    <div className="h-1.5 bg-[#e3e8ef] rounded-full mt-2">
+                    <div className="h-1.5 bg-[#e3e8ef] dark:bg-[#2a2a2a] rounded-full mt-2">
                       <div
-                        className="bg-[#0570de] rounded-full h-full"
+                        className="bg-[#0570de] dark:bg-[#3b82f6] rounded-full h-full"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -414,8 +445,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Activity Feed */}
-      <div className="bg-white border border-[#e3e8ef] rounded-lg p-5 px-6 mt-6">
-        <h2 className="text-base font-semibold text-[#0a2540] mb-2">
+      <div className="bg-white dark:bg-[#111111] border border-[#e3e8ef] dark:border-[#1f1f1f] rounded-lg p-5 px-6 mt-6">
+        <h2 className="text-base font-semibold text-[#0a2540] dark:text-[#f5f5f5] mb-2">
           Recent activity
         </h2>
         <div>
@@ -425,7 +456,7 @@ export default function DashboardPage() {
               className={cn(
                 'flex items-start gap-3 py-3',
                 index < activityItems.length - 1 &&
-                  'border-b border-[#e3e8ef]'
+                  'border-b border-[#e3e8ef] dark:border-[#1f1f1f]'
               )}
             >
               <div
@@ -435,8 +466,8 @@ export default function DashboardPage() {
                 )}
               />
               <div className="flex-1">
-                <p className="text-sm text-[#425466]">{item.text}</p>
-                <p className="text-xs text-[#697386] mt-0.5">{item.time}</p>
+                <p className="text-sm text-[#425466] dark:text-[#a0a0a0]">{item.text}</p>
+                <p className="text-xs text-[#697386] dark:text-[#666666] mt-0.5">{item.time}</p>
               </div>
             </div>
           ))}

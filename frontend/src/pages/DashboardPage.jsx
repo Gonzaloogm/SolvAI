@@ -11,7 +11,11 @@ import {
  FileSpreadsheet,
  Globe,
  RefreshCw,
+ Loader2,
 } from 'lucide-react';
+import { generateReportPDF } from '../lib/generateReportPDF';
+import ReportDetailModal from '../components/ReportDetailModal.jsx';
+import { mockApi } from '../lib/mockApi';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -19,13 +23,16 @@ export default function DashboardPage({ onNavigate }) {
  const [syncingSources, setSyncingSources] = useState({});
  const [syncedSources, setSyncedSources] = useState({});
  const [syncedRecords, setSyncedRecords] = useState({});
+ const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+ const [selectedReportForDetail, setSelectedReportForDetail] = useState(null);
+ const [downloadingPdfId, setDownloadingPdfId] = useState(null);
  const { addToast } = useToast();
 
  const handleSync = async (name) => {
- setSyncingSources((prev) => ({ ...prev, [name]: true }));
+ setSyncedRecords(prev => ({ ...prev, [name]: 'Syncing...' }));
  try {
- const result = await window.syncSource(name);
- setSyncedRecords((prev) => ({ ...prev, [name]: (prev[name] || 0) + result.newRecords }));
+ const result = await mockApi.syncSource(name);
+ setSyncedRecords(prev => ({ ...prev, [name]: (prev[name] || 0) + result.newRecords }));
  setSyncedSources((prev) => ({ ...prev, [name]: true }));
  addToast(`Successfully synced ${name} (+${result.newRecords} records)`, 'success');
  } catch (error) {
@@ -182,15 +189,17 @@ export default function DashboardPage({ onNavigate }) {
  };
 
  const typeBadgeStyles = {
- Financial: 'bg-nav-active/20 text-nav-active',
- Risk: 'bg-[#fffbeb] /20 text-[#c9870c] ',
- Compliance: 'bg-[#ecfdf5] /20 text-[#1a9e6e] ',
+ Financial: 'badge-financial',
+ Risk: 'badge-risk',
+ Compliance: 'badge-compliance',
+ Custom: 'badge-custom',
  };
 
  const statusBadgeStyles = {
- Complete: 'bg-[#ecfdf5] /20 text-[#1a9e6e] ',
- Processing: 'bg-[#fffbeb] /20 text-[#c9870c] ',
- Failed: 'bg-[#fef2f2] /20 text-[#df1b41] ',
+ Complete: 'badge-complete',
+ Processing: 'badge-processing',
+ Failed: 'badge-failed',
+ Draft: 'badge-draft',
  };
 
  return (
@@ -261,31 +270,31 @@ export default function DashboardPage({ onNavigate }) {
  </h2>
  <button
  onClick={() => onNavigate && onNavigate('reports')}
- className="text-sm text-nav-active hover:underline cursor-pointer bg-transparent border-none p-0"
+ className="link-primary bg-transparent border-none p-0"
  >
  View all reports →
  </button>
  </div>
- <div className="w-full overflow-x-auto">
- <table className="w-full">
+ <div className="w-full overflow-x-auto min-h-[200px]">
+ <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '700px' }}>
  <thead>
  <tr className="bg-page">
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4">
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '40%' }}>
  Report name
  </th>
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4">
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '15%' }}>
  Type
  </th>
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4">
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '15%' }}>
  Status
  </th>
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4">
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '15%' }}>
  Created
  </th>
- <th className="text-right text-xs font-medium text-muted uppercase tracking-wider py-3 px-4">
+ <th className="text-right text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '10%' }}>
  Accuracy
  </th>
- <th className="text-right text-xs font-medium text-muted uppercase tracking-wider py-3 px-4">
+ <th className="text-right text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '5%' }}>
  Actions
  </th>
  </tr>
@@ -294,40 +303,33 @@ export default function DashboardPage({ onNavigate }) {
  {reports.map((report, index) => (
  <tr
  key={report.name}
- onClick={() => onNavigate && onNavigate('reports')}
+ onClick={() => {
+ setSelectedReportForDetail(report);
+ setIsDetailModalOpen(true);
+ }}
  className={cn(
  'hover:bg-page transition-colors cursor-pointer',
  index < reports.length - 1 &&
  'border-b border-border'
  )}
  >
- <td className="py-3 px-4 text-sm font-medium text-primary">
+ <td className="py-3 px-4 text-sm font-medium text-primary whitespace-nowrap overflow-hidden text-ellipsis">
  {report.name}
  </td>
- <td className="py-3 px-4">
- <span
- className={cn(
- 'rounded-full px-2.5 py-0.5 text-xs font-medium',
- typeBadgeStyles[report.type]
- )}
- >
+ <td className="py-3 px-4 whitespace-nowrap">
+ <span className={typeBadgeStyles[report.type] || 'badge-custom'}>
  {report.type}
  </span>
  </td>
- <td className="py-3 px-4">
- <span
- className={cn(
- 'rounded-full px-2.5 py-0.5 text-xs font-medium',
- statusBadgeStyles[report.status]
- )}
- >
+ <td className="py-3 px-4 whitespace-nowrap">
+ <span className={statusBadgeStyles[report.status] || 'badge-draft'}>
  {report.status}
  </span>
  </td>
- <td className="py-3 px-4 text-sm text-muted">
+ <td className="py-3 px-4 text-sm text-muted whitespace-nowrap">
  {report.created}
  </td>
- <td className="py-3 px-4 text-right text-sm">
+ <td className="py-3 px-4 text-right text-sm whitespace-nowrap">
  {report.accuracy ? (
  <span className="text-[#1a9e6e] font-medium">
  {report.accuracy}
@@ -336,11 +338,36 @@ export default function DashboardPage({ onNavigate }) {
  <span className="text-muted">—</span>
  )}
  </td>
- <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+ <td className="py-3 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
  <div className="flex gap-2 justify-end">
- <Eye className="w-4 h-4 text-muted hover:text-primary cursor-pointer" />
+ <Eye 
+ className="w-4 h-4 text-muted hover:text-primary cursor-pointer" 
+ onClick={() => {
+ setSelectedReportForDetail(report);
+ setIsDetailModalOpen(true);
+ }}
+ />
  {report.hasDownload && (
- <Download className="w-4 h-4 text-muted hover:text-primary cursor-pointer" />
+ downloadingPdfId === report.name ? (
+ <Loader2 className="w-4 h-4 text-muted animate-spin cursor-not-allowed" />
+ ) : (
+ <Download 
+ className="w-4 h-4 text-muted hover:text-primary cursor-pointer" 
+ onClick={async () => {
+ setDownloadingPdfId(report.name);
+ addToast('Generating PDF report...', 'info');
+ try {
+ await generateReportPDF(report);
+ addToast('PDF downloaded successfully', 'success');
+ } catch (e) {
+ console.error('PDF Generation Error:', e);
+ addToast('Failed to generate PDF', 'error');
+ } finally {
+ setDownloadingPdfId(null);
+ }
+ }}
+ />
+ )
  )}
  </div>
  </td>
@@ -415,6 +442,13 @@ export default function DashboardPage({ onNavigate }) {
  );
  })}
  </div>
+
+ {isDetailModalOpen && selectedReportForDetail && (
+ <ReportDetailModal 
+ report={selectedReportForDetail}
+ onClose={() => setIsDetailModalOpen(false)}
+ />
+ )}
  </div>
 
  {/* Usage This Month Card */}

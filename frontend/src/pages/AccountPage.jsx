@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Check, CreditCard, AlertTriangle, Zap, ArrowUpRight, X, Loader2 } from 'lucide-react';
+import { mockApi } from '../lib/mockApi';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import ConfirmModal from '../components/ConfirmModal.jsx';
@@ -91,12 +92,12 @@ export default function AccountPage() {
  setIsSubmitting(true);
  try {
  if (paymentModalMode === 'upgrade') {
- await window.createSubscription('pro');
+ await mockApi.createSubscription('pro');
  setCurrentPlan('Pro');
  setPaymentSuccess(true);
  addToast("Welcome to SolvAI Pro!", "success");
  } else {
- const cardData = await window.addPaymentMethod({ 
+ const cardData = await mockApi.addPaymentMethod({ 
  number: cardInput, 
  expiry: expiry 
  });

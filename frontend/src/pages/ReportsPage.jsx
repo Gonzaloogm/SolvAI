@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { generateReportPDF } from '../lib/generateReportPDF';
+import ReportDetailModal from '../components/ReportDetailModal.jsx';
+import { mockApi } from '../lib/mockApi';
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -103,17 +106,17 @@ const REPORTS = [
 
 // ── Badge Helpers ────────────────────────────────────────────────────────────
 const TYPE_STYLES = {
- Financial: 'bg-nav-active text-[#0570de] /20 ',
- Risk: 'bg-[#fffbeb] text-[#c9870c] /20 ',
- Compliance: 'bg-[#ecfdf5] text-[#1a9e6e] /20 ',
- Custom: 'bg-[#f0f2f5] text-muted ',
+ Financial: 'badge-financial',
+ Risk: 'badge-risk',
+ Compliance: 'badge-compliance',
+ Custom: 'badge-custom',
 };
 
 const STATUS_STYLES = {
- Complete: 'bg-[#ecfdf5] text-[#1a9e6e] /20 ',
- Processing: 'bg-[#fffbeb] text-[#c9870c] /20 ',
- Failed: 'bg-[#fef2f2] text-[#df1b41] /20 ',
- Draft: 'bg-[#f0f2f5] text-muted ',
+ Complete: 'badge-complete',
+ Processing: 'badge-processing',
+ Failed: 'badge-failed',
+ Draft: 'badge-draft',
 };
 
 const getAccuracyColor = (val) => {
@@ -131,6 +134,7 @@ export default function ReportsPage() {
  const [statusFilter, setStatusFilter] = useState('all');
  const [typeFilter, setTypeFilter] = useState('all');
  const [dateFilter, setDateFilter] = useState('all');
+ const [downloadingPdfId, setDownloadingPdfId] = useState(null);
  
  const [openMenuId, setOpenMenuId] = useState(null);
  const [currentPage, setCurrentPage] = useState(1);
@@ -261,7 +265,7 @@ export default function ReportsPage() {
  action: async () => {
  setIsProcessing(true);
  try {
- await Promise.all(Array.from(selectedRows).map(id => window.deleteReport(id)));
+ await Promise.all(Array.from(selectedRows).map(id => mockApi.deleteReport(id)));
  setReports((prev) => prev.filter((r) => !selectedRows.has(r.id)));
  setSelectedRows(new Set());
  addToast(`Deleted ${selectedRows.size} reports`, 'success');
@@ -279,6 +283,21 @@ export default function ReportsPage() {
  addToast(`Downloading ${selectedRows.size} reports...`, 'info');
  };
 
+ const handleDownloadPDF = async (report) => {
+ setDownloadingPdfId(report.name);
+ addToast('Generating PDF report...', 'info');
+ try {
+ await generateReportPDF(report);
+ addToast('PDF downloaded successfully', 'success');
+ } catch (e) {
+ console.error('PDF Generation Error:', e);
+ addToast('Failed to generate PDF', 'error');
+ } finally {
+ setDownloadingPdfId(null);
+ }
+ setOpenMenuId(null);
+ };
+
  const handleDelete = (id) => {
  setOpenMenuId(null);
  setConfirmConfig({
@@ -289,7 +308,7 @@ export default function ReportsPage() {
  action: async () => {
  setIsProcessing(true);
  try {
- await window.deleteReport(id);
+ await mockApi.deleteReport(id);
  setReports((prev) => prev.filter((r) => r.id !== id));
  setSelectedRows((prev) => {
  const next = new Set([...prev]);
@@ -331,7 +350,7 @@ export default function ReportsPage() {
 
  setIsProcessing(true);
  try {
- const newReport = await window.createReport({
+ const newReport = await mockApi.createReport({
  name,
  type,
  dataSource,
@@ -466,11 +485,11 @@ export default function ReportsPage() {
  </div>
 
  {/* Table */}
- <div className="overflow-x-auto min-h-[300px]">
- <table className="w-full">
+ <div className="overflow-x-auto w-full min-h-[300px]">
+ <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '800px' }}>
  <thead className="bg-page">
  <tr>
- <th className="w-12 py-3 px-4">
+ <th className="py-3 px-4" style={{ width: '40px' }}>
  <input
  type="checkbox"
  checked={allVisibleSelected}
@@ -478,25 +497,25 @@ export default function ReportsPage() {
  className="w-4 h-4 rounded border-gray-300 accent-[#0570de] cursor-pointer"
  />
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '28%' }}>
  Report
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '12%' }}>
  Type
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '12%' }}>
  Status
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '15%' }}>
  Data Source
  </th>
- <th className="py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider">
+ <th className="py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '10%' }}>
  Accuracy
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '12%' }}>
  Created
  </th>
- <th className="w-12 py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider">
+ <th className="py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '6%' }}>
  <span className="sr-only">Actions</span>
  </th>
  </tr>
@@ -527,51 +546,41 @@ export default function ReportsPage() {
  </td>
 
  {/* Report name */}
- <td className="py-3 px-4">
- <div className="text-sm font-medium text-primary">
+ <td className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis">
+ <div className="text-[14px] font-medium text-primary truncate">
  {report.name}
  </div>
- <div className="text-xs text-muted mt-0.5">
+ <div className="text-[13px] text-muted mt-0.5 truncate">
  {report.subtitle}
  </div>
  </td>
 
  {/* Type badge */}
- <td className="py-3 px-4">
- <span
- className={cn(
- 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
- TYPE_STYLES[report.type] || TYPE_STYLES.Custom
- )}
- >
+ <td className="py-3 px-4 whitespace-nowrap">
+ <span className={TYPE_STYLES[report.type] || TYPE_STYLES.Custom}>
  {report.type}
  </span>
  </td>
 
  {/* Status badge */}
- <td className="py-3 px-4">
- <span
- className={cn(
- 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
- STATUS_STYLES[report.status] || STATUS_STYLES.Draft
- )}
- >
+ <td className="py-3 px-4 whitespace-nowrap">
+ <span className={STATUS_STYLES[report.status] || STATUS_STYLES.Draft}>
  {report.status}
  </span>
  </td>
 
  {/* Data Source */}
- <td className="py-3 px-4">
+ <td className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis">
  <div className="flex items-center gap-1.5">
- <Database className="w-3.5 h-3.5 text-muted" />
- <span className="text-sm text-secondary">
+ <Database className="w-3.5 h-3.5 text-muted shrink-0" />
+ <span className="text-sm text-secondary truncate">
  {report.dataSource}
  </span>
  </div>
  </td>
 
  {/* Accuracy */}
- <td className="py-3 px-4 text-right">
+ <td className="py-3 px-4 text-right whitespace-nowrap">
  <span
  className={cn(
  'text-sm font-medium',
@@ -585,14 +594,14 @@ export default function ReportsPage() {
  </td>
 
  {/* Created */}
- <td className="py-3 px-4">
+ <td className="py-3 px-4 whitespace-nowrap">
  <span className="text-sm text-muted">
  {report.createdAt}
  </span>
  </td>
 
  {/* Actions */}
- <td className="py-3 px-4 text-right">
+ <td className="py-3 px-4 text-right whitespace-nowrap">
  <div className="relative" ref={openMenuId === report.id ? menuRef : undefined}>
  <button
  onClick={(e) => handleMenuToggle(e, report.id)}
@@ -619,13 +628,22 @@ export default function ReportsPage() {
  <button 
  onClick={(e) => {
  e.stopPropagation();
- addToast('Preparing PDF... Download will start shortly', 'info');
- setOpenMenuId(null);
+ handleDownloadPDF(report);
  }}
- className="w-full px-3 py-2 text-sm hover:bg-page cursor-pointer flex items-center gap-2 text-secondary"
+ disabled={downloadingPdfId === report.name}
+ className="w-full px-3 py-2 text-sm hover:bg-page cursor-pointer flex items-center gap-2 text-secondary disabled:opacity-50"
  >
+ {downloadingPdfId === report.name ? (
+ <>
+ <Loader2 className="w-4 h-4 animate-spin" />
+ Generating...
+ </>
+ ) : (
+ <>
  <Download className="w-4 h-4" />
  Download PDF
+ </>
+ )}
  </button>
  <button 
  onClick={(e) => {
@@ -803,89 +821,10 @@ export default function ReportsPage() {
 
  {/* ── 7. DETAIL MODAL ────────────────────────────────────────────────── */}
  {isDetailModalOpen && selectedReportForDetail && (
- <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
- <div className="bg-card rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden border border-border">
- <div className="flex justify-between items-center p-6 border-b border-border">
- <div>
- <h2 className="text-xl font-semibold text-primary">
- {selectedReportForDetail.name}
- </h2>
- <div className="flex items-center gap-2 mt-2">
- <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', TYPE_STYLES[selectedReportForDetail.type] || TYPE_STYLES.Custom)}>
- {selectedReportForDetail.type}
- </span>
- <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', STATUS_STYLES[selectedReportForDetail.status] || STATUS_STYLES.Draft)}>
- {selectedReportForDetail.status}
- </span>
- </div>
- </div>
- <button 
- onClick={() => setIsDetailModalOpen(false)}
- className="text-muted hover:text-primary transition-colors"
- >
- <X className="w-5 h-5" />
- </button>
- </div>
- 
- <div className="p-6 overflow-y-auto max-h-[70vh]">
- <div className="grid grid-cols-2 gap-6 mb-8">
- <div>
- <div className="text-sm text-muted mb-1">Created Date</div>
- <div className="text-sm font-medium text-primary">{selectedReportForDetail.createdAt}</div>
- </div>
- <div>
- <div className="text-sm text-muted mb-1">Data Source</div>
- <div className="text-sm font-medium text-primary flex items-center gap-1.5">
- <Database className="w-4 h-4 text-muted" />
- {selectedReportForDetail.dataSource}
- </div>
- </div>
- <div>
- <div className="text-sm text-muted mb-1">Model Used</div>
- <div className="text-sm font-medium text-primary">
- {selectedReportForDetail.subtitle?.split('·')[0]?.trim() || 'Custom Model'}
- </div>
- </div>
- <div>
- <div className="text-sm text-muted mb-1">Accuracy Score</div>
- <div className={cn('text-sm font-medium', getAccuracyColor(selectedReportForDetail.accuracy))}>
- {selectedReportForDetail.accuracy !== null ? `${selectedReportForDetail.accuracy}%` : 'N/A'}
- </div>
- </div>
- </div>
-
- <div className="mb-8">
- <h3 className="text-sm font-semibold text-primary mb-2">Explanation Output</h3>
- <p className="text-sm text-secondary leading-relaxed">
- This report outlines the key drivers of the prediction model. The analysis indicates that historical transaction volumes and recent account activity are the primary indicators for this outcome. The model exhibits high confidence across the major feature splits.
- </p>
- </div>
-
- <div>
- <h3 className="text-sm font-semibold text-primary mb-4">Feature Importance (SHAP-style)</h3>
- <div className="space-y-4">
- {[
- { label: 'Transaction Volume', value: 35 },
- { label: 'Account Age', value: 25 },
- { label: 'Recent Activity', value: 20 },
- { label: 'Balance History', value: 15 },
- { label: 'Credit Score', value: 5 }
- ].map((feat, i) => (
- <div key={i}>
- <div className="flex justify-between text-xs mb-1">
- <span className="font-medium text-secondary">{feat.label}</span>
- <span className="text-muted">{feat.value}%</span>
- </div>
- <div className="w-full bg-[#f0f2f5] rounded-full h-2">
- <div className="bg-[#0570de] h-2 rounded-full" style={{ width: `${feat.value}%` }}></div>
- </div>
- </div>
- ))}
- </div>
- </div>
- </div>
- </div>
- </div>
+ <ReportDetailModal 
+ report={selectedReportForDetail} 
+ onClose={() => setIsDetailModalOpen(false)} 
+ />
  )}
 
  {/* ── 8. CONFIRM MODAL ───────────────────────────────────────────────── */}

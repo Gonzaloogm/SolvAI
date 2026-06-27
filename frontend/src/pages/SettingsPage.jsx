@@ -8,10 +8,12 @@ import {
  Copy,
  RefreshCw,
  X,
- AlertCircle
+ AlertCircle,
+ Fingerprint
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { mockApi } from '../lib/mockApi';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -111,6 +113,7 @@ export default function SettingsPage() {
  const [apiKey, setApiKey] = useState('sk-solv-a7b8c9d0e1f2g3h4i5j6k7l8m9n03f9a');
  const [webhook, setWebhook] = useState('');
  const [isSavingWebhook, setIsSavingWebhook] = useState(false);
+ const [isRegeneratingKey, setIsRegeneratingKey] = useState(false);
  const [apps, setApps] = useState([
  { id: 'google', name: 'Google Workspace' },
  { id: 'slack', name: 'Slack' },
@@ -141,7 +144,7 @@ export default function SettingsPage() {
 
  setIsUpdatingPassword(true);
  try {
- await window.changePassword(current, newPass);
+ await mockApi.changePassword(current, newPass);
  setPasswordModalOpen(false);
  addToast("Password updated successfully", "success");
  e.target.reset();
@@ -162,12 +165,15 @@ export default function SettingsPage() {
  };
 
  const handleRegenerateApi = async () => {
+ setIsRegeneratingKey(true);
  try {
- const { key } = await window.regenerateApiKey();
+ const { key } = await mockApi.regenerateApiKey();
  setApiKey(key);
  addToast("API key regenerated", "success");
  } catch (error) {
  addToast("Failed to regenerate API key", "error");
+ } finally {
+ setIsRegeneratingKey(false);
  }
  };
 
@@ -175,8 +181,8 @@ export default function SettingsPage() {
  if (!webhook) return;
  setIsSavingWebhook(true);
  try {
- await window.saveWebhook(webhook);
- addToast("Webhook saved", "success");
+ await mockApi.saveWebhook(webhook);
+ addToast("Webhook saved successfully", "success");
  } catch (error) {
  addToast("Failed to save webhook", "error");
  } finally {

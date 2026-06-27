@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { mockApi } from '../lib/mockApi';
 import {
  Plus,
  Cloud,
@@ -114,7 +115,7 @@ export default function DataSourcesPage() {
  );
 
  try {
- await window.syncSource(name);
+ await mockApi.syncSource(name);
  setConnected((prev) =>
  prev.map((s) => {
  if (s.name === name) {
@@ -186,7 +187,7 @@ export default function DataSourcesPage() {
  setIsConnecting(true);
  
  try {
- await window.connectSource(connectModal.name, {});
+ await mockApi.connectSource(connectModal.name, {});
  
  const sourceToAdd = {
  name: connectModal.name,

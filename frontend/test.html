@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script type="module">
+import { Chart, registerables } from './node_modules/chart.js/dist/chart.mjs';
+Chart.register(...registerables);
+try {
+  const canvas = document.createElement('canvas');
+  canvas.width = 400; canvas.height = 400;
+  const ctx = canvas.getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'pie',
+    data: { labels: ['A'], datasets: [{ data: [1] }] },
+    options: { animation: false } // responsive is true by default
+  });
+  console.log('SUCCESS');
+} catch (e) {
+  console.error('CHART ERROR:', e);
+}
+</script>
+</body>
+</html>

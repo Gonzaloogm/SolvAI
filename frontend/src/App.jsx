@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
- LayoutGrid,
+ LayoutDashboard,
  FileText,
  Database,
  BarChart2,
@@ -29,7 +29,7 @@ const cn = (...classes) => classes.filter(Boolean).join(' ');
 
 /* ── Navigation items ──────────────────────────────────────────────────────── */
 const NAV_ITEMS = [
- { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+ { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
  { id: 'reports', label: 'Reports', icon: FileText },
  { id: 'data-sources', label: 'Data Sources', icon: Database },
  { id: 'demo', label: 'Demo Comparison', icon: BarChart2 },
@@ -72,7 +72,7 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  )}
  >
  {/* Logo */}
- <div className="px-5 h-16 flex items-center justify-between border-b border-border">
+ <div className="px-5 h-16 shrink-0 flex items-center justify-between border-b border-border">
  <img src="/SolvAI-logo.png" alt="SolvAI Logo" className="h-7 w-auto object-contain" />
  <button
  className="lg:hidden p-1 rounded-md hover:bg-page "
@@ -100,8 +100,8 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  }}
  disabled={isDisabled}
  className={cn(
- 'w-full flex items-center gap-3 px-3 h-9 rounded-lg text-sm font-medium transition-colors duration-150',
- isActive && 'bg-nav-active text-nav-active',
+ 'w-full flex items-center gap-3 px-3 h-9 rounded-lg text-sm transition-colors duration-150 font-medium',
+ isActive && 'bg-[#eff6ff] dark:bg-[#0d1f3c] text-[#0570de] dark:text-[#60a5fa]',
  !isActive && !isDisabled && 'text-secondary hover:bg-page hover:text-primary ',
  isDisabled && 'text-[#d0d5dd] cursor-not-allowed'
  )}
@@ -119,7 +119,7 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  </nav>
 
  {/* Theme Toggle & User info */}
- <div className="border-t border-border p-3 flex flex-col gap-2">
+ <div className="border-t border-border p-3 flex flex-col gap-2 shrink-0">
 
 
  <div className="flex items-center gap-3 px-3 py-2">

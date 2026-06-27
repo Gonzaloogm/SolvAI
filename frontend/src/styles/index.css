@@ -1,43 +1,60 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================================
-   SolvAI Design System — Stripe-inspired
+   SolvAI Design System — Strict CSS Variables
    ============================================================ */
+
+:root {
+  --bg-page: #f6f8fa;
+  --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
+  --border-color: #e3e8ef;
+  --text-primary: #0a2540;
+  --text-secondary: #425466;
+  --text-muted: #697386;
+  --bg-table-header: #f6f8fa;
+  --bg-input: #ffffff;
+  --bg-nav-active: #eff6ff;
+  --text-nav-active: #0570de;
+  --bg-row-hover: #f6f8fa;
+  --bg-badge: #f0f4f8;
+}
+
+html.dark {
+  --bg-page: #0a0a0a;
+  --bg-card: #111111;
+  --bg-sidebar: #0d0d0d;
+  --border-color: #1f1f1f;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #555555;
+  --bg-table-header: #161616;
+  --bg-input: #161616;
+  --bg-nav-active: #0d1f3c;
+  --text-nav-active: #60a5fa;
+  --bg-row-hover: #161616;
+  --bg-badge: #1a1a1a;
+}
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  --color-page-bg: #f6f8fa;
-  --color-surface: #ffffff;
-  --color-border: #e3e8ef;
-  --color-border-hover: #d0d5dd;
-
-  --color-primary: #0570de;
-  --color-primary-hover: #0462c7;
-  --color-primary-light: #eff6ff;
-
-  --color-text-primary: #0a2540;
-  --color-text-secondary: #425466;
-  --color-text-muted: #697386;
-
-  --color-success: #1a9e6e;
-  --color-success-light: #ecfdf5;
-  --color-warning: #c9870c;
-  --color-warning-light: #fffbeb;
-  --color-danger: #df1b41;
-  --color-danger-light: #fef2f2;
-
-  --color-badge-gray-bg: #f0f2f5;
-  --color-badge-gray-text: #697386;
-  --color-badge-blue-bg: #eff6ff;
-  --color-badge-blue-text: #0570de;
-  --color-badge-green-bg: #ecfdf5;
-  --color-badge-green-text: #1a9e6e;
-  --color-badge-amber-bg: #fffbeb;
-  --color-badge-amber-text: #c9870c;
-  --color-badge-red-bg: #fef2f2;
-  --color-badge-red-text: #df1b41;
+  --color-page: var(--bg-page);
+  --color-card: var(--bg-card);
+  --color-sidebar: var(--bg-sidebar);
+  --color-border: var(--border-color);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-table-header: var(--bg-table-header);
+  --color-input: var(--bg-input);
+  --color-nav-active: var(--bg-nav-active);
+  --color-nav-active-text: var(--text-nav-active);
+  --color-row-hover: var(--bg-row-hover);
+  --color-badge: var(--bg-badge);
 }
 
 /* ── Base ── */
@@ -53,17 +70,12 @@ html {
 
 body {
   font-family: var(--font-sans);
-  color: var(--color-text-secondary);
-  background-color: var(--color-page-bg);
+  color: var(--text-secondary);
+  background-color: var(--bg-page);
   margin: 0;
   padding: 0;
   line-height: 1.5;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.dark body {
-  color: #a0a0a0;
-  background-color: #0a0a0a;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 /* ── Page transition ── */
@@ -97,7 +109,7 @@ body {
   border-radius: 99px;
 }
 
-.dark ::-webkit-scrollbar-thumb {
+html.dark ::-webkit-scrollbar-thumb {
   background: #333333;
 }
 
@@ -105,24 +117,12 @@ body {
   background: #98a1b0;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: #555555;
 }
 
 /* ── Selection ── */
 ::selection {
-  background-color: #bfdbfe;
-  color: #0a2540;
-}
-
-.dark ::selection {
-  background-color: #1e3a8a;
-  color: #f5f5f5;
-}
-
-/* Transitions for dark mode */
-.transition-colors-all {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
+  background-color: var(--bg-nav-active);
+  color: var(--text-nav-active);
 }

@@ -23,6 +23,9 @@ import DataSourcesPage from './pages/DataSourcesPage.jsx';
 import DemoComparisonPage from './pages/DemoComparisonPage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 /* ── Utility ───────────────────────────────────────────────────────────────── */
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -52,6 +55,18 @@ const PAGES = {
  ══════════════════════════════════════════════════════════════════════════════ */
 function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  const { actualTheme, toggleTheme } = useTheme();
+ const navigate = useNavigate();
+
+ const handleLogout = () => {
+   localStorage.removeItem('solvai_token');
+   localStorage.removeItem('solvai_user');
+   navigate('/login');
+ };
+ 
+ const userStr = localStorage.getItem('solvai_user');
+ const user = userStr ? JSON.parse(userStr) : null;
+ const email = user?.email || 'demo@solvai.com';
+ const initial = email.charAt(0).toUpperCase();
 
  return (
  <>
@@ -124,15 +139,20 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
 
  <div className="flex items-center gap-3 px-3 py-2">
  <div className="w-8 h-8 rounded-full bg-[#0570de] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
- SA
+ {initial}
  </div>
  <div className="flex-1 min-w-0">
  <p className="text-sm font-medium text-primary truncate">
- demo@solvai.com
+ {email}
  </p>
- <p className="text-xs text-muted truncate">Free plan</p>
+ <p className="text-xs text-muted truncate">{user?.subscription_plan || 'free'} plan</p>
  </div>
  </div>
+ 
+ <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 h-9 rounded-lg text-sm transition-colors duration-150 font-medium text-secondary hover:bg-page hover:text-primary mt-1">
+   <User className="w-[18px] h-[18px] flex-shrink-0" />
+   <span className="flex-1 text-left">Logout</span>
+ </button>
  </div>
  </aside>
  </>
@@ -142,20 +162,48 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
 /* ══════════════════════════════════════════════════════════════════════════════
  App Component
  ══════════════════════════════════════════════════════════════════════════════ */
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('solvai_token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
 export default function App() {
- const [activePage, setActivePage] = useState('dashboard');
+  return (
+    <ThemeProvider>
+      <ToastProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </ToastProvider>
+    </ThemeProvider>
+  );
+}
+
+function AppLayout() {
+ const location = useLocation();
+ const navigate = useNavigate();
  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
- const PageComponent = PAGES[activePage] || DashboardPage;
+ const path = location.pathname.slice(1);
+ const activePage = PAGES[path] ? path : 'dashboard';
+
+ const PageComponent = PAGES[activePage];
 
  return (
- <ThemeProvider>
- <ToastProvider>
  <div className="min-h-screen bg-page transition-colors duration-200">
  {/* Sidebar */}
  <Sidebar
  activePage={activePage}
- onNavigate={setActivePage}
+ onNavigate={(id) => navigate(`/${id}`)}
  mobileOpen={mobileMenuOpen}
  onClose={() => setMobileMenuOpen(false)}
  />
@@ -176,12 +224,10 @@ export default function App() {
  {/* Page content */}
  <div className="px-6 py-8 lg:px-10 lg:py-8">
  <div className="max-w-[1100px] mx-auto">
- <PageComponent key={activePage} onNavigate={setActivePage} />
+ <PageComponent key={activePage} onNavigate={(id) => navigate(`/${id}`)} />
  </div>
  </div>
  </main>
  </div>
- </ToastProvider>
- </ThemeProvider>
  );
 }

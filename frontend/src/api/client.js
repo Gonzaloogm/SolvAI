@@ -114,6 +114,12 @@ export const solvencyReports = {
    * GET /solvency-reports/demo-transactions
    */
   getDemoTransactions: () => apiClient.get('/solvency-reports/demo-transactions'),
+
+  /**
+   * Download the WeasyPrint PDF for a completed report.
+   * GET /solvency-reports/{id}/pdf
+   */
+  getPDF: (id) => apiClient.get(`/solvency-reports/${id}/pdf`, { responseType: 'blob' }),
 };
 
 // ─── Lender Matching ──────────────────────────────────────────────────────────

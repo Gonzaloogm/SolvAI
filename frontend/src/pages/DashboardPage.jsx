@@ -12,10 +12,10 @@ import {
  Globe,
  RefreshCw,
  Loader2,
+ Plus,
 } from 'lucide-react';
-import { generateReportPDF } from '../lib/generateReportPDF';
 import ReportDetailModal from '../components/ReportDetailModal.jsx';
-import { mockApi } from '../lib/mockApi';
+import { solvencyReports, dataSources as dataSourcesApi, users, billing } from '../api/client.js';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -28,165 +28,140 @@ export default function DashboardPage({ onNavigate }) {
  const [downloadingPdfId, setDownloadingPdfId] = useState(null);
  const { addToast } = useToast();
 
- const handleSync = async (name) => {
- setSyncedRecords(prev => ({ ...prev, [name]: 'Syncing...' }));
- try {
- const result = await mockApi.syncSource(name);
- setSyncedRecords(prev => ({ ...prev, [name]: (prev[name] || 0) + result.newRecords }));
- setSyncedSources((prev) => ({ ...prev, [name]: true }));
- addToast(`Successfully synced ${name} (+${result.newRecords} records)`, 'success');
- } catch (error) {
- addToast(`Failed to sync ${name}`, 'error');
- } finally {
- setSyncingSources((prev) => ({ ...prev, [name]: false }));
- }
+ const [realReports, setRealReports] = useState([]);
+ const [realSources, setRealSources] = useState([]);
+ const [userInfo, setUserInfo] = useState(null);
+ const [subscription, setSubscription] = useState(null);
+ const [loading, setLoading] = useState(true);
+ const [generating, setGenerating] = useState(false);
+
+ React.useEffect(() => {
+   const fetchData = async () => {
+     try {
+       const [reportsRes, sourcesRes, userRes, subRes] = await Promise.all([
+         solvencyReports.list().catch(() => ({ data: [] })),
+         dataSourcesApi.list().catch(() => ({ data: [] })),
+         users.me().catch(() => ({ data: null })),
+         billing.getSubscription().catch(() => ({ data: { plan: 'free' } })),
+       ]);
+       const reps = Array.isArray(reportsRes.data) ? reportsRes.data : (reportsRes.data?.items ?? []);
+       reps.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+       setRealReports(reps);
+       const srcs = Array.isArray(sourcesRes.data) ? sourcesRes.data : (sourcesRes.data?.items ?? []);
+       setRealSources(srcs);
+       setUserInfo(userRes.data);
+       setSubscription(subRes.data);
+     } catch (err) {
+       console.error('Dashboard fetch error:', err);
+     } finally {
+       setLoading(false);
+     }
+   };
+   fetchData();
+ }, []);
+
+ const handleGenerate = async () => {
+   setGenerating(true);
+   try {
+     const res = await solvencyReports.create();
+     const newId = res.data?.id;
+     if (!newId) throw new Error('No report ID returned');
+     addToast('Report generation started...', 'info');
+     const poll = setInterval(async () => {
+       try {
+         const pollRes = await solvencyReports.get(newId);
+         const status = pollRes.data?.status;
+         if (status === 'COMPLETED') {
+           clearInterval(poll);
+           setGenerating(false);
+           addToast('Report generated successfully!', 'success');
+           const freshRes = await solvencyReports.list();
+           const fresh = Array.isArray(freshRes.data) ? freshRes.data : (freshRes.data?.items ?? []);
+           fresh.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+           setRealReports(fresh);
+         } else if (status === 'FAILED') {
+           clearInterval(poll);
+           setGenerating(false);
+           addToast('Report generation failed', 'error');
+         }
+       } catch (e) {
+         clearInterval(poll);
+         setGenerating(false);
+       }
+     }, 3000);
+   } catch (err) {
+     setGenerating(false);
+     addToast(err?.response?.data?.detail || 'Failed to start report generation', 'error');
+   }
  };
+
+ const handleSync = async (name) => {
+   addToast(`Sync for ${name} is not yet supported`, 'info');
+ };
+
+ const scoredReports = realReports.filter(r => r.report_data?.overall_score || r.report_data?.solvency_score);
+ const avgScore = scoredReports.length > 0
+   ? (scoredReports.reduce((sum, r) => sum + (r.report_data?.overall_score ?? r.report_data?.solvency_score ?? 0), 0) / scoredReports.length).toFixed(1)
+   : '\u2014';
 
  const statCards = [
  {
  label: 'Total Reports',
- value: '47',
- trend: '+12% this month',
+ value: String(realReports.length),
+ trend: realReports.length > 0 ? `${realReports.filter(r => r.status === 'COMPLETED').length} completed` : null,
  trendType: 'success',
  icon: FileText,
  },
  {
  label: 'Data Sources',
- value: '4',
+ value: String(realSources.length),
  subtitle: 'connected',
  icon: Database,
  },
  {
- label: 'Avg Accuracy',
- value: '94.2%',
- badge: 'High',
+ label: 'Avg Score',
+ value: avgScore !== '\u2014' ? `${avgScore}%` : '\u2014',
+ badge: avgScore !== '\u2014' && parseFloat(avgScore) >= 70 ? 'Good' : null,
  badgeType: 'success',
  icon: TrendingUp,
  },
  {
- label: 'API Calls',
- value: '1,240 / 10,000',
- progress: 12.4,
+ label: 'Plan',
+ value: (subscription?.plan || 'free').charAt(0).toUpperCase() + (subscription?.plan || 'free').slice(1),
+ subtitle: subscription?.status || 'active',
  icon: Activity,
  },
  ];
 
- const reports = [
- {
- name: 'Q3 Financial Analysis',
- type: 'Financial',
- status: 'Complete',
- created: 'Oct 15, 2024',
- accuracy: '96.1%',
- hasDownload: true,
- },
- {
- name: 'Risk Assessment Model v2',
- type: 'Risk',
- status: 'Processing',
- created: 'Oct 14, 2024',
- accuracy: null,
- hasDownload: false,
- },
- {
- name: 'Compliance Audit Report',
- type: 'Compliance',
- status: 'Complete',
- created: 'Oct 12, 2024',
- accuracy: '91.3%',
- hasDownload: true,
- },
- {
- name: 'Revenue Forecast 2025',
- type: 'Financial',
- status: 'Complete',
- created: 'Oct 10, 2024',
- accuracy: '88.7%',
- hasDownload: true,
- },
- {
- name: 'Credit Scoring Pipeline',
- type: 'Risk',
- status: 'Failed',
- created: 'Oct 9, 2024',
- accuracy: null,
- hasDownload: false,
- },
- ];
+ const reports = realReports.slice(0, 5).map(r => ({
+ id: r.id,
+ name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
+ type: 'Solvency',
+ status: r.status === 'COMPLETED' ? 'Complete' : r.status === 'GENERATING' ? 'Processing' : r.status === 'FAILED' ? 'Failed' : 'Draft',
+ created: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '\u2014',
+ accuracy: r.report_data?.overall_score ? `${r.report_data.overall_score}%` : null,
+ hasDownload: r.status === 'COMPLETED',
+ _raw: r,
+ }));
 
- const dataSources = [
- {
- name: 'Salesforce',
- icon: Cloud,
- bgColor: 'bg-[#0570de]',
- connected: true,
- lastSync: '2h ago',
- },
- {
- name: 'PostgreSQL',
+ const displaySources = realSources.map(s => ({
+ name: (s.source_type || s.type || 'Source').charAt(0).toUpperCase() + (s.source_type || s.type || 'Source').slice(1).toLowerCase(),
  icon: Database,
- bgColor: 'bg-[#336791]',
- connected: true,
- lastSync: '30m ago',
- },
- {
- name: 'Google Sheets',
- icon: FileSpreadsheet,
- bgColor: 'bg-[#1a9e6e]',
- connected: true,
- lastSync: '1h ago',
- },
- {
- name: 'REST API',
- icon: Globe,
- bgColor: 'bg-[#c9870c]',
- connected: false,
- lastSync: 'Error',
- },
- ];
+ bgColor: (s.source_type || s.type || '').toLowerCase() === 'stripe' ? 'bg-[#635bff]' : (s.source_type || s.type || '').toLowerCase() === 'xero' ? 'bg-[#00b0e0]' : 'bg-[#336791]',
+ connected: (s.status || '').toUpperCase() === 'CONNECTED',
+ lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(new Date(s.created_at)) : '\u2014',
+ }));
 
  const usageItems = [
- { label: 'Reports', current: 47, max: 100, unit: '' },
- { label: 'API Calls', current: 1240, max: 10000, unit: '' },
- { label: 'Storage', current: 2.1, max: 5.0, unit: ' GB' },
+ { label: 'Reports', current: realReports.length, max: subscription?.plan === 'pro' ? 1000 : 100, unit: '' },
+ { label: 'Data Sources', current: realSources.length, max: subscription?.plan === 'pro' ? 10 : 4, unit: '' },
  ];
 
- const [activities, setActivities] = useState([
- {
- color: 'bg-[#1a9e6e]',
- text: "Report 'Q3 Financial Analysis' completed successfully",
- time: '2 hours ago',
- },
- {
- color: 'bg-[#0570de]',
- text: "New data source 'Google Sheets' connected",
- time: '5 hours ago',
- },
- {
- color: 'bg-[#c9870c]',
- text: "Report 'Risk Assessment Model v2' processing started",
- time: '6 hours ago',
- },
- {
- color: 'bg-[#df1b41]',
- text: "Report 'Credit Scoring Pipeline' failed — timeout error",
- time: '1 day ago',
- },
- {
- color: 'bg-[#0570de]',
- text: 'API key regenerated',
- time: '2 days ago',
- },
- ]);
-
- const loadMoreActivities = () => {
- const newItems = Array(5).fill(null).map((_, i) => ({
- color: 'bg-[#697386]',
- text: `Historical activity event ${activities.length + i + 1}`,
- time: `${activities.length + i + 2} days ago`,
+ const derivedActivities = realReports.slice(0, 5).map(r => ({
+ color: r.status === 'COMPLETED' ? 'bg-[#1a9e6e]' : r.status === 'FAILED' ? 'bg-[#df1b41]' : 'bg-[#0570de]',
+ text: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''} ${r.status?.toLowerCase() || ''}`,
+ time: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(r.created_at)) : '\u2014',
  }));
- setActivities(prev => [...prev, ...newItems]);
- };
 
  const typeBadgeStyles = {
  Financial: 'badge-financial',
@@ -202,14 +177,35 @@ export default function DashboardPage({ onNavigate }) {
  Draft: 'badge-draft',
  };
 
+ if (loading) {
+   return (
+     <div className="page-enter flex items-center justify-center" style={{minHeight: '60vh'}}>
+       <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+     </div>
+   );
+ }
+
  return (
  <div className="page-enter">
  {/* Page Header */}
+ <div className="flex justify-between items-center">
  <div>
  <h1 className="text-xl font-semibold text-primary">Dashboard</h1>
  <p className="text-sm text-muted">
  Overview of your AI explainability platform
  </p>
+ </div>
+ <button
+   onClick={handleGenerate}
+   disabled={generating}
+   className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors disabled:opacity-50"
+ >
+   {generating ? (
+     <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+   ) : (
+     <><Plus className="w-4 h-4" /> New Report</>
+   )}
+ </button>
  </div>
 
  {/* Stat Cards Row */}
@@ -355,15 +351,23 @@ export default function DashboardPage({ onNavigate }) {
  className="w-4 h-4 text-muted hover:text-primary cursor-pointer" 
  onClick={async () => {
  setDownloadingPdfId(report.name);
- addToast('Generating PDF report...', 'info');
+ addToast('Downloading PDF...', 'info');
  try {
- await generateReportPDF(report);
- addToast('PDF downloaded successfully', 'success');
+   const reportId = report._raw?.id || report.id;
+   const res = await solvencyReports.getPDF(reportId);
+   const blob = new Blob([res.data], { type: 'application/pdf' });
+   const url = URL.createObjectURL(blob);
+   const a = document.createElement('a');
+   a.href = url;
+   a.download = `solvai_report_${reportId}.pdf`;
+   a.click();
+   URL.revokeObjectURL(url);
+   addToast('PDF downloaded successfully', 'success');
  } catch (e) {
- console.error('PDF Generation Error:', e);
- addToast('Failed to generate PDF', 'error');
+   console.error('PDF download error:', e);
+   addToast('Failed to download PDF', 'error');
  } finally {
- setDownloadingPdfId(null);
+   setDownloadingPdfId(null);
  }
  }}
  />
@@ -386,14 +390,14 @@ export default function DashboardPage({ onNavigate }) {
  Data sources
  </h2>
  <div>
- {dataSources.map((source, index) => {
+ {displaySources.map((source, index) => {
  const SourceIcon = source.icon;
  return (
  <div
  key={source.name}
  className={cn(
  'flex items-center justify-between py-3',
- index < dataSources.length - 1 &&
+ index < displaySources.length - 1 &&
  'border-b border-border'
  )}
  >
@@ -502,12 +506,12 @@ export default function DashboardPage({ onNavigate }) {
  Recent activity
  </h2>
  <div>
- {activities.map((item, index) => (
+ {derivedActivities.map((item, index) => (
  <div
  key={index}
  className={cn(
  'flex items-start gap-3 py-3',
- index < activities.length - 1 &&
+ index < derivedActivities.length - 1 &&
  'border-b border-border'
  )}
  >
@@ -524,12 +528,6 @@ export default function DashboardPage({ onNavigate }) {
  </div>
  ))}
  </div>
- <button
- onClick={loadMoreActivities}
- className="w-full mt-4 py-2 border border-border rounded-md text-sm font-medium text-primary hover:bg-page transition-colors cursor-pointer"
- >
- Load more
- </button>
  </div>
  </div>
  );

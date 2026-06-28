@@ -13,96 +13,11 @@ import {
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { generateReportPDF } from '../lib/generateReportPDF';
+import { solvencyReports } from '../api/client.js';
 import ReportDetailModal from '../components/ReportDetailModal.jsx';
-import { mockApi } from '../lib/mockApi';
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 const cn = (...classes) => classes.filter(Boolean).join(' ');
-
-// ── Mock Data ────────────────────────────────────────────────────────────────
-const REPORTS = [
- {
- id: 1,
- name: 'Q3 Financial Analysis',
- subtitle: 'GPT-4 · Salesforce',
- type: 'Financial',
- status: 'Complete',
- dataSource: 'Salesforce',
- accuracy: 96.1,
- createdAt: 'Oct 15, 2024',
- },
- {
- id: 2,
- name: 'Risk Assessment Model v2',
- subtitle: 'BERT · PostgreSQL',
- type: 'Risk',
- status: 'Processing',
- dataSource: 'PostgreSQL',
- accuracy: null,
- createdAt: 'Oct 14, 2024',
- },
- {
- id: 3,
- name: 'Compliance Audit Report',
- subtitle: 'Claude · Google Sheets',
- type: 'Compliance',
- status: 'Complete',
- dataSource: 'Google Sheets',
- accuracy: 91.3,
- createdAt: 'Oct 12, 2024',
- },
- {
- id: 4,
- name: 'Revenue Forecast 2025',
- subtitle: 'GPT-4 · Salesforce',
- type: 'Financial',
- status: 'Complete',
- dataSource: 'Salesforce',
- accuracy: 88.7,
- createdAt: 'Oct 10, 2024',
- },
- {
- id: 5,
- name: 'Credit Scoring Pipeline',
- subtitle: 'XGBoost · PostgreSQL',
- type: 'Risk',
- status: 'Failed',
- dataSource: 'PostgreSQL',
- accuracy: null,
- createdAt: 'Oct 9, 2024',
- },
- {
- id: 6,
- name: 'Monthly KPI Dashboard',
- subtitle: 'GPT-4 · REST API',
- type: 'Financial',
- status: 'Complete',
- dataSource: 'REST API',
- accuracy: 93.5,
- createdAt: 'Oct 7, 2024',
- },
- {
- id: 7,
- name: 'Fraud Detection Analysis',
- subtitle: 'BERT · PostgreSQL',
- type: 'Risk',
- status: 'Draft',
- dataSource: 'PostgreSQL',
- accuracy: null,
- createdAt: 'Oct 5, 2024',
- },
- {
- id: 8,
- name: 'ESG Compliance Check',
- subtitle: 'Claude · Google Sheets',
- type: 'Compliance',
- status: 'Complete',
- dataSource: 'Google Sheets',
- accuracy: 85.2,
- createdAt: 'Oct 3, 2024',
- },
-];
 
 // ── Badge Helpers ────────────────────────────────────────────────────────────
 const TYPE_STYLES = {
@@ -128,7 +43,7 @@ const getAccuracyColor = (val) => {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function ReportsPage() {
- const [reports, setReports] = useState(REPORTS);
+ const [reports, setReports] = useState([]);
  const [selectedRows, setSelectedRows] = useState(new Set());
  const [searchQuery, setSearchQuery] = useState('');
  const [statusFilter, setStatusFilter] = useState('all');
@@ -143,6 +58,37 @@ export default function ReportsPage() {
  // New States
  const { addToast } = useToast();
  const [isProcessing, setIsProcessing] = useState(false);
+ const [loading, setLoading] = useState(true);
+ const [generating, setGenerating] = useState(false);
+
+ const fetchReports = useCallback(async () => {
+   setLoading(true);
+   try {
+     const res = await solvencyReports.list();
+     const data = Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
+     data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+     const mapped = data.map(r => ({
+       id: r.id,
+       name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
+       subtitle: `Gemini \u00b7 ${r.report_data?.financial_summary?.connected_platforms?.join(', ') || 'SolvAI'}`,
+       type: 'Solvency',
+       status: r.status === 'COMPLETED' ? 'Complete' : r.status === 'GENERATING' ? 'Processing' : r.status === 'FAILED' ? 'Failed' : 'Draft',
+       dataSource: r.report_data?.financial_summary?.connected_platforms?.[0] || 'Stripe',
+       accuracy: r.report_data?.overall_score ?? null,
+       createdAt: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '\u2014',
+       _raw: r,
+     }));
+     setReports(mapped);
+   } catch (err) {
+     console.error('Failed to load reports:', err);
+   } finally {
+     setLoading(false);
+   }
+ }, []);
+
+ useEffect(() => {
+   fetchReports();
+ }, [fetchReports]);
  
  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
  const [confirmConfig, setConfirmConfig] = useState({ title: '', description: '', action: () => {}, confirmLabel: '', confirmVariant: 'primary' });
@@ -259,21 +205,13 @@ export default function ReportsPage() {
  const handleBulkDelete = () => {
  setConfirmConfig({
  title: 'Delete Reports',
- description: `Are you sure you want to delete ${selectedRows.size} reports?`,
- confirmLabel: 'Delete',
+ description: `Are you sure you want to remove ${selectedRows.size} reports from this view?`,
+ confirmLabel: 'Remove',
  confirmVariant: 'danger',
  action: async () => {
- setIsProcessing(true);
- try {
- await Promise.all(Array.from(selectedRows).map(id => mockApi.deleteReport(id)));
  setReports((prev) => prev.filter((r) => !selectedRows.has(r.id)));
  setSelectedRows(new Set());
- addToast(`Deleted ${selectedRows.size} reports`, 'success');
- } catch (err) {
- addToast('Failed to delete reports', 'error');
- } finally {
- setIsProcessing(false);
- }
+ addToast(`Removed ${selectedRows.size} reports`, 'success');
  }
  });
  setIsConfirmModalOpen(true);
@@ -284,14 +222,21 @@ export default function ReportsPage() {
  };
 
  const handleDownloadPDF = async (report) => {
- setDownloadingPdfId(report.name);
- addToast('Generating PDF report...', 'info');
+ setDownloadingPdfId(report.id || report.name);
+ addToast('Downloading PDF...', 'info');
  try {
- await generateReportPDF(report);
- addToast('PDF downloaded successfully', 'success');
+ const reportId = report._raw?.id || report.id;
+ const res = await solvencyReports.getPDF(reportId);
+ const blob = new Blob([res.data], { type: 'application/pdf' });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = `solvai_report_${reportId}.pdf`;
+ a.click();
+ URL.revokeObjectURL(url);
+ addToast('PDF downloaded', 'success');
  } catch (e) {
- console.error('PDF Generation Error:', e);
- addToast('Failed to generate PDF', 'error');
+ addToast(e?.response?.data?.detail || 'Failed to download PDF', 'error');
  } finally {
  setDownloadingPdfId(null);
  }
@@ -302,25 +247,13 @@ export default function ReportsPage() {
  setOpenMenuId(null);
  setConfirmConfig({
  title: 'Delete Report',
- description: 'Are you sure you want to delete this report?',
- confirmLabel: 'Delete',
+ description: 'Remove this report from the list?',
+ confirmLabel: 'Remove',
  confirmVariant: 'danger',
  action: async () => {
- setIsProcessing(true);
- try {
- await mockApi.deleteReport(id);
- setReports((prev) => prev.filter((r) => r.id !== id));
- setSelectedRows((prev) => {
- const next = new Set([...prev]);
- next.delete(id);
- return next;
- });
- addToast('Report deleted', 'success');
- } catch (err) {
- addToast('Failed to delete report', 'error');
- } finally {
- setIsProcessing(false);
- }
+ setReports(prev => prev.filter(r => r.id !== id));
+ setSelectedRows(prev => { const next = new Set([...prev]); next.delete(id); return next; });
+ addToast('Report removed', 'success');
  }
  });
  setIsConfirmModalOpen(true);
@@ -339,37 +272,51 @@ export default function ReportsPage() {
  };
 
  const handleAddReport = async (e) => {
- e.preventDefault();
- const formData = new FormData(e.target);
- const name = formData.get('name');
- const type = formData.get('type');
- const dataSource = formData.get('dataSource');
- const subtitle = formData.get('description') || 'Custom Report';
- 
- if (!name) return;
-
- setIsProcessing(true);
- try {
- const newReport = await mockApi.createReport({
- name,
- type,
- dataSource,
- subtitle,
- accuracy: null,
- createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
- });
- setReports((prev) => [newReport, ...prev]);
- addToast('Report created', 'success');
+ if (e) e.preventDefault();
  setIsModalOpen(false);
+ setGenerating(true);
+ try {
+ const res = await solvencyReports.create();
+ const newId = res.data?.id;
+ if (!newId) throw new Error('No report ID returned');
+ addToast('Report generation started \u2014 analyzing financial data...', 'info');
+ const poll = setInterval(async () => {
+ try {
+ const pollRes = await solvencyReports.get(newId);
+ const status = pollRes.data?.status;
+ if (status === 'COMPLETED') {
+ clearInterval(poll);
+ setGenerating(false);
+ addToast('Report generated successfully!', 'success');
+ fetchReports();
+ } else if (status === 'FAILED') {
+ clearInterval(poll);
+ setGenerating(false);
+ const errMsg = pollRes.data?.report_data?.error || 'Report generation failed';
+ addToast(errMsg, 'error');
+ fetchReports();
+ }
+ } catch (e) {
+ clearInterval(poll);
+ setGenerating(false);
+ }
+ }, 3000);
  } catch (err) {
- addToast('Failed to create report', 'error');
- } finally {
- setIsProcessing(false);
+ setGenerating(false);
+ addToast(err?.response?.data?.detail || 'Failed to start report generation', 'error');
  }
  };
 
  const handlePrevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
  const handleNextPage = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
+
+ if (loading) {
+ return (
+ <div className="flex items-center justify-center" style={{minHeight: '60vh'}}>
+ <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+ </div>
+ );
+ }
 
  return (
  <div className="page-enter">
@@ -383,12 +330,23 @@ export default function ReportsPage() {
  </div>
  <button 
  onClick={() => setIsModalOpen(true)}
- className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors"
+ disabled={generating}
+ className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors disabled:opacity-50"
  >
- <Plus className="w-4 h-4" />
- New Report
+ {generating ? (
+ <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+ ) : (
+ <><Plus className="w-4 h-4" /> New Report</>
+ )}
  </button>
  </div>
+
+ {generating && (
+ <div className="mt-4 bg-[#eff6ff] dark:bg-[#0d1f3c] border border-[#0570de]/30 rounded-lg px-4 py-3 flex items-center gap-3">
+ <Loader2 className="w-5 h-5 animate-spin text-[#0570de]" />
+ <span className="text-sm font-medium text-[#0570de]">Generating report \u2014 analyzing your financial data...</span>
+ </div>
+ )}
 
  {/* ── 2. FILTER BAR ──────────────────────────────────────────────────── */}
  <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -532,7 +490,11 @@ export default function ReportsPage() {
  paginatedReports.map((report) => (
  <tr
  key={report.id}
- className="hover:bg-page border-b border-border transition-colors group last:border-b-0"
+ className="hover:bg-page border-b border-border transition-colors group last:border-b-0 cursor-pointer"
+ onClick={() => {
+ setSelectedReportForDetail(report);
+ setIsDetailModalOpen(true);
+ }}
  >
  {/* Checkbox */}
  <td className="py-3 px-4">
@@ -822,7 +784,7 @@ export default function ReportsPage() {
  {/* ── 7. DETAIL MODAL ────────────────────────────────────────────────── */}
  {isDetailModalOpen && selectedReportForDetail && (
  <ReportDetailModal 
- report={selectedReportForDetail} 
+ report={selectedReportForDetail._raw || selectedReportForDetail} 
  onClose={() => setIsDetailModalOpen(false)} 
  />
  )}

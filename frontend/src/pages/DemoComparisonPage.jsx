@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeftRight, GitCompare, Play, Download, Share2 } from 'lucide-react';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../context/ToastContext.jsx';
+import { solvencyReports } from '../api/client.js';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -12,13 +13,7 @@ const MODEL_OPTIONS = [
  'BERT Fine-tuned',
 ];
 
-const INPUT_DATA = `{
- "company": "Acme Corp",
- "revenue": 2450000,
- "expenses": 1890000,
- "debt_ratio": 0.34,
- "sector": "Technology"
-}`;
+// Replaced INPUT_DATA with state below
 
 const Highlight = ({ children }) => (
  <span className="bg-nav-active text-[#0570de] px-1 py-0.5 rounded text-xs font-medium">
@@ -154,19 +149,57 @@ const getDifferences = (a, b) => {
  ];
 };
 
-export default function DemoComparisonPage() {
+ export default function DemoComparisonPage() {
  const [modelA, setModelA] = useState('GPT-4 Turbo');
  const [modelB, setModelB] = useState('Claude 3.5 Sonnet');
  const [compared, setCompared] = useState(false);
  const [isLoading, setIsLoading] = useState(false);
+ const [transactions, setTransactions] = useState([]);
+ const [inputDataStr, setInputDataStr] = useState('Loading transactions...');
+ const [realReport, setRealReport] = useState(null);
  const { addToast } = useToast();
 
- const handleCompare = () => {
+ useEffect(() => {
+ solvencyReports.getDemoTransactions().then(res => {
+ setTransactions(res.data);
+ const sample = res.data.slice(0, 8);
+ setInputDataStr(JSON.stringify(sample, null, 2));
+ }).catch(err => {
+ console.error(err);
+ setInputDataStr('Failed to load transactions');
+ });
+ }, []);
+
+ const handleCompare = async () => {
  setCompared(true);
  setIsLoading(true);
- setTimeout(() => {
+ try {
+ const res = await solvencyReports.create();
+ const newId = res.data?.id;
+ if (!newId) throw new Error('No ID');
+ addToast('Generating AI analysis...', 'info');
+ const poll = setInterval(async () => {
+ try {
+ const pollRes = await solvencyReports.get(newId);
+ if (pollRes.data?.status === 'COMPLETED') {
+ clearInterval(poll);
+ setRealReport(pollRes.data);
  setIsLoading(false);
- }, 1500);
+ addToast('Comparison complete!', 'success');
+ } else if (pollRes.data?.status === 'FAILED') {
+ clearInterval(poll);
+ setIsLoading(false);
+ addToast('Analysis failed', 'error');
+ }
+ } catch (e) {
+ clearInterval(poll);
+ setIsLoading(false);
+ }
+ }, 3000);
+ } catch (e) {
+ setIsLoading(false);
+ addToast('Failed to start comparison', 'error');
+ }
  };
 
  const handleSwap = () => {
@@ -308,7 +341,7 @@ export default function DemoComparisonPage() {
  Input Data
  </p>
  <pre className="bg-page rounded-md p-4 font-mono text-xs text-secondary leading-relaxed transition-colors">
- {INPUT_DATA}
+ {inputDataStr}
  </pre>
  </div>
 
@@ -326,7 +359,15 @@ export default function DemoComparisonPage() {
  <div className="h-3.5 bg-gray-200 rounded w-full"></div>
  </div>
  ) : (
+ realReport && modelA === 'Gemini 1.5 Pro' ? (
+ <div>
+ {realReport.report_data?.executive_summary || realReport.report_data?.narrative || 'Analysis complete based on real transactions.'}
+ <br/><br/>
+ <Highlight>Score: {realReport.report_data?.overall_score || realReport.report_data?.solvency_score || 0}/100</Highlight>
+ </div>
+ ) : (
  modelDataA.output
+ )
  )}
  </div>
  </div>
@@ -384,7 +425,7 @@ export default function DemoComparisonPage() {
  Input Data
  </p>
  <pre className="bg-page rounded-md p-4 font-mono text-xs text-secondary leading-relaxed transition-colors">
- {INPUT_DATA}
+ {inputDataStr}
  </pre>
  </div>
 
@@ -402,7 +443,15 @@ export default function DemoComparisonPage() {
  <div className="h-3.5 bg-gray-200 rounded w-full"></div>
  </div>
  ) : (
+ realReport && modelB === 'Gemini 1.5 Pro' ? (
+ <div>
+ {realReport.report_data?.executive_summary || realReport.report_data?.narrative || 'Analysis complete based on real transactions.'}
+ <br/><br/>
+ <Highlight>Score: {realReport.report_data?.overall_score || realReport.report_data?.solvency_score || 0}/100</Highlight>
+ </div>
+ ) : (
  modelDataB.output
+ )
  )}
  </div>
  </div>

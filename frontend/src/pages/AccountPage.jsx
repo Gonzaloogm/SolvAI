@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, CreditCard, AlertTriangle, Zap, ArrowUpRight, X, Loader2 } from 'lucide-react';
-import { mockApi } from '../lib/mockApi';
+import { users, billing } from '../api/client.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import ConfirmModal from '../components/ConfirmModal.jsx';
@@ -12,6 +12,24 @@ export default function AccountPage() {
  const { addToast } = useToast();
 
  const [currentPlan, setCurrentPlan] = useState('Free');
+ const [realPlan, setRealPlan] = useState(null);
+ const [loading, setLoading] = useState(true);
+
+ useEffect(() => {
+   const fetchData = async () => {
+     try {
+       const subRes = await billing.getSubscription().catch(() => ({ data: { plan: 'free' } }));
+       const plan = subRes.data?.plan || 'free';
+       setCurrentPlan(plan.charAt(0).toUpperCase() + plan.slice(1));
+       setRealPlan(subRes.data);
+     } catch (err) {
+       console.error('Account fetch error:', err);
+     } finally {
+       setLoading(false);
+     }
+   };
+   fetchData();
+ }, []);
 
  // Modal states
  const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -92,18 +110,14 @@ export default function AccountPage() {
  setIsSubmitting(true);
  try {
  if (paymentModalMode === 'upgrade') {
- await mockApi.createSubscription('pro');
  setCurrentPlan('Pro');
  setPaymentSuccess(true);
- addToast("Welcome to SolvAI Pro!", "success");
+ addToast("Upgrade request submitted — Stripe Checkout integration required", "info");
  } else {
- const cardData = await mockApi.addPaymentMethod({ 
- number: cardInput, 
- expiry: expiry 
- });
- setPaymentMethod(cardData);
+ const last4 = cardInput.replace(/\s/g, '').slice(-4);
+ setPaymentMethod({ last4, brand: detectCardBrand(cardInput.replace(/\s/g, '')), expiry });
  setPaymentSuccess(true);
- addToast("Card added successfully", "success");
+ addToast("Card saved locally", "success");
  }
  } catch (error) {
  addToast("An error occurred", "error");

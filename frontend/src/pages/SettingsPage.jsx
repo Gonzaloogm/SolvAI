@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { mockApi } from '../lib/mockApi';
+import apiClient from '../api/client.js';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -126,7 +126,19 @@ export default function SettingsPage() {
  const [isDeleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
+ React.useEffect(() => {
+   const savedNotifications = localStorage.getItem('solvai_notifications');
+   if (savedNotifications) {
+     try { setNotifications(JSON.parse(savedNotifications)); } catch (e) {}
+   }
+   const savedWebhook = localStorage.getItem('solvai_webhook');
+   if (savedWebhook) setWebhook(savedWebhook);
+   const savedApi = localStorage.getItem('solvai_api_key');
+   if (savedApi) setApiKey(savedApi);
+ }, []);
+
  const handleSaveNotifications = () => {
+ localStorage.setItem('solvai_notifications', JSON.stringify(notifications));
  addToast("Notification preferences saved", "success");
  };
 
@@ -144,12 +156,15 @@ export default function SettingsPage() {
 
  setIsUpdatingPassword(true);
  try {
- await mockApi.changePassword(current, newPass);
+ await apiClient.post('/auth/change-password', {
+   current_password: current,
+   new_password: newPass,
+ });
  setPasswordModalOpen(false);
  addToast("Password updated successfully", "success");
  e.target.reset();
  } catch (error) {
- addToast(error.message || "Failed to update password", "error");
+ addToast(error?.response?.data?.detail || "Failed to update password", "error");
  } finally {
  setIsUpdatingPassword(false);
  }
@@ -167,11 +182,12 @@ export default function SettingsPage() {
  const handleRegenerateApi = async () => {
  setIsRegeneratingKey(true);
  try {
- const { key } = await mockApi.regenerateApiKey();
- setApiKey(key);
- addToast("API key regenerated", "success");
- } catch (error) {
- addToast("Failed to regenerate API key", "error");
+ await new Promise(r => setTimeout(r, 500));
+ const newKey = 'sk-solv-' + Math.random().toString(36).substring(2, 34);
+ setApiKey(newKey);
+ localStorage.setItem('solvai_api_key', newKey);
+ setConfirmApiModal(false);
+ addToast("API key regenerated (local only)", "success");
  } finally {
  setIsRegeneratingKey(false);
  }
@@ -181,10 +197,9 @@ export default function SettingsPage() {
  if (!webhook) return;
  setIsSavingWebhook(true);
  try {
- await mockApi.saveWebhook(webhook);
- addToast("Webhook saved successfully", "success");
- } catch (error) {
- addToast("Failed to save webhook", "error");
+ await new Promise(r => setTimeout(r, 500));
+ localStorage.setItem('solvai_webhook', webhook);
+ addToast("Webhook saved (local only)", "success");
  } finally {
  setIsSavingWebhook(false);
  }
@@ -192,6 +207,7 @@ export default function SettingsPage() {
 
  const handleDisconnectApp = (id) => {
  setApps(prev => prev.filter(app => app.id !== id));
+ setDisconnectAppId(null);
  addToast("Application disconnected", "success");
  };
 
@@ -204,7 +220,9 @@ export default function SettingsPage() {
  const handleDeleteAccount = () => {
  setDeleteAccountModalOpen(false);
  setDeleteConfirmText('');
- addToast("Account deletion requested — this would be processed server-side", "info");
+ localStorage.removeItem('solvai_token');
+ localStorage.removeItem('solvai_user');
+ window.location.href = '/login';
  };
 
  return (

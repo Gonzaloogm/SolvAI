@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { mockApi } from '../lib/mockApi';
+import { dataSources as dataSourcesApi } from '../api/client.js';
 import {
  Plus,
  Cloud,
@@ -89,14 +89,50 @@ const initialAvailableIntegrations = [
 ];
 
 export default function DataSourcesPage() {
- const [connected, setConnected] = useState(initialConnectedSources);
+ const [connected, setConnected] = useState([]);
  const [available, setAvailable] = useState(initialAvailableIntegrations);
  
  const [expandedSettings, setExpandedSettings] = useState(null);
  const [connectModal, setConnectModal] = useState(null);
  const [disconnectModal, setDisconnectModal] = useState(null);
  const [isConnecting, setIsConnecting] = useState(false);
+ const [loading, setLoading] = useState(true);
  const { addToast } = useToast();
+
+ useEffect(() => {
+   const fetchData = async () => {
+     try {
+       const res = await dataSourcesApi.list();
+       const data = Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
+       const mapped = data.map(s => {
+         const typeLower = (s.source_type || s.type || '').toLowerCase();
+         const isStripe = typeLower === 'stripe';
+         const isXero = typeLower === 'xero';
+         return {
+           name: (s.source_type || s.type || 'Source').charAt(0).toUpperCase() + (s.source_type || s.type || 'Source').slice(1),
+           iconBg: isStripe ? 'bg-[#635bff]' : isXero ? 'bg-[#00b0e0]' : 'bg-[#336791]',
+           Icon: isStripe ? CreditCard : isXero ? Database : Cloud,
+           statusColor: (s.status || '').toUpperCase() === 'CONNECTED' ? 'bg-[#1a9e6e]' : 'bg-[#df1b41]',
+           statusText: (s.status || '').toUpperCase() === 'CONNECTED' ? 'Connected' : 'Error',
+           statusTextColor: (s.status || '').toUpperCase() === 'CONNECTED' ? 'text-[#1a9e6e]' : 'text-[#df1b41]',
+           badge: isStripe ? 'Payments' : 'Accounting',
+           lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(s.created_at)) : '\u2014',
+           records: s.record_count?.toLocaleString() || '0',
+           isSyncing: false,
+         };
+       });
+       setConnected(mapped);
+       
+       const connectedNames = mapped.map(c => c.name.toLowerCase());
+       setAvailable(initialAvailableIntegrations.filter(a => !connectedNames.includes(a.name.toLowerCase())));
+     } catch (e) {
+       console.error(e);
+     } finally {
+       setLoading(false);
+     }
+   };
+   fetchData();
+ }, []);
 
  const handleSync = async (name) => {
  setConnected((prev) =>
@@ -115,7 +151,7 @@ export default function DataSourcesPage() {
  );
 
  try {
- await mockApi.syncSource(name);
+ await new Promise(r => setTimeout(r, 1500));
  setConnected((prev) =>
  prev.map((s) => {
  if (s.name === name) {
@@ -187,7 +223,7 @@ export default function DataSourcesPage() {
  setIsConnecting(true);
  
  try {
- await mockApi.connectSource(connectModal.name, {});
+ await dataSourcesApi.connect(connectModal.name.toLowerCase(), {});
  
  const sourceToAdd = {
  name: connectModal.name,
@@ -213,6 +249,14 @@ export default function DataSourcesPage() {
  setConnectModal(null);
  }
  };
+
+ if (loading) {
+ return (
+ <div className="page-enter flex items-center justify-center" style={{minHeight: '60vh'}}>
+ <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+ </div>
+ );
+ }
 
  return (
  <div className="page-enter">

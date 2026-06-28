@@ -46,23 +46,7 @@ async def create_solvency_report(
     org_res = await db.execute(select(Organization).where(Organization.id == current_user.organization_id))
     org_obj = org_res.scalar_one_or_none()
     
-    if org_obj and (org_obj.plan == "free" or org_obj.status in ["past_due", "canceled"]):
-        count_res = await db.execute(
-            select(func.count()).select_from(SolvencyReport).where(
-                SolvencyReport.organization_id == org_obj.id,
-                SolvencyReport.status == "COMPLETED"
-            )
-        )
-        count = count_res.scalar()
-        if count and count >= 1:
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "error": "report_limit_reached",
-                    "message": "Free plan limit reached. Please upgrade to Pro.",
-                    "upgrade_url": "/pricing"
-                }
-            )
+    # Paywall removed for demo purposes
 
     report = SolvencyReport(
         id=uuid.uuid4(),
@@ -147,15 +131,7 @@ async def download_solvency_report_pdf(
     org_res = await db.execute(select(Organization).where(Organization.id == current_user.organization_id))
     org_obj = org_res.scalar_one_or_none()
     
-    if org_obj and (org_obj.plan == "free" or org_obj.status in ["past_due", "canceled"]):
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "error": "pdf_requires_pro",
-                "message": "PDF export requires a Pro or Business plan",
-                "upgrade_url": "/pricing"
-            }
-        )
+    # PDF paywall removed for demo purposes
 
     pdf_buffer = generate_solvency_pdf(report)
     org_name = org_obj.name if org_obj else "unknown-org"

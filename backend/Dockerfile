@@ -42,6 +42,10 @@ COPY alembic.ini .
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
 
+ENV XDG_CACHE_HOME=/tmp/.cache
+ENV FONTCONFIG_PATH=/etc/fonts
+ENV MPLCONFIGDIR=/tmp/matplotlib
+
 EXPOSE 8000
 
 CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

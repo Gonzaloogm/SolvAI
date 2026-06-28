@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../api/client.js';
 import { IconWarning } from '../components/Icons.jsx';
 
 export default function Register() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,7 +93,7 @@ export default function Register() {
         {/* Card */}
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-[#e3e8ef]">
           <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold text-[#0a2540] mb-1">Create an Account</h1>
+            <h1 className="text-2xl font-bold text-[#0a2540] mb-1">{t('auth.createAccount')}</h1>
             <p className="text-[#425466]">Get the same explainable credit analysis used by large banks</p>
           </div>
 
@@ -104,7 +106,7 @@ export default function Register() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-org">Organisation name</label>
+              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-org">{t('auth.company')}</label>
               <input
                 id="reg-org"
                 className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
@@ -118,7 +120,7 @@ export default function Register() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-email">Email address</label>
+              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-email">{t('auth.email')}</label>
               <input
                 id="reg-email"
                 className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
@@ -132,7 +134,7 @@ export default function Register() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-password">Password</label>
+              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-password">{t('auth.password')}</label>
               <input
                 id="reg-password"
                 className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
@@ -192,17 +194,17 @@ export default function Register() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                  Creating account…
+                  {t('auth.creatingAccount')}
                 </>
               ) : (
-                'Create account →'
+                <>{t('auth.signUp')} →</>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-5 border-t border-[#e3e8ef] flex items-center justify-center gap-2 text-[14px]">
-            <span className="text-[#425466]">Already have an account?</span>
-            <Link to="/login" className="font-medium text-[#0570de] hover:text-[#0462c7]">Sign in</Link>
+            <span className="text-[#425466]">{t('auth.hasAccount')}</span>
+            <Link to="/login" className="font-medium text-[#0570de] hover:text-[#0462c7]">{t('auth.signIn')}</Link>
           </div>
         </div>
 

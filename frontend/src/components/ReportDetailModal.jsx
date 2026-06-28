@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import { QRCodeSVG as QRCode } from 'qrcode.react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../context/ToastContext.jsx';
 import { solvencyReports } from '../api/client.js';
 
@@ -26,9 +28,122 @@ const getAccuracyColor = (val) => {
   return 'text-[#df1b41]';
 };
 
+function ShareModal({ isOpen, onClose, reportId }) {
+  const { addToast } = useToast();
+  const { t } = useTranslation();
+  const [shareEnabled, setShareEnabled] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [expiryDays, setExpiryDays] = useState(90);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  
+  const fullShareUrl = shareUrl ? `${window.location.origin}${shareUrl}` : '';
+  
+  const handleToggle = async (enabled) => {
+    setLoading(true);
+    try {
+      if (enabled) {
+        const res = await solvencyReports.createShare(reportId, { expires_days: expiryDays });
+        setShareUrl(res.data.share_url);
+        setShareEnabled(true);
+        addToast('Share link created', 'success');
+      } else {
+        await solvencyReports.deleteShare(reportId);
+        setShareUrl('');
+        setShareEnabled(false);
+        addToast('Share link disabled', 'info');
+      }
+    } catch (err) {
+      addToast('Failed to update share settings', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleCopy = () => {
+    navigator.clipboard.writeText(fullShareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
+      <div style={{ background: 'var(--color-surface, white)', border: '1px solid var(--color-border, #e5e7eb)', borderRadius: 12, padding: 24, width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Share this report</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary, #6b7280)' }}>✕</button>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary, #111827)' }}>Enable public link</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #6b7280)' }}>Anyone with the link can view your score</div>
+          </div>
+          <button
+            onClick={() => handleToggle(!shareEnabled)}
+            disabled={loading}
+            style={{
+              width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: shareEnabled ? '#10b981' : '#d1d5db',
+              position: 'relative', transition: 'background 0.2s'
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 2, left: shareEnabled ? 22 : 2,
+              width: 20, height: 20, borderRadius: '50%', background: 'white',
+              transition: 'left 0.2s'
+            }} />
+          </button>
+        </div>
+        
+        {shareEnabled && shareUrl && (
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input
+                readOnly
+                value={fullShareUrl}
+                style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--color-border, #e5e7eb)', borderRadius: 8, fontSize: 13, background: 'var(--color-background, #f9fafb)', color: 'var(--color-text-primary, #111827)' }}
+              />
+              <button onClick={handleCopy} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--color-border, #e5e7eb)', cursor: 'pointer', background: 'var(--color-surface, white)', color: 'var(--color-text-primary, #111827)', fontSize: 13 }}>
+                {copied ? t('common.copied') : t('common.copy')}
+              </button>
+            </div>
+            
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 13, color: 'var(--color-text-secondary, #6b7280)', display: 'block', marginBottom: 6 }}>Link expires</label>
+              <select
+                value={expiryDays}
+                onChange={e => setExpiryDays(Number(e.target.value))}
+                style={{ padding: '6px 12px', border: '1px solid var(--color-border, #e5e7eb)', borderRadius: 8, background: 'var(--color-surface, white)', color: 'var(--color-text-primary, #111827)', fontSize: 13 }}
+              >
+                <option value={30}>30 days</option>
+                <option value={90}>90 days</option>
+                <option value={180}>6 months</option>
+                <option value={365}>1 year</option>
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <QRCode value={fullShareUrl} size={128} />
+            </div>
+          </>
+        )}
+        
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#166534' }}>
+          🔒 Recipients can see your score and ratings but <strong>NOT</strong> your transaction details or amounts
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ReportDetailModal({ report, onClose }) {
   const { addToast } = useToast();
+  const { t } = useTranslation();
   const [isGeneratingPDF, setIsGeneratingPDF] = React.useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   
   const modelName = report.subtitle?.split('·')[0]?.trim() || report.model || 'Gemini 2.5 Flash';
   
@@ -147,7 +262,7 @@ export default function ReportDetailModal({ report, onClose }) {
                   reportData.rating === 'Developing' ? 'bg-[#fef3c7] text-[#92400e] border-[#fcd34d]' :
                   'bg-[#fee2e2] text-[#991b1b] border-[#fca5a5]'
                 )}>
-                  {reportData.rating} Rating
+                  {reportData.rating}
                 </span>
               )}
             </div>
@@ -156,13 +271,21 @@ export default function ReportDetailModal({ report, onClose }) {
             <button onClick={handleCopyMD} className="px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Copy MD</button>
             <button onClick={handleDownloadMD} className="px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Download MD</button>
             {(report.status === 'Complete' || report.status === 'COMPLETED') && (
-              <button 
-                onClick={handleDownloadPDF} 
-                disabled={isGeneratingPDF}
-                className="px-3 py-1.5 text-sm font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
-              </button>
+              <>
+                <button 
+                  onClick={() => setShareModalOpen(true)} 
+                  className="px-3 py-1.5 text-sm font-medium bg-[#10b981] text-white rounded-md hover:bg-[#059669] transition-colors"
+                >
+                  {t('reports.actions.share')}
+                </button>
+                <button 
+                  onClick={handleDownloadPDF} 
+                  disabled={isGeneratingPDF}
+                  className="px-3 py-1.5 text-sm font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingPDF ? t('status.generating') : t('reports.actions.download')}
+                </button>
+              </>
             )}
             <button onClick={onClose} className="ml-2 text-muted hover:text-primary transition-colors"><X className="w-5 h-5" /></button>
           </div>
@@ -171,11 +294,11 @@ export default function ReportDetailModal({ report, onClose }) {
         <div className="p-6 space-y-8 bg-card">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <div className="text-sm text-muted mb-1">Created</div>
+              <div className="text-sm text-muted mb-1">{t('reports.columns.created')}</div>
               <div className="text-sm font-medium text-primary">{report.createdAt || report.created || '—'}</div>
             </div>
             <div>
-              <div className="text-sm text-muted mb-1">Data Source</div>
+              <div className="text-sm text-muted mb-1">{t('reports.columns.source')}</div>
               <div className="text-sm font-medium text-primary">{report.dataSource || '—'}</div>
             </div>
             <div>
@@ -183,7 +306,7 @@ export default function ReportDetailModal({ report, onClose }) {
               <div className="text-sm font-medium text-primary">{modelName}</div>
             </div>
             <div>
-              <div className="text-sm text-muted mb-1">Overall Score</div>
+              <div className="text-sm text-muted mb-1">{t('solvency.overallScore')}</div>
               <div className={cn('text-sm font-medium', getAccuracyColor(accuracy ? parseFloat(accuracy) : null))}>
                 {accuracy !== null && accuracy !== undefined ? (typeof accuracy === 'number' ? `${accuracy}%` : accuracy) : '—'}
               </div>
@@ -191,7 +314,7 @@ export default function ReportDetailModal({ report, onClose }) {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-primary mb-3">Explanation Output</h3>
+            <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.narrative')}</h3>
             <div className="bg-page rounded-md p-4 text-[14px] leading-[1.7] text-secondary">
               {explanationText}
             </div>
@@ -201,7 +324,7 @@ export default function ReportDetailModal({ report, onClose }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {reportData.risk_flags?.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-primary mb-3">Risk Flags</h3>
+                  <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.riskFlags')}</h3>
                   <ul className="list-disc pl-5 space-y-2 text-sm text-[#df1b41] marker:text-[#df1b41]">
                     {reportData.risk_flags.map((flag, i) => (
                       <li key={i}>{flag}</li>
@@ -211,7 +334,7 @@ export default function ReportDetailModal({ report, onClose }) {
               )}
               {reportData.recommendations?.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-primary mb-3">Recommendations</h3>
+                  <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.recommendations')}</h3>
                   <ul className="list-disc pl-5 space-y-2 text-sm text-[#1a9e6e] marker:text-[#1a9e6e]">
                     {reportData.recommendations.map((rec, i) => (
                       <li key={i}>{rec}</li>
@@ -247,6 +370,8 @@ export default function ReportDetailModal({ report, onClose }) {
           </div>
         </div>
       </div>
+      
+      <ShareModal isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} reportId={report._raw?.id || report.id} />
     </div>
   );
 }

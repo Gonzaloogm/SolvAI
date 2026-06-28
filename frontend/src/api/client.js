@@ -116,10 +116,26 @@ export const solvencyReports = {
   getDemoTransactions: () => apiClient.get('/solvency-reports/demo-transactions'),
 
   /**
+   * Get score history.
+   * GET /solvency-reports/score-history
+   */
+  getScoreHistory: () => apiClient.get('/solvency-reports/score-history'),
+
+  /**
    * Download the WeasyPrint PDF for a completed report.
    * GET /solvency-reports/{id}/pdf
    */
   getPDF: (id) => apiClient.get(`/solvency-reports/${id}/pdf`, { responseType: 'blob' }),
+
+  /**
+   * Create share link for a report.
+   */
+  createShare: (id, data) => apiClient.post(`/solvency-reports/${id}/share`, data),
+
+  /**
+   * Disable share link for a report.
+   */
+  deleteShare: (id) => apiClient.delete(`/solvency-reports/${id}/share`),
 };
 
 // ─── Lender Matching ──────────────────────────────────────────────────────────
@@ -138,6 +154,21 @@ export const billing = {
    * GET /billing/subscription
    */
   getSubscription: () => apiClient.get('/billing/subscription'),
+};
+
+// ─── Alerts ───────────────────────────────────────────────────────────────────
+export const alerts = {
+  getAll: () => apiClient.get('/alerts/'),
+  markRead: (id) => apiClient.patch(`/alerts/${id}/read`),
+  markAllRead: () => apiClient.patch('/alerts/read-all'),
+  delete: (id) => apiClient.delete(`/alerts/${id}`),
+};
+
+// ─── API Keys ──────────────────────────────────────────────────────────────────
+export const apiKeys = {
+  getAll: () => apiClient.get('/api-keys/'),
+  create: (data) => apiClient.post('/api-keys/', data),
+  revoke: (id) => apiClient.delete(`/api-keys/${id}`),
 };
 
 export default apiClient;

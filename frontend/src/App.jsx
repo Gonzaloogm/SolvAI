@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
  LayoutDashboard,
  FileText,
@@ -25,6 +26,8 @@ import AccountPage from './pages/AccountPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import PublicReport from './pages/PublicReport.jsx';
+import ApiDocs from './pages/ApiDocs.jsx';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 /* ── Utility ───────────────────────────────────────────────────────────────── */
@@ -32,12 +35,12 @@ const cn = (...classes) => classes.filter(Boolean).join(' ');
 
 /* ── Navigation items ──────────────────────────────────────────────────────── */
 const NAV_ITEMS = [
- { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
- { id: 'reports', label: 'Reports', icon: FileText },
- { id: 'data-sources', label: 'Data Sources', icon: Database },
- { id: 'demo', label: 'Demo Comparison', icon: BarChart2 },
- { id: 'account', label: 'Account', icon: User },
- { id: 'settings', label: 'Settings', icon: Settings },
+ { id: 'dashboard', tKey: 'nav.dashboard', icon: LayoutDashboard },
+ { id: 'reports', tKey: 'nav.reports', icon: FileText },
+ { id: 'data-sources', tKey: 'nav.dataSources', icon: Database },
+ { id: 'demo', tKey: 'nav.demo', icon: BarChart2 },
+ { id: 'account', tKey: 'nav.account', icon: User },
+ { id: 'settings', tKey: 'nav.settings', icon: Settings },
 ];
 
 /* ── Page map ──────────────────────────────────────────────────────────────── */
@@ -48,6 +51,7 @@ const PAGES = {
  demo: DemoComparisonPage,
  account: AccountPage,
  settings: SettingsPage,
+ 'api-docs': ApiDocs,
 };
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -56,6 +60,26 @@ const PAGES = {
 function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  const { actualTheme, toggleTheme } = useTheme();
  const navigate = useNavigate();
+ const { t, i18n } = useTranslation();
+
+ const LANGUAGES = [
+   { code: 'en', label: '🇬🇧 EN' },
+   { code: 'es', label: '🇪🇸 ES' },
+   { code: 'fr', label: '🇫🇷 FR' },
+   { code: 'de', label: '🇩🇪 DE' },
+   { code: 'it', label: '🇮🇹 IT' },
+   { code: 'pt', label: '🇵🇹 PT' }
+ ];
+
+ const cycleLanguage = () => {
+   const currentIndex = LANGUAGES.findIndex(l => l.code === i18n.language);
+   const nextIndex = (currentIndex + 1) % LANGUAGES.length;
+   const nextLang = LANGUAGES[nextIndex].code;
+   i18n.changeLanguage(nextLang);
+   localStorage.setItem('solvai-language', nextLang);
+ };
+
+ const currentLangLabel = LANGUAGES.find(l => l.code === i18n.language)?.label || '🇬🇧 EN';
 
  const handleLogout = () => {
    localStorage.removeItem('solvai_token');
@@ -122,7 +146,7 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  )}
  >
  <Icon className="w-[18px] h-[18px] flex-shrink-0" />
- <span className="flex-1 text-left">{item.label}</span>
+ <span className="flex-1 text-left">{t(item.tKey)}</span>
  {item.badge && (
  <span className="text-[10px] font-medium bg-[#f0f2f5] text-muted px-2 py-0.5 rounded-full">
  {item.badge}
@@ -151,7 +175,11 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  
  <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 h-9 rounded-lg text-sm transition-colors duration-150 font-medium text-secondary hover:bg-page hover:text-primary mt-1">
    <User className="w-[18px] h-[18px] flex-shrink-0" />
-   <span className="flex-1 text-left">Logout</span>
+   <span className="flex-1 text-left">{t('nav.logout')}</span>
+ </button>
+
+ <button onClick={cycleLanguage} className="w-full flex items-center justify-center gap-2 px-3 h-8 rounded-lg text-xs transition-colors duration-150 font-medium text-muted hover:bg-page hover:text-primary mt-2">
+   {currentLangLabel}
  </button>
  </div>
  </aside>
@@ -177,6 +205,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/r/:token" element={<PublicReport />} />
           <Route path="/*" element={
             <ProtectedRoute>
               <AppLayout />

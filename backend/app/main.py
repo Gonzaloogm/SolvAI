@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from app.core.config import settings
-from app.api import auth, data_sources, lender_matching, organizations, solvency_reports, users, webhooks, ws_terminal, billing, admin
+from app.api import auth, data_sources, lender_matching, organizations, solvency_reports, users, webhooks, ws_terminal, billing, admin, public_reports, alerts, api_keys, public_api
 
 # ── Loguru configuration ──────────────────────────────────────────────────────
 # Remove default handler and add a clean one
@@ -82,7 +82,10 @@ app.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
 app.include_router(billing.router, prefix="/billing", tags=["Billing"])
 app.include_router(ws_terminal.router, prefix="/ws/terminal", tags=["WebSockets Terminal"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
-
+app.include_router(public_reports.router, tags=["Public Reports"])
+app.include_router(alerts.router, prefix="/alerts", tags=["Alerts"])
+app.include_router(api_keys.router, prefix="/api-keys", tags=["API Keys"])
+app.include_router(public_api.router, prefix="/v1", tags=["Public API"])
 
 # ── Lifecycle events ──────────────────────────────────────────────────────────
 @app.on_event("startup")

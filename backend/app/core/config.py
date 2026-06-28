@@ -59,6 +59,16 @@ class Settings(BaseSettings):
     # ── Admin / Beta Setup ────────────────────────────────────────────────────
     ADMIN_KEY: str = ""
 
+    # ── Belvo (Open Banking) ───────────────────────────────────────────────────
+    BELVO_SECRET_ID: str = ""
+    BELVO_SECRET_PASSWORD: str = ""
+    BELVO_ENV: str = "sandbox"  # sandbox or production
+
+    # ── PayPal ────────────────────────────────────────────────────────────────
+    PAYPAL_CLIENT_ID: str = ""
+    PAYPAL_SECRET: str = ""
+    PAYPAL_ENV: str = "sandbox"  # sandbox or live
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

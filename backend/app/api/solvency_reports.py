@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import re
+import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from loguru import logger
 from sqlalchemy import select
@@ -48,11 +50,13 @@ async def create_solvency_report(
     
     # Paywall removed for demo purposes
 
+    report_type = getattr(body, "report_type", "FULL")
     report = SolvencyReport(
         id=uuid.uuid4(),
         user_id=current_user.id,
         organization_id=current_user.organization_id,
         status="PENDING",
+        report_type=report_type,
     )
     db.add(report)
     await db.flush()
@@ -148,6 +152,118 @@ async def download_solvency_report_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+
+@router.post("/{id}/share", summary="Enable public share link for a report")
+async def create_share_link(
+    id: uuid.UUID,
+    body: dict = Body(default={}),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(SolvencyReport).where(
+            SolvencyReport.id == id,
+            SolvencyReport.is_deleted.is_(False),
+        )
+    )
+    report = result.scalar_one_or_none()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    if report.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if report.status != "COMPLETED":
+        raise HTTPException(status_code=400, detail="Report must be completed to share")
+
+    expires_days = int(body.get("expires_days", 90))
+    token = secrets.token_urlsafe(24)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=expires_days)
+
+    report.share_token = token
+    report.share_enabled = True
+    report.share_expires_at = expires_at
+    await db.flush()
+
+    share_url = f"/r/{token}"
+
+    return {
+        "share_url": share_url,
+        "token": token,
+        "expires_at": expires_at.isoformat(),
+        "expires_days": expires_days,
+    }
+
+
+@router.delete("/{id}/share", summary="Disable public share link")
+async def delete_share_link(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(SolvencyReport).where(
+            SolvencyReport.id == id,
+            SolvencyReport.is_deleted.is_(False),
+        )
+    )
+    report = result.scalar_one_or_none()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    if report.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    report.share_enabled = False
+    report.share_token = None
+    report.share_expires_at = None
+    await db.flush()
+
+    return {"message": "Share link disabled"}
+
+
+@router.get(
+    "/score-history",
+    summary="Get score history for the last 12 months",
+)
+async def get_score_history(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Returns one score per month for the last 12 months, ordered ascending."""
+    result = await db.execute(
+        select(SolvencyReport)
+        .where(
+            SolvencyReport.organization_id == current_user.organization_id,
+            SolvencyReport.is_deleted.is_(False),
+            SolvencyReport.status == "COMPLETED",
+            SolvencyReport.overall_score.isnot(None),
+        )
+        .order_by(SolvencyReport.generated_month.asc())
+        .limit(12)
+    )
+    reports = result.scalars().all()
+
+    # Deduplicate by month — keep the latest score per month
+    month_map: dict = {}
+    for r in reports:
+        month = r.generated_month or (
+            r.created_at.strftime('%Y-%m') if r.created_at else None
+        )
+        if month and (
+            month not in month_map
+            or r.created_at > month_map[month].created_at
+        ):
+            month_map[month] = r
+
+    history = [
+        {
+            "month": month,
+            "score": r.overall_score,
+            "rating": r.rating,
+        }
+        for month, r in sorted(month_map.items())
+    ]
+
+    return history
 
 
 @router.get(

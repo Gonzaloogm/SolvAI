@@ -391,7 +391,10 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
     
     template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
     env = Environment(loader=FileSystemLoader(template_dir))
-    template = env.get_template("report_template.html")
+    
+    report_type = getattr(report, "report_type", "FULL")
+    template_name = "rental_template.html" if report_type == "RENTAL" else "report_template.html"
+    template = env.get_template(template_name)
     html_out = template.render(context)
     
     pdf_buffer = io.BytesIO()

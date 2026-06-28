@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { dataSources as dataSourcesApi } from '../api/client.js';
@@ -98,6 +99,7 @@ export default function DataSourcesPage() {
  const [isConnecting, setIsConnecting] = useState(false);
  const [loading, setLoading] = useState(true);
  const { addToast } = useToast();
+ const { t } = useTranslation();
 
  useEffect(() => {
    const fetchData = async () => {
@@ -113,7 +115,7 @@ export default function DataSourcesPage() {
            iconBg: isStripe ? 'bg-[#635bff]' : isXero ? 'bg-[#00b0e0]' : 'bg-[#336791]',
            Icon: isStripe ? CreditCard : isXero ? Database : Cloud,
            statusColor: (s.status || '').toUpperCase() === 'CONNECTED' ? 'bg-[#1a9e6e]' : 'bg-[#df1b41]',
-           statusText: (s.status || '').toUpperCase() === 'CONNECTED' ? 'Connected' : 'Error',
+           statusText: (s.status || '').toUpperCase() === 'CONNECTED' ? t('dataSources.connected') : t('dataSources.error'),
            statusTextColor: (s.status || '').toUpperCase() === 'CONNECTED' ? 'text-[#1a9e6e]' : 'text-[#df1b41]',
            badge: isStripe ? 'Payments' : 'Accounting',
            lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(s.created_at)) : '\u2014',
@@ -141,7 +143,7 @@ export default function DataSourcesPage() {
  ? {
  ...s,
  statusColor: 'bg-[#c9870c]',
- statusText: 'Syncing',
+ statusText: t('dataSources.syncing'),
  statusTextColor: 'text-[#c9870c]',
  lastSync: 'Syncing now...',
  isSyncing: true,
@@ -160,7 +162,7 @@ export default function DataSourcesPage() {
  return {
  ...s,
  statusColor: 'bg-[#1a9e6e]',
- statusText: 'Connected',
+ statusText: t('dataSources.connected'),
  statusTextColor: 'text-[#1a9e6e]',
  lastSync: 'Just now',
  records: newRecords.toLocaleString(),
@@ -179,7 +181,7 @@ export default function DataSourcesPage() {
  ? {
  ...s,
  statusColor: 'bg-[#df1b41]',
- statusText: 'Error',
+ statusText: t('dataSources.error'),
  statusTextColor: 'text-[#df1b41]',
  lastSync: 'Failed just now',
  isSyncing: false,
@@ -230,7 +232,7 @@ export default function DataSourcesPage() {
  iconBg: connectModal.iconBg,
  Icon: connectModal.Icon,
  statusColor: 'bg-[#1a9e6e]',
- statusText: 'Connected',
+ statusText: t('dataSources.connected'),
  statusTextColor: 'text-[#1a9e6e]',
  badge: connectModal.badge || 'Integration',
  lastSync: 'Just now',
@@ -263,9 +265,9 @@ export default function DataSourcesPage() {
  {/* PAGE HEADER */}
  <div className="flex justify-between items-start mb-6">
  <div>
- <h1 className="text-xl font-semibold text-primary">Data Sources</h1>
+ <h1 className="text-xl font-semibold text-primary">{t('dataSources.title')}</h1>
  <p className="text-sm text-muted mt-1">
- Manage your connected data integrations
+ {t('dataSources.subtitle')}
  </p>
  </div>
  <button 
@@ -273,7 +275,7 @@ export default function DataSourcesPage() {
  className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors"
  >
  <Plus className="w-4 h-4" />
- Connect source
+ {t('dataSources.connect')}
  </button>
  </div>
 
@@ -341,7 +343,7 @@ export default function DataSourcesPage() {
  ) : (
  <RefreshCw className="w-3.5 h-3.5" />
  )}
- {isSyncing ? 'Syncing...' : 'Sync now'}
+ {isSyncing ? t('dataSources.syncing') : t('dataSources.syncNow')}
  </button>
  <button 
  onClick={() => setExpandedSettings(expandedSettings === source.name ? null : source.name)}
@@ -353,7 +355,7 @@ export default function DataSourcesPage() {
  onClick={() => handleDisconnect(source.name)}
  className="ml-auto text-sm text-[#df1b41] hover:underline cursor-pointer"
  >
- Disconnect
+ {t('dataSources.disconnect')}
  </span>
  </div>
  </div>
@@ -402,7 +404,7 @@ export default function DataSourcesPage() {
  {/* AVAILABLE INTEGRATIONS */}
  <div className="mt-8">
  <h2 className="text-base font-semibold text-primary">
- Add a new source
+ {t('dataSources.addNew')}
  </h2>
  <p className="text-sm text-muted mt-1">
  Connect a new data source to start generating reports
@@ -439,7 +441,7 @@ export default function DataSourcesPage() {
  </span>
  {integration.available ? (
  <span className="text-xs text-[#0570de] font-medium hover:underline mt-2">
- Connect
+ {t('dataSources.connect')}
  </span>
  ) : (
  <>
@@ -547,7 +549,7 @@ export default function DataSourcesPage() {
  onClick={() => setConnectModal(null)}
  className="px-4 py-2 text-sm font-medium text-muted hover:text-primary transition-colors"
  >
- Cancel
+ {t('common.cancel')}
  </button>
  <button 
  type="submit"

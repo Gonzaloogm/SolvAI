@@ -4,7 +4,8 @@ import datetime
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Text
+import sqlalchemy as sa
+from sqlalchemy import DateTime, ForeignKey, Integer, Text, Boolean
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -43,6 +44,9 @@ class SolvencyReport(Base, TimestampMixin, SoftDeleteMixin):
         server_default="PENDING",
         comment="PENDING | GENERATING | COMPLETED | FAILED",
     )
+    report_type: Mapped[str] = mapped_column(
+        sa.String(20), nullable=False, default="FULL", server_default="FULL"
+    )
     report_data: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
@@ -52,6 +56,42 @@ class SolvencyReport(Base, TimestampMixin, SoftDeleteMixin):
         DateTime(timezone=True),
         nullable=True,
         default=None,
+    )
+    share_token: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        unique=True,
+        index=True,
+    )
+    share_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sa.sql.false(),
+    )
+    share_expires_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # ── Score history columns ─────────────────────────────────────────────────
+    overall_score: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        default=None,
+        comment="Extracted from report_data for fast querying",
+    )
+    rating: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        default=None,
+        comment="APPROVE | REVIEW | DECLINE or Strong | Developing | At Risk",
+    )
+    generated_month: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        default=None,
+        comment="Format: YYYY-MM e.g. 2026-06",
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────

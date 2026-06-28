@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../api/client.js';
 import { IconWarning } from '../components/Icons.jsx';
@@ -7,6 +8,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname ?? '/';
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,7 +69,7 @@ export default function Login() {
         {/* Card */}
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-[#e3e8ef]">
           <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold text-[#0a2540] mb-1">Welcome back</h1>
+            <h1 className="text-2xl font-bold text-[#0a2540] mb-1">{t('auth.welcome')}</h1>
             <p className="text-[#425466]">Enter your details to access your account</p>
           </div>
 
@@ -80,7 +82,7 @@ export default function Login() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="login-email">Email address</label>
+              <label className="text-sm font-medium text-[#425466]" htmlFor="login-email">{t('auth.email')}</label>
               <input
                 id="login-email"
                 className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
@@ -95,7 +97,7 @@ export default function Login() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="login-password">Password</label>
+              <label className="text-sm font-medium text-[#425466]" htmlFor="login-password">{t('auth.password')}</label>
               <input
                 id="login-password"
                 className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
@@ -117,17 +119,17 @@ export default function Login() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                  Signing in…
+                  {t('auth.signingIn')}
                 </>
               ) : (
-                'Sign in →'
+                <>{t('auth.signIn')} →</>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-5 border-t border-[#e3e8ef] flex items-center justify-center gap-2 text-[14px]">
-            <span className="text-[#425466]">Don't have an account?</span>
-            <Link to="/register" className="font-medium text-[#0570de] hover:text-[#0462c7]">Create account</Link>
+            <span className="text-[#425466]">{t('auth.noAccount')}</span>
+            <Link to="/register" className="font-medium text-[#0570de] hover:text-[#0462c7]">{t('auth.signUp')}</Link>
           </div>
         </div>
 

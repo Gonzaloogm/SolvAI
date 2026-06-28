@@ -17,6 +17,7 @@ class AgentState(TypedDict):
     iterations: int
     final_report: Dict[str, Any]
     requires_human_review: bool
+    report_type: str
 
 def data_quant_node(state: AgentState) -> AgentState:
     logger.info("Executing Data Quant Agent...")
@@ -36,7 +37,19 @@ async def underwriter_node(state: AgentState) -> AgentState:
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
     
+    report_type = state.get("report_type", "FULL")
+    
+    rental_context = ""
+    if report_type == "RENTAL":
+        rental_context = """
+IMPORTANT: This is a RENTAL SOLVENCY CERTIFICATE intended for a landlord or property agency.
+- The narrative MUST focus heavily on the applicant's ability to consistently pay monthly rent.
+- Analyze income stability, lack of negative risk flags, and provide a clear recommendation (APPROVE/REVIEW/DECLINE) based on typical rental criteria (e.g., stable income covering 3x typical rent).
+- The tone should be formal, reassuring to landlords, and directly address tenant viability.
+"""
+
     prompt = f"""You are SolvAI's Underwriter Agent.
+{rental_context}
 Generate a JSON solvency report based on the following data:
 Financial Summary: {json.dumps(state.get("financial_summary", {}))}
 Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}

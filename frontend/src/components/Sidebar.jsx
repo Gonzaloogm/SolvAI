@@ -1,7 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { alerts } from '../api/client';
 
 /* ── Icon SVGs ──────────────────────────────────────────────────────────── */
+const IconBell = () => (
+ <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+ <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+ <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+ </svg>
+);
+
 const IconDashboard = () => (
  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
  <rect x="3" y="3" width="7" height="7" rx="1.5"/>
@@ -67,20 +76,47 @@ function getUserInfo() {
  }
 }
 
-/* ── Navigation items ────────────────────────────────────────────────────── */
 const NAV_ITEMS = [
- { label: 'Dashboard', to: '/', icon: <IconDashboard />, exact: true },
- { label: 'Reports', to: '/reports', icon: <IconReports />, exact: false },
- { label: 'Data Sources', to: '/data-sources', icon: <IconDataSources />, exact: false },
- { label: 'Demo Comparison', to: '/demo', icon: <IconDashboard />, exact: false },
- { label: 'Account', to: '/account', icon: <IconAccount />, exact: false },
- { label: 'Settings', to: '/settings', icon: <IconSettings />, exact: false },
+ { label: 'Dashboard', to: '/', icon: <IconDashboard />, exact: true, tKey: 'nav.dashboard' },
+ { label: 'Reports', to: '/reports', icon: <IconReports />, exact: false, tKey: 'nav.reports' },
+ { label: 'Data Sources', to: '/data-sources', icon: <IconDataSources />, exact: false, tKey: 'nav.dataSources' },
+ { label: 'Demo Comparison', to: '/demo', icon: <IconDashboard />, exact: false, tKey: 'nav.demo' },
+ { label: 'Account', to: '/account', icon: <IconAccount />, exact: false, tKey: 'nav.account' },
+ { label: 'Settings', to: '/settings', icon: <IconSettings />, exact: false, tKey: 'nav.settings' },
 ];
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function Sidebar() {
  const navigate = useNavigate();
  const userInfo = getUserInfo();
+ const { t, i18n } = useTranslation();
+ const [unreadCount, setUnreadCount] = useState(0);
+
+ useEffect(() => {
+   alerts.getAll().then(res => {
+     const count = res.data.filter(a => !a.is_read).length;
+     setUnreadCount(count);
+   }).catch(err => console.error("Failed to fetch alerts:", err));
+ }, []);
+
+ const LANGUAGES = [
+   { code: 'en', label: '🇬🇧 EN' },
+   { code: 'es', label: '🇪🇸 ES' },
+   { code: 'fr', label: '🇫🇷 FR' },
+   { code: 'de', label: '🇩🇪 DE' },
+   { code: 'it', label: '🇮🇹 IT' },
+   { code: 'pt', label: '🇵🇹 PT' }
+ ];
+
+ const cycleLanguage = () => {
+   const currentIndex = LANGUAGES.findIndex(l => l.code === i18n.language);
+   const nextIndex = (currentIndex + 1) % LANGUAGES.length;
+   const nextLang = LANGUAGES[nextIndex].code;
+   i18n.changeLanguage(nextLang);
+   localStorage.setItem('solvai-language', nextLang);
+ };
+
+ const currentLangLabel = LANGUAGES.find(l => l.code === i18n.language)?.label || '🇬🇧 EN';
 
  const handleLogout = () => {
  localStorage.removeItem('solvai_token');
@@ -111,7 +147,7 @@ export default function Sidebar() {
  {item.disabled ? (
  <span className="sidebar__nav-item sidebar__nav-item--disabled">
  <span className="sidebar__nav-icon">{item.icon}</span>
- <span className="sidebar__nav-label">{item.label}</span>
+ <span className="sidebar__nav-label">{t(item.tKey)}</span>
  <span className="sidebar__nav-soon">soon</span>
  </span>
  ) : (
@@ -123,7 +159,7 @@ export default function Sidebar() {
  }
  >
  <span className="sidebar__nav-icon">{item.icon}</span>
- <span className="sidebar__nav-label">{item.label}</span>
+ <span className="sidebar__nav-label">{t(item.tKey)}</span>
  </NavLink>
  )}
  </li>
@@ -141,14 +177,29 @@ export default function Sidebar() {
  </span>
  </div>
  </div>
- <button
- className="sidebar__logout"
- onClick={handleLogout}
- title="Sign out"
- aria-label="Sign out"
- >
- <IconLogout />
- </button>
+ <div className="sidebar__actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', color: 'var(--color-text-secondary)' }}>
+     <IconBell />
+     {unreadCount > 0 && (
+       <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: 'bold', width: '14px', height: '14px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+         {unreadCount}
+       </span>
+     )}
+   </div>
+   <button
+   className="sidebar__logout"
+   onClick={handleLogout}
+   title={t('nav.logout')}
+   aria-label={t('nav.logout')}
+   >
+   <IconLogout />
+   </button>
+ </div>
+ </div>
+ <div style={{ display: 'flex', justifyContent: 'center', padding: '8px' }}>
+   <button onClick={cycleLanguage} style={{ fontSize: '12px', background: 'transparent', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+     {currentLangLabel}
+   </button>
  </div>
 
  <style>{`

@@ -7,6 +7,8 @@ from app.models.user import User
 from app.models.financial_data_source import FinancialDataSource
 from app.models.solvency_report import SolvencyReport
 from app.models.lender_profile import LenderManifest
+from app.models.alert import Alert
+from app.models.api_key import ApiKey
 
 __all__ = [
     "Organization",
@@ -14,4 +16,6 @@ __all__ = [
     "FinancialDataSource",
     "SolvencyReport",
     "LenderManifest",
+    "Alert",
+    "ApiKey",
 ]

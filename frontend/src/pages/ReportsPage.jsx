@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
  Plus,
  Search,
@@ -60,6 +61,8 @@ export default function ReportsPage() {
  const [isProcessing, setIsProcessing] = useState(false);
  const [loading, setLoading] = useState(true);
  const [generating, setGenerating] = useState(false);
+ const [generatingType, setGeneratingType] = useState("FULL");
+ const { t } = useTranslation();
 
  const fetchReports = useCallback(async () => {
    setLoading(true);
@@ -72,7 +75,7 @@ export default function ReportsPage() {
        name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
        subtitle: `Gemini \u00b7 ${r.report_data?.financial_summary?.connected_platforms?.join(', ') || 'SolvAI'}`,
        type: 'Solvency',
-       status: r.status === 'COMPLETED' ? 'Complete' : r.status === 'GENERATING' ? 'Processing' : r.status === 'FAILED' ? 'Failed' : 'Draft',
+       status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? t('status.failed') : t('status.pending'),
        dataSource: r.report_data?.financial_summary?.connected_platforms?.[0] || 'Stripe',
        accuracy: r.report_data?.overall_score ?? null,
        createdAt: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '\u2014',
@@ -276,7 +279,7 @@ export default function ReportsPage() {
  setIsModalOpen(false);
  setGenerating(true);
  try {
- const res = await solvencyReports.create();
+ const res = await solvencyReports.create({ report_type: generatingType });
  const newId = res.data?.id;
  if (!newId) throw new Error('No report ID returned');
  addToast('Report generation started \u2014 analyzing financial data...', 'info');
@@ -323,22 +326,41 @@ export default function ReportsPage() {
  {/* ── 1. PAGE HEADER ─────────────────────────────────────────────────── */}
  <div className="flex justify-between items-start">
  <div>
- <h1 className="text-xl font-semibold text-primary">Reports</h1>
+ <h1 className="text-xl font-semibold text-primary">{t('reports.title')}</h1>
  <p className="text-sm text-muted mt-1">
- View and manage your AI explainability reports
+ {t('reports.subtitle')}
  </p>
  </div>
+ <div className="flex gap-2">
  <button 
- onClick={() => setIsModalOpen(true)}
+ onClick={() => {
+   setGeneratingType("FULL");
+   setIsModalOpen(true);
+ }}
  disabled={generating}
  className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors disabled:opacity-50"
  >
- {generating ? (
- <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+ {generating && generatingType === "FULL" ? (
+ <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
  ) : (
- <><Plus className="w-4 h-4" /> New Report</>
+ <><Plus className="w-4 h-4" /> {t('reports.fullSolvency') || "Generate Full Report"}</>
  )}
  </button>
+ <button 
+ onClick={() => {
+   setGeneratingType("RENTAL");
+   setIsModalOpen(true);
+ }}
+ disabled={generating}
+ className="bg-[#10b981] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#059669] flex items-center gap-2 transition-colors disabled:opacity-50"
+ >
+ {generating && generatingType === "RENTAL" ? (
+ <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
+ ) : (
+ <><Plus className="w-4 h-4" /> {t('reports.rentalCertificate') || "Generate Rental Certificate"}</>
+ )}
+ </button>
+ </div>
  </div>
 
  {generating && (
@@ -355,7 +377,7 @@ export default function ReportsPage() {
  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4 pointer-events-none" />
  <input
  type="text"
- placeholder="Search reports…"
+ placeholder={t('reports.search')}
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
  className="w-full h-9 border border-border rounded-md pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0570de] bg-card text-primary placeholder:text-muted dark:placeholder-[#666666]"
@@ -427,7 +449,7 @@ export default function ReportsPage() {
  className="bg-[#df1b41] hover:bg-[#c5183a] text-white rounded-md px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors"
  >
  <Trash2 className="w-3.5 h-3.5" />
- Delete
+ {t('common.delete')}
  </button>
  </div>
  </div>
@@ -456,22 +478,22 @@ export default function ReportsPage() {
  />
  </th>
  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '28%' }}>
- Report
+ {t('reports.columns.name')}
  </th>
  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '12%' }}>
- Type
+ {t('reports.columns.type')}
  </th>
  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '12%' }}>
- Status
+ {t('reports.columns.status')}
  </th>
  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '15%' }}>
- Data Source
+ {t('reports.columns.source')}
  </th>
  <th className="py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '10%' }}>
- Accuracy
+ {t('reports.columns.score')}
  </th>
  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '12%' }}>
- Created
+ {t('reports.columns.created')}
  </th>
  <th className="py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '6%' }}>
  <span className="sr-only">Actions</span>
@@ -483,7 +505,7 @@ export default function ReportsPage() {
  {paginatedReports.length === 0 ? (
  <tr>
  <td colSpan={8} className="py-12 text-center text-muted">
- No reports found
+ {t('reports.noResults')}
  </td>
  </tr>
  ) : (
@@ -585,7 +607,7 @@ export default function ReportsPage() {
  className="w-full px-3 py-2 text-sm hover:bg-page cursor-pointer flex items-center gap-2 text-secondary"
  >
  <Eye className="w-4 h-4" />
- View
+ {t('reports.actions.view')}
  </button>
  <button 
  onClick={(e) => {
@@ -615,7 +637,7 @@ export default function ReportsPage() {
  className="w-full px-3 py-2 text-sm hover:bg-page cursor-pointer flex items-center gap-2 text-secondary"
  >
  <Copy className="w-4 h-4" />
- Duplicate
+ {t('reports.actions.duplicate')}
  </button>
  <div className="border-t border-border my-1" />
  <button 
@@ -626,7 +648,7 @@ export default function ReportsPage() {
  className="w-full px-3 py-2 text-sm hover:bg-page cursor-pointer flex items-center gap-2 text-[#df1b41] "
  >
  <Trash2 className="w-4 h-4" />
- Delete
+ {t('reports.actions.delete')}
  </button>
  </div>
  )}
@@ -765,7 +787,7 @@ export default function ReportsPage() {
  onClick={() => setIsModalOpen(false)}
  className="px-4 py-2 text-sm font-medium text-secondary hover:text-primary transition-colors"
  >
- Cancel
+ {t('common.cancel')}
  </button>
  <button
  type="submit"

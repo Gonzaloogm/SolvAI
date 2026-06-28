@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 class SolvencyReportCreateRequest(BaseModel):
     """No required fields – the report is built from the user's connected data sources."""
-    pass
+    report_type: str = "FULL"
 
 
 class SolvencyReportResponse(BaseModel):
@@ -19,6 +19,7 @@ class SolvencyReportResponse(BaseModel):
     user_id: uuid.UUID
     organization_id: uuid.UUID
     status: str
+    report_type: str = "FULL"
     report_data: dict[str, Any] | None = None
     generated_at: datetime | None = None
     created_at: datetime

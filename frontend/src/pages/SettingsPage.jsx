@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import apiClient from '../api/client.js';
+import apiClient, { apiKeys } from '../api/client.js';
+import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -86,6 +87,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 export default function SettingsPage() {
  const { theme, setTheme } = useTheme();
  const { addToast } = useToast();
+ const { t, i18n } = useTranslation();
 
  // State: Appearance
  const [density, setDensity] = useState('Comfortable');
@@ -109,16 +111,18 @@ export default function SettingsPage() {
  ]);
 
  // State: API
- const [showApi, setShowApi] = useState(false);
- const [apiKey, setApiKey] = useState('sk-solv-a7b8c9d0e1f2g3h4i5j6k7l8m9n03f9a');
+ const [apiKeysList, setApiKeysList] = useState([]);
+ const [newApiKey, setNewApiKey] = useState(null);
+ const [isCreateApiModalOpen, setIsCreateApiModalOpen] = useState(false);
+ const [newKeyName, setNewKeyName] = useState('');
+ const [isCreatingKey, setIsCreatingKey] = useState(false);
+ 
  const [webhook, setWebhook] = useState('');
  const [isSavingWebhook, setIsSavingWebhook] = useState(false);
- const [isRegeneratingKey, setIsRegeneratingKey] = useState(false);
  const [apps, setApps] = useState([
  { id: 'google', name: 'Google Workspace' },
  { id: 'slack', name: 'Slack' },
  ]);
- const [confirmApiModal, setConfirmApiModal] = useState(false);
  const [disconnectAppId, setDisconnectAppId] = useState(null);
 
  // State: Danger Zone
@@ -133,13 +137,21 @@ export default function SettingsPage() {
    }
    const savedWebhook = localStorage.getItem('solvai_webhook');
    if (savedWebhook) setWebhook(savedWebhook);
-   const savedApi = localStorage.getItem('solvai_api_key');
-   if (savedApi) setApiKey(savedApi);
+   loadApiKeys();
  }, []);
+
+ const loadApiKeys = async () => {
+   try {
+     const res = await apiKeys.getAll();
+     setApiKeysList(res.data);
+   } catch (error) {
+     console.error("Failed to load API keys", error);
+   }
+ };
 
  const handleSaveNotifications = () => {
  localStorage.setItem('solvai_notifications', JSON.stringify(notifications));
- addToast("Notification preferences saved", "success");
+ addToast(t('settings.saved'), "success");
  };
 
  const handlePasswordUpdate = async (e) => {
@@ -174,23 +186,30 @@ export default function SettingsPage() {
  setSessions(prev => prev.filter(s => s.id !== id));
  };
 
- const handleCopyApi = () => {
- navigator.clipboard.writeText(apiKey);
- addToast("API key copied", "info");
+ const handleCreateApiKey = async (e) => {
+   e.preventDefault();
+   setIsCreatingKey(true);
+   try {
+     const res = await apiKeys.create({ name: newKeyName });
+     setNewApiKey(res.data.key);
+     setIsCreateApiModalOpen(false);
+     setNewKeyName('');
+     loadApiKeys();
+   } catch (error) {
+     addToast("Failed to create API key", "error");
+   } finally {
+     setIsCreatingKey(false);
+   }
  };
 
- const handleRegenerateApi = async () => {
- setIsRegeneratingKey(true);
- try {
- await new Promise(r => setTimeout(r, 500));
- const newKey = 'sk-solv-' + Math.random().toString(36).substring(2, 34);
- setApiKey(newKey);
- localStorage.setItem('solvai_api_key', newKey);
- setConfirmApiModal(false);
- addToast("API key regenerated (local only)", "success");
- } finally {
- setIsRegeneratingKey(false);
- }
+ const handleRevokeApiKey = async (id) => {
+   try {
+     await apiKeys.revoke(id);
+     addToast("API key revoked", "success");
+     loadApiKeys();
+   } catch (error) {
+     addToast("Failed to revoke API key", "error");
+   }
  };
 
  const handleSaveWebhook = async () => {
@@ -228,9 +247,9 @@ export default function SettingsPage() {
  return (
  <div className="page-enter max-w-3xl mx-auto pb-12">
  <div className="mb-6">
- <h1 className="text-xl font-semibold text-primary">Settings</h1>
+ <h1 className="text-xl font-semibold text-primary">{t('settings.title')}</h1>
  <p className="text-sm text-muted">
- Manage your account settings and preferences.
+ {t('settings.subtitle')}
  </p>
  </div>
 
@@ -238,14 +257,14 @@ export default function SettingsPage() {
  
  {/* SECTION: Appearance */}
  <section>
- <SectionHeader title="Appearance" description="Customize how SolvAI looks on your device" />
+ <SectionHeader title={t('settings.appearance')} description={t('settings.appearanceDesc')} />
  <Card className="px-5">
- <Row label="Theme" subtext="Select your preferred color scheme">
+ <Row label={t('settings.theme')} subtext={t('settings.themeDesc')}>
  <div className="flex p-1 bg-page rounded-lg border border-border">
  {[
- { id: 'light', icon: Sun, label: 'Light' },
- { id: 'dark', icon: Moon, label: 'Dark' },
- { id: 'system', icon: Monitor, label: 'System' },
+ { id: 'light', icon: Sun, label: t('settings.themeLight') },
+ { id: 'dark', icon: Moon, label: t('settings.themeDark') },
+ { id: 'system', icon: Monitor, label: t('settings.themeSystem') },
  ].map(opt => {
  const Icon = opt.icon;
  const isActive = theme === opt.id;
@@ -267,14 +286,31 @@ export default function SettingsPage() {
  })}
  </div>
  </Row>
- <Row label="Sidebar density" subtext="Adjust the sidebar navigation size" noBorder>
+ <Row label={t('settings.language')} subtext={t('settings.languageDesc')}>
+ <select 
+ value={i18n.language}
+ onChange={e => {
+   i18n.changeLanguage(e.target.value);
+   localStorage.setItem('solvai-language', e.target.value);
+ }}
+ className="bg-card border border-border text-primary rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#0570de]"
+ >
+ <option value="en">English</option>
+ <option value="es">Español</option>
+ <option value="fr">Français</option>
+ <option value="de">Deutsch</option>
+ <option value="it">Italiano</option>
+ <option value="pt">Português</option>
+ </select>
+ </Row>
+ <Row label={t('settings.density')} subtext={t('settings.densityDesc')} noBorder>
  <select 
  value={density}
  onChange={e => setDensity(e.target.value)}
  className="bg-card border border-border text-primary rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#0570de]"
  >
- <option>Comfortable</option>
- <option>Compact</option>
+ <option>{t('settings.densityComfortable')}</option>
+ <option>{t('settings.densityCompact')}</option>
  </select>
  </Row>
  </Card>
@@ -282,21 +318,21 @@ export default function SettingsPage() {
 
  {/* SECTION: Notifications */}
  <section>
- <SectionHeader title="Notifications" description="Choose what you want to be notified about" />
+ <SectionHeader title={t('settings.notifications')} description={t('settings.notificationsDesc')} />
  <Card className="px-5">
- <Row label="Report completed" subtext="Get notified when a report finishes processing">
+ <Row label={t('settings.notifReports')} subtext={t('settings.notifReportsDesc')}>
  <Toggle checked={notifications.reports} onChange={v => setNotifications(prev => ({...prev, reports: v}))} />
  </Row>
- <Row label="Data source errors" subtext="Alert when a connected source fails to sync">
+ <Row label={t('settings.notifErrors')} subtext={t('settings.notifErrorsDesc')}>
  <Toggle checked={notifications.errors} onChange={v => setNotifications(prev => ({...prev, errors: v}))} />
  </Row>
- <Row label="Weekly digest" subtext="Receive a weekly summary of your activity">
+ <Row label={t('settings.notifDigest')} subtext={t('settings.notifDigestDesc')}>
  <Toggle checked={notifications.digest} onChange={v => setNotifications(prev => ({...prev, digest: v}))} />
  </Row>
- <Row label="Product updates" subtext="News about new features and improvements">
+ <Row label={t('settings.notifUpdates')} subtext={t('settings.notifUpdatesDesc')}>
  <Toggle checked={notifications.updates} onChange={v => setNotifications(prev => ({...prev, updates: v}))} />
  </Row>
- <Row label="Marketing emails" subtext="Tips, tutorials and promotional content" noBorder>
+ <Row label={t('settings.notifMarketing')} subtext={t('settings.notifMarketingDesc')} noBorder>
  <Toggle checked={notifications.marketing} onChange={v => setNotifications(prev => ({...prev, marketing: v}))} />
  </Row>
  <div className="pb-4 pt-2">
@@ -304,7 +340,7 @@ export default function SettingsPage() {
  onClick={handleSaveNotifications}
  className="bg-[#0570de] hover:bg-[#0462c7] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
  >
- Save notification preferences
+ {t('settings.saveNotifications')}
  </button>
  </div>
  </Card>
@@ -312,17 +348,17 @@ export default function SettingsPage() {
 
  {/* SECTION: Security */}
  <section>
- <SectionHeader title="Security" description="Manage your account security settings" />
+ <SectionHeader title={t('settings.security')} description={t('settings.securityDesc')} />
  <Card className="px-5">
- <Row label="Password" subtext="Last changed 3 months ago">
+ <Row label={t('settings.password')} subtext={t('settings.passwordDesc')}>
  <button 
  onClick={() => setPasswordModalOpen(true)}
  className="bg-card border border-border hover:bg-page text-primary px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
  >
- Change password
+ {t('settings.changePassword')}
  </button>
  </Row>
- <Row label="Two-factor authentication" subtext="Add an extra layer of security to your account">
+ <Row label={t('settings.twoFactor')} subtext={t('settings.twoFactorDesc')}>
  <Toggle checked={twoFactor} onChange={setTwoFactor} />
  </Row>
  {twoFactor && (
@@ -331,7 +367,7 @@ export default function SettingsPage() {
  2FA setup would be configured here in production
  </div>
  )}
- <Row label="Active sessions" subtext="Devices currently logged into your account" noBorder>
+ <Row label={t('settings.activeSessions')} subtext={t('settings.activeSessionsDesc')} noBorder>
  {/* Empty container just to keep flex layout clean */}
  </Row>
  <div className="pb-5 pl-2 border-t border-border pt-4 -mt-4">
@@ -341,12 +377,12 @@ export default function SettingsPage() {
  <div className="flex items-center gap-2">
  <div className={cn("w-2 h-2 rounded-full", s.current ? "bg-[#1a9e6e]" : "bg-[#697386] ")} />
  <span className="text-sm text-primary">{s.name}</span>
- {s.current && <span className="text-xs text-muted ml-1">· Current session</span>}
+ {s.current && <span className="text-xs text-muted ml-1">· {t('settings.currentSession')}</span>}
  {s.time && <span className="text-xs text-muted ml-1">· {s.time}</span>}
  </div>
  {!s.current && (
  <button onClick={() => handleRevokeSession(s.id)} className="text-xs font-medium text-[#df1b41] hover:underline">
- Revoke
+ {t('settings.revoke')}
  </button>
  )}
  </div>
@@ -358,25 +394,44 @@ export default function SettingsPage() {
 
  {/* SECTION: API & Integrations */}
  <section>
- <SectionHeader title="API & Integrations" description="Manage your API keys and third-party integrations" />
+ <SectionHeader title={t('settings.api')} description={t('settings.apiDesc')} />
  <Card className="px-5">
- <Row label="API Key" subtext="Use this key to access the SolvAI API">
- <div className="flex items-center gap-2 mt-2 md:mt-0">
- <div className="font-mono text-sm bg-page border border-border px-3 py-1.5 rounded-lg text-primary">
- {showApi ? apiKey : "sk-solv-••••••••••••••••••••••3f9a"}
- </div>
- <button onClick={() => setShowApi(!showApi)} className="p-1.5 text-muted hover:text-primary " title="Toggle visibility">
- {showApi ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+ <Row label="API Keys" subtext="Manage secret keys used to authenticate API requests." noBorder>
+ <button 
+ onClick={() => setIsCreateApiModalOpen(true)}
+ className="bg-card border border-border hover:bg-page text-primary px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+ >
+ Create new secret key
  </button>
- <button onClick={handleCopyApi} className="p-1.5 text-muted hover:text-primary " title="Copy">
- <Copy className="w-4 h-4" />
- </button>
- <button onClick={() => setConfirmApiModal(true)} className="p-1.5 text-muted hover:text-[#df1b41]" title="Regenerate">
- <RefreshCw className="w-4 h-4" />
- </button>
- </div>
  </Row>
- <Row label="Webhook endpoint" subtext="Receive real-time event notifications">
+ <div className="pb-5 pt-2">
+ {apiKeysList.length > 0 ? (
+ <div className="flex flex-col gap-3">
+ {apiKeysList.map(key => (
+ <div key={key.id} className="flex items-center justify-between bg-page border border-border p-3 rounded-lg">
+ <div>
+ <div className="text-sm font-medium text-primary">{key.name}</div>
+ <div className="text-xs font-mono text-muted mt-1">{key.key_prefix}...</div>
+ </div>
+ <button 
+ onClick={() => handleRevokeApiKey(key.id)}
+ className="text-sm font-medium text-[#df1b41] hover:underline"
+ >
+ Revoke
+ </button>
+ </div>
+ ))}
+ </div>
+ ) : (
+ <p className="text-sm text-muted">No API keys generated yet.</p>
+ )}
+ <div className="mt-4 pt-4 border-t border-border">
+ <a href="/api-docs" className="text-sm font-medium text-[#0570de] hover:underline">
+ View API Documentation &rarr;
+ </a>
+ </div>
+ </div>
+ <Row label={t('settings.webhookEndpoint')} subtext={t('settings.webhookDesc')}>
  <div className="flex gap-2">
  <input 
  type="url" 
@@ -390,11 +445,11 @@ export default function SettingsPage() {
  disabled={isSavingWebhook}
  className="bg-card border border-border hover:bg-page text-primary px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
  >
- {isSavingWebhook ? 'Saving...' : 'Save'}
+ {isSavingWebhook ? t('settings.saving') : t('settings.save')}
  </button>
  </div>
  </Row>
- <Row label="Connected applications" subtext="" noBorder>
+ <Row label={t('settings.connectedApps')} subtext="" noBorder>
  {/* Layout placeholder */}
  </Row>
  <div className="pb-5 pt-2 border-t border-border -mt-4">
@@ -409,7 +464,7 @@ export default function SettingsPage() {
  onClick={() => setDisconnectAppId(app.id)}
  className="text-sm font-medium text-muted hover:text-primary "
  >
- Disconnect
+ {t('settings.disconnect')}
  </button>
  </div>
  ))}
@@ -423,22 +478,22 @@ export default function SettingsPage() {
 
  {/* SECTION: Danger Zone */}
  <section>
- <SectionHeader title="Danger zone" description="Irreversible actions" />
+ <SectionHeader title={t('settings.danger')} description={t('settings.dangerDesc')} />
  <Card className="px-5 border-l-[3px] border-l-[#df1b41] bg-red-50/30 dark:bg-red-950/10">
- <Row label="Delete all reports" subtext="Permanently delete all your reports. This cannot be undone.">
+ <Row label={t('settings.deleteReports')} subtext={t('settings.deleteReportsDesc')}>
  <button 
  onClick={() => setDeleteReportsModalOpen(true)}
  className="bg-transparent border border-[#df1b41] text-[#df1b41] hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
  >
- Delete all reports
+ {t('settings.deleteReports')}
  </button>
  </Row>
- <Row label="Delete account" subtext="Permanently delete your account and all associated data." noBorder>
+ <Row label={t('settings.deleteAccount')} subtext={t('settings.deleteAccountDesc')} noBorder>
  <button 
  onClick={() => setDeleteAccountModalOpen(true)}
  className="bg-[#df1b41] hover:bg-[#c8183a] text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
  >
- Delete account
+ {t('settings.deleteAccount')}
  </button>
  </Row>
  </Card>
@@ -470,16 +525,41 @@ export default function SettingsPage() {
  </form>
  </Modal>
 
- {/* MODAL: Confirm Regenerate API */}
- <ConfirmModal
- isOpen={confirmApiModal}
- onClose={() => setConfirmApiModal(false)}
- title="Regenerate API Key"
- description="Are you sure you want to regenerate your API key? Your current key will stop working immediately."
- confirmLabel="Regenerate"
- confirmVariant="danger"
- onConfirm={handleRegenerateApi}
- />
+ {/* MODAL: Create API Key */}
+ <Modal isOpen={isCreateApiModalOpen} onClose={() => setIsCreateApiModalOpen(false)} title="Create new API Key">
+ <form onSubmit={handleCreateApiKey} className="flex flex-col gap-4">
+ <div>
+ <label className="block text-sm font-medium text-primary mb-1">Key Name</label>
+ <input type="text" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} required placeholder="e.g. Production Key" className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[#0570de]" />
+ </div>
+ <div className="flex justify-end gap-3 mt-2">
+ <button type="button" onClick={() => setIsCreateApiModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-primary ">Cancel</button>
+ <button type="submit" disabled={isCreatingKey} className="bg-[#0570de] hover:bg-[#0462c7] disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium">
+ {isCreatingKey ? 'Creating...' : 'Create key'}
+ </button>
+ </div>
+ </form>
+ </Modal>
+
+ {/* MODAL: New API Key Result */}
+ <Modal isOpen={!!newApiKey} onClose={() => setNewApiKey(null)} title="API Key Created">
+ <div className="flex flex-col gap-4">
+ <p className="text-sm text-primary">
+ Please copy this key and save it somewhere safe. For security reasons, <strong>you will not be able to view it again</strong>.
+ </p>
+ <div className="bg-page border border-border p-3 rounded-lg flex items-center justify-between">
+ <code className="text-sm font-mono text-primary break-all">{newApiKey}</code>
+ <button onClick={() => { navigator.clipboard.writeText(newApiKey); addToast("Copied to clipboard", "success"); }} className="p-2 text-muted hover:text-primary shrink-0 ml-2">
+ <Copy className="w-4 h-4" />
+ </button>
+ </div>
+ <div className="flex justify-end mt-2">
+ <button onClick={() => setNewApiKey(null)} className="bg-[#0570de] hover:bg-[#0462c7] text-white px-4 py-2 rounded-lg text-sm font-medium">
+ I've saved it
+ </button>
+ </div>
+ </div>
+ </Modal>
 
  {/* MODAL: Confirm Disconnect App */}
  <ConfirmModal

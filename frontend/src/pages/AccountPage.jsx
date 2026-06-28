@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, CreditCard, AlertTriangle, Zap, ArrowUpRight, X, Loader2 } from 'lucide-react';
 import { users, billing } from '../api/client.js';
 import { useTheme } from '../context/ThemeContext.jsx';
@@ -10,6 +11,7 @@ const cn = (...classes) => classes.filter(Boolean).join(' ');
 export default function AccountPage() {
  const { theme, setTheme } = useTheme();
  const { addToast } = useToast();
+ const { t } = useTranslation();
 
  const [currentPlan, setCurrentPlan] = useState('Free');
  const [realPlan, setRealPlan] = useState(null);
@@ -155,8 +157,8 @@ export default function AccountPage() {
  <div className="page-enter">
  {/* ── 1. PAGE HEADER ── */}
  <div>
- <h1 className={`text-xl font-semibold ${textPrimary}`}>Account settings</h1>
- <p className={`text-sm ${textSecondary} mt-1`}>Manage your subscription and billing</p>
+ <h1 className={`text-xl font-semibold ${textPrimary}`}>{t('account.title')}</h1>
+ <p className={`text-sm ${textSecondary} mt-1`}>{t('settings.subtitle')}</p>
  </div>
 
  {/* ── 2. CURRENT PLAN CARD ── */}
@@ -183,7 +185,7 @@ export default function AccountPage() {
  onClick={openUpgradeModal}
  className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] transition-colors"
  >
- Upgrade plan
+ {t('account.upgrade')}
  </button>
  )}
  </div>
@@ -237,11 +239,11 @@ export default function AccountPage() {
 
  {/* ── 3. PLANS COMPARISON ── */}
  <div className="mt-8">
- <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>Choose a plan</h2>
+ <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>{t('account.choosePlan')}</h2>
 
  <div className="grid grid-cols-3 gap-6">
  <div className="bg-card border border-border rounded-lg p-6 flex flex-col">
- <p className={`text-lg font-semibold ${textPrimary}`}>Free</p>
+ <p className={`text-lg font-semibold ${textPrimary}`}>{t('account.free')}</p>
  <div className="mt-2">
  <span className={`text-3xl font-bold ${textPrimary}`}>€0</span>
  <span className={`text-sm ${textSecondary} ml-1`}>/month</span>
@@ -267,7 +269,7 @@ export default function AccountPage() {
  </ul>
 
  <div className={`mt-6 w-full ${currentPlan === 'Free' ? 'bg-[#f0f2f5] text-muted cursor-not-allowed' : 'bg-card border border-border text-primary hover:bg-page cursor-pointer'} rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors`}>
- {currentPlan === 'Free' ? 'Current plan' : 'Downgrade to Free'}
+ {currentPlan === 'Free' ? t('account.currentPlan') : 'Downgrade to Free'}
  </div>
  </div>
 
@@ -276,7 +278,7 @@ export default function AccountPage() {
  Most popular
  </span>
  <div className="bg-card border-2 border-[#0570de] rounded-lg p-6 relative h-full flex flex-col">
- <p className={`text-lg font-semibold ${textPrimary}`}>Pro</p>
+ <p className={`text-lg font-semibold ${textPrimary}`}>{t('account.pro')}</p>
  <div className="mt-2">
  <span className={`text-3xl font-bold ${textPrimary}`}>€29</span>
  <span className={`text-sm ${textSecondary} ml-1`}>/month</span>
@@ -308,7 +310,7 @@ export default function AccountPage() {
 
  {currentPlan === 'Pro' ? (
  <div className="mt-6 w-full bg-[#f0f2f5] text-muted cursor-not-allowed rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors">
- Current plan
+ {t('account.currentPlan')}
  </div>
  ) : (
  <button 
@@ -322,7 +324,7 @@ export default function AccountPage() {
  </div>
 
  <div className="bg-card border border-border rounded-lg p-6 flex flex-col">
- <p className={`text-lg font-semibold ${textPrimary}`}>Business</p>
+ <p className={`text-lg font-semibold ${textPrimary}`}>{t('account.business')}</p>
  <div className="mt-2">
  <span className={`text-3xl font-bold ${textPrimary}`}>€99</span>
  <span className={`text-sm ${textSecondary} ml-1`}>/month</span>
@@ -364,7 +366,7 @@ export default function AccountPage() {
 
  {/* ── 4. BILLING CARD ── */}
  <div className="bg-card border border-border rounded-lg p-6 mt-8">
- <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>Billing</h2>
+ <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>{t('account.billing')}</h2>
 
  {/* Payment method */}
  {paymentMethod ? (
@@ -393,20 +395,20 @@ export default function AccountPage() {
  ) : (
  <div className="flex flex-col items-center py-8">
  <CreditCard className="w-10 h-10 text-[#d0d5dd] " />
- <p className={`text-sm font-medium ${textPrimary} mt-3`}>No payment method</p>
+ <p className={`text-sm font-medium ${textPrimary} mt-3`}>{t('account.noPayment')}</p>
  <p className={`text-xs ${textSecondary} mt-1`}>Add a card to enable automatic billing</p>
  <button 
  onClick={openAddCardModal}
  className="mt-3 text-sm font-medium text-[#0570de] border border-border dark:hover:border-[#0570de] rounded-lg px-4 py-2 hover:bg-page /10 transition-colors"
  >
- + Add card
+ {t('account.addCard')}
  </button>
  </div>
  )}
 
  {/* Invoices */}
  <div className="mt-6 pt-6 border-t border-border">
- <h3 className={`text-sm font-semibold ${textPrimary} mb-4`}>Invoices</h3>
+ <h3 className={`text-sm font-semibold ${textPrimary} mb-4`}>{t('account.invoices')}</h3>
  
  {currentPlan === 'Pro' ? (
  <div className="flex items-center justify-between py-3 border border-border px-4 rounded-lg">
@@ -426,7 +428,7 @@ export default function AccountPage() {
  </div>
  ) : (
  <div className="text-center py-8">
- <p className={`text-sm ${textSecondary}`}>No invoices yet</p>
+ <p className={`text-sm ${textSecondary}`}>{t('account.noInvoices')}</p>
  </div>
  )}
  </div>
@@ -488,9 +490,9 @@ export default function AccountPage() {
 
  <div className="mt-3 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
  <div>
- <p className={`text-sm font-medium ${textPrimary}`}>Delete account</p>
+ <p className={`text-sm font-medium ${textPrimary}`}>{t('settings.deleteAccount')}</p>
  <p className={`text-xs ${textSecondary} mt-1 max-w-md`}>
- Permanently delete your account and all associated data. This action cannot be undone.
+ {t('settings.deleteAccountDesc')}
  </p>
  </div>
 
@@ -499,7 +501,7 @@ export default function AccountPage() {
  className="bg-card border border-[#fca5a5] /30 text-[#df1b41] rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#fef2f2] /10 whitespace-nowrap flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
  >
  <AlertTriangle className="w-4 h-4" />
- Delete account
+ {t('settings.deleteAccount')}
  </button>
  </div>
  </div>

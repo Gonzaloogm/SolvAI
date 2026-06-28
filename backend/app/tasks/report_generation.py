@@ -158,6 +158,8 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                 redis_client = await aioredis.from_url(settings.REDIS_URL)
                 channel = f"solvai:telemetry:{report_id}"
                 
+                report_type = getattr(report, "report_type", "FULL")
+                
                 initial_state = {
                     "transactions": [],
                     "financial_summary": financial_summary,
@@ -167,7 +169,8 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                     "is_approved": False,
                     "iterations": 0,
                     "final_report": {},
-                    "requires_human_review": False
+                    "requires_human_review": False,
+                    "report_type": report_type,
                 }
                 
                 final_data = None
@@ -198,6 +201,26 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
             report.report_data = report_data
             report.generated_at = datetime.now(timezone.utc)
             report.updated_at = datetime.now(timezone.utc)
+
+            # Extract and store score/rating for fast history queries
+            try:
+                rd = report_data or {}
+                extracted_score = rd.get('overall_score')
+                if extracted_score is not None:
+                    try:
+                        report.overall_score = int(extracted_score)
+                    except (ValueError, TypeError):
+                        pass
+
+                raw_rating = rd.get('rating', '')
+                report.rating = str(raw_rating) if raw_rating else None
+
+                # Generate month string YYYY-MM
+                now_utc = datetime.now(timezone.utc)
+                report.generated_month = now_utc.strftime('%Y-%m')
+            except Exception as score_err:
+                logger.warning(f"Could not extract score for history: {score_err}")
+
             db.commit()
 
             logger.info(

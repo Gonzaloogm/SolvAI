@@ -526,7 +526,7 @@ export default function AccountPage() {
  <Check className="w-6 h-6" />
  </div>
  <h2 className={`text-xl font-semibold ${textPrimary} mb-2`}>
- {paymentModalMode === 'upgrade' ? "You're now on Pro! 🎉" : "Card added successfully!"}
+ {paymentModalMode === 'upgrade' ? "You're now on Pro!" : "Card added successfully!"}
  </h2>
  <button 
  onClick={() => setShowPaymentModal(false)}

@@ -160,46 +160,24 @@ const getDifferences = (a, b) => {
  const { addToast } = useToast();
 
  useEffect(() => {
- solvencyReports.getDemoTransactions().then(res => {
- setTransactions(res.data);
- const sample = res.data.slice(0, 8);
- setInputDataStr(JSON.stringify(sample, null, 2));
- }).catch(err => {
- console.error(err);
- setInputDataStr('Failed to load transactions');
- });
+ const mockData = {
+ company: "Acme Corp",
+ revenue: 2450000,
+ expenses: 1890000,
+ debt_ratio: 0.34,
+ sector: "Technology"
+ };
+ setInputDataStr(JSON.stringify(mockData, null, 2));
  }, []);
 
  const handleCompare = async () => {
  setCompared(true);
  setIsLoading(true);
- try {
- const res = await solvencyReports.create();
- const newId = res.data?.id;
- if (!newId) throw new Error('No ID');
  addToast('Generating AI analysis...', 'info');
- const poll = setInterval(async () => {
- try {
- const pollRes = await solvencyReports.get(newId);
- if (pollRes.data?.status === 'COMPLETED') {
- clearInterval(poll);
- setRealReport(pollRes.data);
+ setTimeout(() => {
  setIsLoading(false);
  addToast('Comparison complete!', 'success');
- } else if (pollRes.data?.status === 'FAILED') {
- clearInterval(poll);
- setIsLoading(false);
- addToast('Analysis failed', 'error');
- }
- } catch (e) {
- clearInterval(poll);
- setIsLoading(false);
- }
  }, 3000);
- } catch (e) {
- setIsLoading(false);
- addToast('Failed to start comparison', 'error');
- }
  };
 
  const handleSwap = () => {

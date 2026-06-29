@@ -51,6 +51,28 @@ async def create_solvency_report(
     # Paywall removed for demo purposes
 
     report_type = getattr(body, "report_type", "FULL")
+
+    # Enforce rental certificate limits for Free plan
+    if report_type == "RENTAL" and org_obj and org_obj.plan == "free":
+        from sqlalchemy import func
+        start_of_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        count_res = await db.execute(
+            select(func.count(SolvencyReport.id))
+            .where(
+                SolvencyReport.organization_id == current_user.organization_id,
+                SolvencyReport.report_type == "RENTAL",
+                SolvencyReport.created_at >= start_of_month,
+                SolvencyReport.is_deleted.is_(False)
+            )
+        )
+        count = count_res.scalar() or 0
+        if count >= 1:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Free plan allows 1 Rental Certificate per month. Upgrade to Pro for unlimited certificates."
+            )
+
     report = SolvencyReport(
         id=uuid.uuid4(),
         user_id=current_user.id,

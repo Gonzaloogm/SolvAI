@@ -238,6 +238,20 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                     report_id=report_id,
                     score=report_data.get("overall_score", 0),
                 )
+            
+            # ── 8. Create In-App Alert ────────────────────────────────────────
+            # Generate alerts based on new report
+            try:
+                from app.services.alert_service import AlertService
+                alert_svc = AlertService(db)
+                alert_svc.check_and_generate_alerts(
+                    user_id=str(report.user_id),
+                    org_id=str(report.organization_id),
+                    latest_report=report
+                )
+            except Exception as e:
+                # Don't fail the task if alerts fail
+                logger.error(f"Alert generation failed: {e}")
 
             return {"status": "completed", "report_id": report_id}
 

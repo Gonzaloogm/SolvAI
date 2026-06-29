@@ -91,15 +91,27 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-        user_id: str | None = payload.get("sub")
-        token_type: str | None = payload.get("token_type")
-        if user_id is None or token_type != "access":
+    if token.startswith("sk-solv-"):
+        from app.models.api_key import ApiKey
+        prefix = token[:12]
+        result = await db.execute(
+            select(ApiKey).where(ApiKey.key_prefix == prefix, ApiKey.is_active.is_(True))
+        )
+        api_key = result.scalar_one_or_none()
+        if not api_key or not pwd_context.verify(token, api_key.key_hash):
             raise credentials_exception
-    except JWTError as exc:
-        logger.debug(f"JWT decode error: {exc}")
-        raise credentials_exception from exc
+        
+        user_id = str(api_key.user_id)
+    else:
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+            user_id: str | None = payload.get("sub")
+            token_type: str | None = payload.get("token_type")
+            if user_id is None or token_type != "access":
+                raise credentials_exception
+        except JWTError as exc:
+            logger.debug(f"JWT decode error: {exc}")
+            raise credentials_exception from exc
 
     result = await db.execute(
         select(User).where(User.id == user_id, User.is_deleted.is_(False))

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertTriangle, TrendingUp, Download, Loader2 } from 'lucide-react';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../context/ToastContext.jsx';
@@ -139,16 +139,195 @@ function ShareModal({ isOpen, onClose, reportId }) {
   );
 }
 
+const KeyFindings = ({ reportData }) => {
+  const riskFlags = reportData?.risk_flags || [];
+  const recommendations = reportData?.recommendations || [];
+  const financialSummary = reportData?.financial_summary;
+  
+  return (
+    <div style={{marginTop: '24px'}}>
+      
+      {/* Risk Flags */}
+      {riskFlags.length > 0 && (
+        <div style={{
+          marginBottom: '20px',
+          padding: '16px',
+          background: 'var(--bg-page)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+          borderLeft: '3px solid #f59e0b'
+        }}>
+          <div style={{
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            marginBottom: '12px'
+          }}>
+            <AlertTriangle size={16} color="#f59e0b" />
+            <span style={{
+              fontWeight: 600, 
+              fontSize: '14px',
+              color: 'var(--text-primary)'
+            }}>
+              Risk Factors Identified
+            </span>
+          </div>
+          <ul style={{
+            margin: 0, 
+            paddingLeft: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px'
+          }}>
+            {riskFlags.slice(0, 5).map((flag, i) => (
+              <li key={i} style={{
+                fontSize: '13px',
+                color: 'var(--text-secondary)',
+                lineHeight: '1.5'
+              }}>
+                {flag.replace(/\*\*/g, '').trim()}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      {/* Top 3 Recommendations */}
+      {recommendations.length > 0 && (
+        <div style={{marginBottom: '20px'}}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '12px'
+          }}>
+            <TrendingUp size={16} color="#0570de" />
+            <span style={{
+              fontWeight: 600,
+              fontSize: '14px',
+              color: 'var(--text-primary)'
+            }}>
+              Recommended Actions
+            </span>
+          </div>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            {recommendations.slice(0, 3).map((rec, i) => {
+              const title = rec
+                .replace(/\*\*/g, '')
+                .replace(/^\d+\.\s*/, '')
+                .split('\n')[0]
+                .split('(Addressing')[0]
+                .trim();
+              
+              return (
+                <div key={i} style={{
+                  display: 'flex',
+                  gap: '12px',
+                  padding: '12px',
+                  background: 'var(--bg-page)',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  <span style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    background: '#eff6ff',
+                    color: '#0570de',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {i + 1}
+                  </span>
+                  <p style={{
+                    margin: 0,
+                    fontSize: '13px',
+                    color: 'var(--text-secondary)',
+                    lineHeight: '1.5'
+                  }}>
+                    {title}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Data Sources Used */}
+      <div style={{
+        padding: '12px 16px',
+        background: 'var(--bg-page)',
+        borderRadius: '6px',
+        border: '1px solid var(--border-color)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div>
+          <div style={{
+            fontSize: '12px',
+            color: 'var(--text-muted)',
+            marginBottom: '2px'
+          }}>
+            Data Sources Analyzed
+          </div>
+          <div style={{
+            fontSize: '13px',
+            fontWeight: 500,
+            color: 'var(--text-primary)'
+          }}>
+            {financialSummary?.connected_platforms?.join(', ') || 'No sources connected'}
+          </div>
+        </div>
+        <div style={{textAlign: 'right'}}>
+          <div style={{
+            fontSize: '12px',
+            color: 'var(--text-muted)',
+            marginBottom: '2px'
+          }}>
+            Analysis Period
+          </div>
+          <div style={{
+            fontSize: '13px',
+            fontWeight: 500,
+            color: 'var(--text-primary)'
+          }}>
+            {financialSummary?.analysis_period_months || 12} months
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  );
+};
+
 export default function ReportDetailModal({ report, onClose }) {
   const { addToast } = useToast();
   const { t } = useTranslation();
-  const [isGeneratingPDF, setIsGeneratingPDF] = React.useState(false);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  const token = localStorage.getItem('solvai_token');
+
   const modelName = report.subtitle?.split('·')[0]?.trim() || report.model || 'Gemini 2.5 Flash';
-  
   const reportData = report._raw?.report_data || report.report_data || {};
-  const accuracy = report.accuracy ?? reportData.overall_score ?? null;
+  const accuracy = report.accuracy ?? reportData.overall_score ?? reportData.score ?? null;
+  const dataSourceName = report.dataSource || reportData.financial_summary?.connected_platforms?.[0] || '—';
+  
+  const createdDate = report.createdAt || report.created || report.created_at;
+  const formattedDate = createdDate ? new Date(createdDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  const title = reportData?.narrative ? (reportData.narrative.slice(0, 60) + '...') : ("Solvency Report " + (report.id || '').slice(0,8).toUpperCase());
+  const overallScore = reportData?.overall_score ? reportData.overall_score + '%' : '—';
 
   const features = [];
   if (reportData.income_stability?.score !== undefined) {
@@ -168,14 +347,13 @@ export default function ReportDetailModal({ report, onClose }) {
   }
 
   const explanationText = reportData.narrative || report.description || `Analysis of ${report.dataSource || 'connected data source'} using ${modelName}. Key drivers identified include revenue trends, risk exposure, and compliance metrics.`;
-  
-  const rawData = JSON.stringify(reportData, null, 2);
 
   const getMarkdown = () => {
-    let md = `# ${report.name}\n\n`;
-    md += `**Type:** ${report.type} | **Status:** ${report.status} | **Created:** ${report.createdAt || report.created}\n\n`;
+    let md = `# ${title}\n\n`;
+    md += `**Type:** ${report.type} | **Status:** ${report.status} | **Created:** ${formattedDate}\n\n`;
     md += `## Metadata\n| Field | Value |\n|-------|-------|\n`;
-    md += `| Data Source | ${report.dataSource || '—'} |\n| Model | ${modelName} |\n| Overall Score | ${accuracy ? accuracy + (typeof accuracy === 'number' ? '%' : '') : '—'} |\n| Rating | ${reportData.rating || '—'} |\n\n`;
+    const avgRev = reportData.financial_summary?.avg_monthly_revenue;
+    md += `| Data Source | ${dataSourceName} |\n| Model | ${modelName} |\n| Overall Score | ${overallScore} |\n| Avg Monthly Revenue | ${avgRev ? '$' + avgRev.toLocaleString() : '—'} |\n| Rating | ${reportData.rating || '—'} |\n\n`;
     
     md += `## Explanation Output\n${explanationText}\n\n`;
     
@@ -187,17 +365,19 @@ export default function ReportDetailModal({ report, onClose }) {
 
     if (reportData.risk_flags && reportData.risk_flags.length > 0) {
       md += `## Risk Flags\n`;
-      reportData.risk_flags.forEach(flag => { md += `- ${flag}\n`; });
+      reportData.risk_flags.forEach(flag => { md += `- ${flag.replace(/\*\*/g, '')}\n`; });
       md += `\n`;
     }
 
     if (reportData.recommendations && reportData.recommendations.length > 0) {
       md += `## Recommendations\n`;
-      reportData.recommendations.forEach(rec => { md += `- ${rec}\n`; });
+      reportData.recommendations.slice(0, 3).forEach(rec => { 
+        md += `- ${rec.replace(/\*\*/g, '').split('\n')[0].trim()}\n`; 
+      });
       md += `\n`;
     }
 
-    md += `## Raw Data\n\`\`\`json\n${rawData}\n\`\`\`\n\n---\n*Generated by SolvAI on ${new Date().toLocaleDateString()}*\n`;
+    md += `\n---\n*Generated by SolvAI on ${new Date().toLocaleDateString()}*\n`;
     return md;
   };
 
@@ -211,30 +391,52 @@ export default function ReportDetailModal({ report, onClose }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `solvai_${report.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}.md`;
+    a.download = `solvai_report.md`;
     a.click();
     URL.revokeObjectURL(url);
     addToast('Markdown downloaded', 'success');
   };
 
   const handleDownloadPDF = async () => {
-    setIsGeneratingPDF(true);
-    addToast('Downloading PDF...', 'info');
+    if (!report?.id) return;
+    
     try {
-      const reportId = report._raw?.id || report.id;
-      const res = await solvencyReports.getPDF(reportId);
-      const blob = new Blob([res.data], { type: 'application/pdf' });
+      setDownloadingPDF(true);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/solvency-reports/${report.id}/pdf`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        if (response.status === 402) {
+          addToast('Upgrade to Pro to download PDFs', 'error');
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `solvai_report_${reportId}.pdf`;
+      a.download = `solvai_report_${report.id.slice(0,8)}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
       addToast('PDF downloaded successfully', 'success');
-    } catch (e) {
-      addToast('Failed to download PDF', 'error');
+    } catch (err) {
+      console.error('PDF download error:', err);
+      addToast('Failed to download PDF. Please try again.', 'error');
     } finally {
-      setIsGeneratingPDF(false);
+      setDownloadingPDF(false);
     }
   };
 
@@ -251,7 +453,7 @@ export default function ReportDetailModal({ report, onClose }) {
       <div className="bg-card rounded-xl w-full max-w-[800px] max-h-[90vh] shadow-2xl overflow-y-auto border border-border" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-start p-6 border-b border-border bg-card sticky top-0 z-10">
           <div>
-            <h1 className="text-2xl font-bold text-primary mb-3">{report.name}</h1>
+            <h1 className="text-2xl font-bold text-primary mb-3">{title}</h1>
             <div className="flex items-center gap-2">
               <span className={cn(STATUS_STYLES[report.status] || STATUS_STYLES.Draft)}>{report.status}</span>
               <span className={cn(TYPE_STYLES[report.type] || TYPE_STYLES.Custom)}>{report.type}</span>
@@ -280,10 +482,20 @@ export default function ReportDetailModal({ report, onClose }) {
                 </button>
                 <button 
                   onClick={handleDownloadPDF} 
-                  disabled={isGeneratingPDF}
-                  className="px-3 py-1.5 text-sm font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                  disabled={downloadingPDF}
+                  className="px-3 py-1.5 text-sm font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
-                  {isGeneratingPDF ? t('status.generating') : t('reports.actions.download')}
+                  {downloadingPDF ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} />
+                      Download PDF
+                    </>
+                  )}
                 </button>
               </>
             )}
@@ -292,14 +504,14 @@ export default function ReportDetailModal({ report, onClose }) {
         </div>
         
         <div className="p-6 space-y-8 bg-card">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             <div>
               <div className="text-sm text-muted mb-1">{t('reports.columns.created')}</div>
-              <div className="text-sm font-medium text-primary">{report.createdAt || report.created || '—'}</div>
+              <div className="text-sm font-medium text-primary">{formattedDate}</div>
             </div>
             <div>
               <div className="text-sm text-muted mb-1">{t('reports.columns.source')}</div>
-              <div className="text-sm font-medium text-primary">{report.dataSource || '—'}</div>
+              <div className="text-sm font-medium text-primary">{dataSourceName}</div>
             </div>
             <div>
               <div className="text-sm text-muted mb-1">Model</div>
@@ -308,8 +520,12 @@ export default function ReportDetailModal({ report, onClose }) {
             <div>
               <div className="text-sm text-muted mb-1">{t('solvency.overallScore')}</div>
               <div className={cn('text-sm font-medium', getAccuracyColor(accuracy ? parseFloat(accuracy) : null))}>
-                {accuracy !== null && accuracy !== undefined ? (typeof accuracy === 'number' ? `${accuracy}%` : accuracy) : '—'}
+                {overallScore}
               </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted mb-1">Avg Rev</div>
+              <div className="text-sm font-medium text-primary">{reportData.financial_summary?.avg_monthly_revenue ? '$' + reportData.financial_summary.avg_monthly_revenue.toLocaleString() : '—'}</div>
             </div>
           </div>
 
@@ -320,54 +536,7 @@ export default function ReportDetailModal({ report, onClose }) {
             </div>
           </div>
 
-          {(reportData.risk_flags?.length > 0 || reportData.recommendations?.length > 0) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {reportData.risk_flags?.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.riskFlags')}</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-[#df1b41] marker:text-[#df1b41]">
-                    {reportData.risk_flags.map((flag, i) => (
-                      <li key={i}>{flag}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {reportData.recommendations?.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.recommendations')}</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-[#1a9e6e] marker:text-[#1a9e6e]">
-                    {reportData.recommendations.map((rec, i) => (
-                      <li key={i}>{rec}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {features.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-primary mb-4">Component Scores</h3>
-              <div className="space-y-4">
-                {features.map((feat, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <div className="w-40 text-sm font-medium text-secondary truncate">{feat.label}</div>
-                    <div className="flex-1 h-3 bg-page rounded-full overflow-hidden">
-                      <div className="h-full bg-[#0570de] rounded-full transition-all duration-500" style={{ width: `${feat.value}%` }}></div>
-                    </div>
-                    <div className="w-12 text-sm text-right text-muted">{feat.value}%</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <h3 className="text-sm font-semibold text-primary mb-3">Raw JSON Data</h3>
-            <pre className="bg-[#111111] text-[#f5f5f5] p-4 rounded-md text-[13px] overflow-x-auto font-mono max-h-96">
-              {rawData}
-            </pre>
-          </div>
+          <KeyFindings reportData={reportData} />
         </div>
       </div>
       

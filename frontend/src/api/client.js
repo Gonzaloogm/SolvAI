@@ -95,7 +95,7 @@ export const solvencyReports = {
    * Trigger new report generation.
    * POST /solvency-reports
    */
-  create: () => apiClient.post('/solvency-reports/'),
+  create: (data = {}) => apiClient.post('/solvency-reports/', data),
 
   /**
    * Get a single report.

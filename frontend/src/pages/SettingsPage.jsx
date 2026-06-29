@@ -90,7 +90,16 @@ export default function SettingsPage() {
  const { t, i18n } = useTranslation();
 
  // State: Appearance
- const [density, setDensity] = useState('Comfortable');
+ const [density, setDensity] = useState(() => localStorage.getItem('solvai_density') || 'Comfortable');
+
+ React.useEffect(() => {
+   localStorage.setItem('solvai_density', density);
+   if (density === 'Compact') {
+     document.documentElement.classList.add('sidebar-dense');
+   } else {
+     document.documentElement.classList.remove('sidebar-dense');
+   }
+ }, [density]);
 
  // State: Notifications
  const [notifications, setNotifications] = useState({

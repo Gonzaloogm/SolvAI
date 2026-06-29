@@ -10,8 +10,11 @@ import {
  Copy,
  Database,
  X,
- Loader2
+ Loader2,
+ Lock,
+ Check
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { solvencyReports } from '../api/client.js';
@@ -55,6 +58,8 @@ export default function ReportsPage() {
  const [openMenuId, setOpenMenuId] = useState(null);
  const [currentPage, setCurrentPage] = useState(1);
  const [isModalOpen, setIsModalOpen] = useState(false);
+ const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+ const navigate = useNavigate();
  
  // New States
  const { addToast } = useToast();
@@ -306,7 +311,11 @@ export default function ReportsPage() {
  }, 3000);
  } catch (err) {
  setGenerating(false);
- addToast(err?.response?.data?.detail || 'Failed to start report generation', 'error');
+ if (generatingType === 'RENTAL' && (err.response?.status === 402 || err.response?.data?.detail?.includes('limit'))) {
+   setShowUpgradeModal(true);
+ } else {
+   addToast(err?.response?.data?.detail || 'Failed to start report generation', 'error');
+ }
  }
  };
 
@@ -710,6 +719,91 @@ export default function ReportsPage() {
  </div>
 
  {/* ── 6. NEW REPORT MODAL ────────────────────────────────────────────── */}
+ {showUpgradeModal && (
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+      <div className="bg-card rounded-xl w-full max-w-md shadow-2xl overflow-hidden border border-border p-6 text-center relative">
+        <div style={{
+          width: '48px', height: '48px',
+          background: '#eff6ff',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 16px'
+        }}>
+          <Lock size={24} color="#0570de" />
+        </div>
+        <h2 style={{fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)'}}>
+          Upgrade to Generate Reports
+        </h2>
+        <p style={{color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px'}}>
+          You've reached your free plan limit. Upgrade to Pro for unlimited solvency reports and rental certificates.
+        </p>
+        <div style={{
+          background: 'var(--bg-page)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '24px',
+          textAlign: 'left'
+        }}>
+          <div style={{fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)'}}>
+            Pro — €29/month
+          </div>
+          {['Unlimited solvency reports',
+            'Unlimited rental certificates', 
+            '10 data sources',
+            'Priority support',
+            'PDF downloads'].map(f => (
+            <div key={f} style={{
+              display: 'flex', gap: '8px',
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+              marginBottom: '4px'
+            }}>
+              <Check size={14} color="#1a9e6e" style={{flexShrink: 0, marginTop: '2px'}}/>
+              {f}
+            </div>
+          ))}
+        </div>
+        <button 
+          onClick={() => {
+            setShowUpgradeModal(false);
+            navigate('/account');
+          }}
+          style={{
+            width: '100%',
+            padding: '10px',
+            background: '#0570de',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer'
+          }}
+        >
+          Upgrade to Pro
+        </button>
+        <button
+          onClick={() => setShowUpgradeModal(false)}
+          style={{
+            width: '100%',
+            padding: '10px',
+            background: 'transparent',
+            color: 'var(--text-muted)',
+            border: 'none',
+            fontSize: '13px',
+            cursor: 'pointer',
+            marginTop: '8px'
+          }}
+        >
+          Maybe later
+        </button>
+      </div>
+    </div>
+  )}
+
  {isModalOpen && (
  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
  <div className="bg-card rounded-xl w-full max-w-md shadow-2xl overflow-hidden border border-border">

@@ -88,3 +88,23 @@ async def delete_alert(
     await db.delete(alert)
     await db.flush()
     return {"success": True}
+
+@router.post("/test")
+async def create_test_alert(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    from app.models.alert import Alert
+    alert = Alert(
+        user_id=current_user.id,
+        organization_id=current_user.organization_id,
+        type='SCORE_DROP',
+        severity='warning',
+        title='Test: Your score dropped 8 points',
+        message='Your solvency score fell from 74 to 66. Main factor: client concentration increased to 52% of revenue.',
+        metadata={'delta': -8, 'score': 66}
+    )
+    db.add(alert)
+    await db.commit()
+    return {"message": "Test alert created", "id": str(alert.id)}
+

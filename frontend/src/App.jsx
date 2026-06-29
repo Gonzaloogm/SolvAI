@@ -62,13 +62,20 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  const navigate = useNavigate();
  const { t, i18n } = useTranslation();
 
+ useEffect(() => {
+   const density = localStorage.getItem('solvai_density');
+   if (density === 'Compact') {
+     document.documentElement.classList.add('sidebar-dense');
+   }
+ }, []);
+
  const LANGUAGES = [
-   { code: 'en', label: '🇬🇧 EN' },
-   { code: 'es', label: '🇪🇸 ES' },
-   { code: 'fr', label: '🇫🇷 FR' },
-   { code: 'de', label: '🇩🇪 DE' },
-   { code: 'it', label: '🇮🇹 IT' },
-   { code: 'pt', label: '🇵🇹 PT' }
+   { code: 'en', label: 'EN' },
+   { code: 'es', label: 'ES' },
+   { code: 'fr', label: 'FR' },
+   { code: 'de', label: 'DE' },
+   { code: 'it', label: 'IT' },
+   { code: 'pt', label: 'PT' }
  ];
 
  const cycleLanguage = () => {
@@ -79,7 +86,7 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
    localStorage.setItem('solvai-language', nextLang);
  };
 
- const currentLangLabel = LANGUAGES.find(l => l.code === i18n.language)?.label || '🇬🇧 EN';
+ const currentLangLabel = LANGUAGES.find(l => l.code === i18n.language)?.label || 'EN';
 
  const handleLogout = () => {
    localStorage.removeItem('solvai_token');

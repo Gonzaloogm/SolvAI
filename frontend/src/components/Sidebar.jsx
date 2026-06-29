@@ -100,12 +100,12 @@ export default function Sidebar() {
  }, []);
 
  const LANGUAGES = [
-   { code: 'en', label: '🇬🇧 EN' },
-   { code: 'es', label: '🇪🇸 ES' },
-   { code: 'fr', label: '🇫🇷 FR' },
-   { code: 'de', label: '🇩🇪 DE' },
-   { code: 'it', label: '🇮🇹 IT' },
-   { code: 'pt', label: '🇵🇹 PT' }
+   { code: 'en', label: 'EN' },
+   { code: 'es', label: 'ES' },
+   { code: 'fr', label: 'FR' },
+   { code: 'de', label: 'DE' },
+   { code: 'it', label: 'IT' },
+   { code: 'pt', label: 'PT' }
  ];
 
  const cycleLanguage = () => {
@@ -116,7 +116,7 @@ export default function Sidebar() {
    localStorage.setItem('solvai-language', nextLang);
  };
 
- const currentLangLabel = LANGUAGES.find(l => l.code === i18n.language)?.label || '🇬🇧 EN';
+ const currentLangLabel = LANGUAGES.find(l => l.code === i18n.language)?.label || 'EN';
 
  const handleLogout = () => {
  localStorage.removeItem('solvai_token');
@@ -280,6 +280,9 @@ export default function Sidebar() {
  transition: all var(--transition-fast);
  border-left: 2px solid transparent;
  cursor: pointer;
+ }
+ html.sidebar-dense .sidebar__nav-item {
+ padding: 4px 8px;
  }
  .sidebar__nav-item:hover:not(.sidebar__nav-item--disabled) {
  background: rgba(255,255,255,0.04);

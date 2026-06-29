@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
+import { AlertTriangle } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -33,7 +34,7 @@ export default function PublicReport() {
   if (error) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
       <div style={{ textAlign: 'center', maxWidth: 400, padding: 24 }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+        <div className="text-yellow-500 mb-4 flex justify-center"><AlertTriangle className="w-12 h-12" /></div>
         <h2 style={{ color: '#111827', marginBottom: 8 }}>Report unavailable</h2>
         <p style={{ color: '#6b7280', marginBottom: 24 }}>{error}</p>
         <a href="/register" style={{ background: '#6366f1', color: 'white', padding: '10px 24px', borderRadius: 8, textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>

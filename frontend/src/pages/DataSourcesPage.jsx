@@ -21,6 +21,7 @@ import {
  BarChart2,
  Server,
  Loader2,
+ AlertTriangle,
  X
 } from 'lucide-react';
 
@@ -80,7 +81,8 @@ const initialAvailableIntegrations = [
  { name: 'Snowflake', iconBg: 'bg-[#29b5e8]', Icon: Cloud, available: true, badge: 'Data Warehouse' },
  { name: 'BigQuery', iconBg: 'bg-[#4285f4]', Icon: BarChart3, available: true, badge: 'Data Warehouse' },
  { name: 'HubSpot', iconBg: 'bg-[#ff7a59]', Icon: Users, available: false, badge: 'CRM' },
- { name: 'Stripe', iconBg: 'bg-[#635bff]', Icon: CreditCard, available: false, badge: 'Payments' },
+ { name: 'Stripe', iconBg: 'bg-[#635bff]', Icon: CreditCard, available: true, badge: 'Payments' },
+ { name: 'Bank Account (Open Banking)', iconBg: 'bg-[#0570de]', Icon: Globe, available: false, badge: 'Bank', tooltip: 'Connect your bank account directly. Available in EU soon.' },
  { name: 'Notion', iconBg: 'bg-[#0a2540]', Icon: FileText, available: false, badge: 'Docs' },
  { name: 'CSV Upload', iconBg: 'bg-[#697386]', Icon: FileUp, available: true, badge: 'File' },
  { name: 'Amazon S3', iconBg: 'bg-[#ff9900]', Icon: HardDrive, available: false, badge: 'Storage' },
@@ -225,7 +227,11 @@ export default function DataSourcesPage() {
  setIsConnecting(true);
  
  try {
- await dataSourcesApi.connect(connectModal.name.toLowerCase(), {});
+ let payload = {};
+ if (connectModal.name === 'Stripe') {
+   payload = { api_key: e.target.elements.api_key.value };
+ }
+ await dataSourcesApi.connect(connectModal.name.toLowerCase(), payload);
  
  const sourceToAdd = {
  name: connectModal.name,
@@ -449,7 +455,7 @@ export default function DataSourcesPage() {
  Coming soon
  </span>
  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#0a2540] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
- Support for {integration.name} coming soon
+ {integration.tooltip || `Support for ${integration.name} coming soon`}
  </div>
  </>
  )}
@@ -481,66 +487,95 @@ export default function DataSourcesPage() {
  </div>
  
  <form onSubmit={handleConnect} className="p-5 space-y-4">
- <div>
- <label className="block text-sm font-medium text-primary mb-1">
- Connection Name
- </label>
- <input 
- type="text" 
- defaultValue={`${connectModal.name} Production`}
- className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
- required
- />
- </div>
- 
- {connectModal.name === 'REST API' || connectModal.name === 'Stripe' || connectModal.name === 'HubSpot' ? (
- <div>
- <label className="block text-sm font-medium text-primary mb-1">
- API Key
- </label>
- <input 
- type="password" 
- placeholder="sk_live_..."
- className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
- required
- />
- </div>
+ {connectModal.name === 'Stripe' ? (
+   <>
+     <p className="text-sm text-secondary mb-4">
+       Connect your Stripe account to analyze your payment history and generate solvency reports.
+     </p>
+     <div>
+       <label className="block text-sm font-medium text-primary mb-1">
+         Stripe Secret Key
+       </label>
+       <input 
+         name="api_key"
+         type="password" 
+         placeholder="sk_live_... or sk_test_..."
+         className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+         required
+       />
+       <p className="text-xs text-muted mt-2">
+         Find this in your Stripe Dashboard → Developers → API Keys. Use your Secret key.
+       </p>
+     </div>
+     <div className="bg-[#fef3c7] text-[#92400e] border border-[#fcd34d] p-3 rounded-md mt-4 text-sm flex items-start gap-2">
+       <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+       <p>Your key is encrypted and stored securely. We only read transaction data — we never make charges.</p>
+     </div>
+   </>
  ) : (
- <>
- <div>
- <label className="block text-sm font-medium text-primary mb-1">
- Host
- </label>
- <input 
- type="text" 
- placeholder="e.g. db.example.com"
- className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
- required
- />
- </div>
- <div className="grid grid-cols-2 gap-4">
- <div>
- <label className="block text-sm font-medium text-primary mb-1">
- Port
- </label>
- <input 
- type="text" 
- placeholder="5432"
- className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
- />
- </div>
- <div>
- <label className="block text-sm font-medium text-primary mb-1">
- User
- </label>
- <input 
- type="text" 
- placeholder="admin"
- className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
- />
- </div>
- </div>
- </>
+   <>
+     <div>
+     <label className="block text-sm font-medium text-primary mb-1">
+     Connection Name
+     </label>
+     <input 
+     type="text" 
+     defaultValue={`${connectModal.name} Production`}
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     required
+     />
+     </div>
+     
+     {connectModal.name === 'REST API' || connectModal.name === 'HubSpot' ? (
+     <div>
+     <label className="block text-sm font-medium text-primary mb-1">
+     API Key
+     </label>
+     <input 
+     type="password" 
+     placeholder="sk_live_..."
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     required
+     />
+     </div>
+     ) : (
+     <>
+     <div>
+     <label className="block text-sm font-medium text-primary mb-1">
+     Host
+     </label>
+     <input 
+     type="text" 
+     placeholder="e.g. db.example.com"
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     required
+     />
+     </div>
+     <div className="grid grid-cols-2 gap-4">
+     <div>
+     <label className="block text-sm font-medium text-primary mb-1">
+     Port
+     </label>
+     <input 
+     type="text" 
+     placeholder="5432"
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     />
+     </div>
+     <div>
+     <label className="block text-sm font-medium text-primary mb-1">
+     User
+     </label>
+     <input 
+     type="text" 
+     placeholder="admin"
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     />
+     </div>
+     </div>
+     </>
+     )}
+   </>
  )}
  
  <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">

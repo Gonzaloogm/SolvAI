@@ -31,3 +31,5 @@ matplotlib
 numpy
 pdfplumber>=0.11.0
 paypalrestsdk>=1.13.3
+pytest
+greenlet

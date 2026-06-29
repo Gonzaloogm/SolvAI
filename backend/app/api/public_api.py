@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Security, Header
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Security, Header, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from passlib.context import CryptContext
 from datetime import datetime, timezone
 import uuid
@@ -11,72 +12,85 @@ from app.models.solvency_report import SolvencyReport
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def get_api_key(x_api_key: str = Header(...), db: Session = Depends(get_db)) -> ApiKey:
-    if not x_api_key.startswith("sk-solv-"):
+async def get_api_key(request: Request, db: AsyncSession = Depends(get_db)) -> ApiKey:
+    # Accept from X-Api-Key or Authorization Bearer
+    auth_header = request.headers.get("Authorization")
+    x_api_key = request.headers.get("X-Api-Key")
+    
+    key_str = None
+    if auth_header and auth_header.startswith("Bearer "):
+        key_str = auth_header.replace("Bearer ", "")
+    elif x_api_key:
+        key_str = x_api_key
+        
+    if not key_str or not key_str.startswith("sk-solv-"):
         raise HTTPException(status_code=401, detail="Invalid API Key format")
     
-    prefix = x_api_key[:12]
-    potential_keys = db.query(ApiKey).filter(ApiKey.key_prefix == prefix, ApiKey.is_active == True).all()
+    prefix = key_str[:12]
+    result = await db.execute(select(ApiKey).where(ApiKey.key_prefix == prefix, ApiKey.is_active == True))
+    potential_keys = result.scalars().all()
     
     for key in potential_keys:
-        if pwd_context.verify(x_api_key, key.key_hash):
+        if pwd_context.verify(key_str, key.key_hash):
             key.last_used_at = datetime.now(timezone.utc)
-            db.commit()
+            await db.commit()
             return key
             
     raise HTTPException(status_code=401, detail="Invalid or inactive API Key")
 
 @router.post("/assess")
-def create_assessment(
-    db: Session = Depends(get_db),
+async def create_assessment(
+    db: AsyncSession = Depends(get_db),
     api_key: ApiKey = Depends(get_api_key)
 ):
     report = SolvencyReport(
         organization_id=api_key.organization_id,
         user_id=api_key.user_id,
         status="processing",
-        score=None
+        overall_score=None,
+        report_type="FULL_SOLVENCY"
     )
     db.add(report)
-    db.commit()
-    db.refresh(report)
+    await db.commit()
+    await db.refresh(report)
     
     return {"id": str(report.id), "status": report.status}
 
 @router.get("/assess/{report_id}")
-def get_assessment(
+async def get_assessment(
     report_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     api_key: ApiKey = Depends(get_api_key)
 ):
-    report = db.query(SolvencyReport).filter(
+    result = await db.execute(select(SolvencyReport).where(
         SolvencyReport.id == report_id,
         SolvencyReport.organization_id == api_key.organization_id
-    ).first()
+    ))
+    report = result.scalar_one_or_none()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     
     return {
         "id": str(report.id),
         "status": report.status,
-        "score": report.score,
+        "score": report.overall_score,
         "report_type": report.report_type
     }
 
 @router.get("/verify/{token}")
-def verify_report(
+async def verify_report(
     token: str,
-    db: Session = Depends(get_db),
-    api_key: ApiKey = Depends(get_api_key)
+    db: AsyncSession = Depends(get_db)
 ):
-    report = db.query(SolvencyReport).filter(SolvencyReport.share_token == token).first()
-    if not report or not report.is_shared:
+    result = await db.execute(select(SolvencyReport).where(SolvencyReport.share_token == token))
+    report = result.scalar_one_or_none()
+    # Check if report is found and if share is enabled
+    if not report or not getattr(report, "share_enabled", False):
         raise HTTPException(status_code=404, detail="Report not found or not shared")
     
     return {
         "id": str(report.id),
-        "score": report.score,
-        "summary": report.summary,
+        "score": getattr(report, "overall_score", None),
         "status": report.status,
         "created_at": report.created_at,
         "organization_id": str(report.organization_id)

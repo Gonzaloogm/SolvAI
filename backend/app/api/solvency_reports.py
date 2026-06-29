@@ -93,6 +93,20 @@ async def list_solvency_reports(
     reports = result.scalars().all()
     return [SolvencyReportResponse.model_validate(r) for r in reports]
 
+@router.post(
+    "/rental",
+    response_model=SolvencyReportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Initiate a new rental certificate generation",
+)
+async def create_rental_certificate(
+    body: SolvencyReportCreateRequest = SolvencyReportCreateRequest(),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SolvencyReportResponse:
+    body.report_type = "RENTAL"
+    return await create_solvency_report(body, current_user, db)
+
 
 # ── PDF endpoint MUST come BEFORE the /{id} catch-all ──────────────────────
 @router.get(
@@ -154,16 +168,16 @@ async def download_solvency_report_pdf(
     )
 
 
-@router.post("/{id}/share", summary="Enable public share link for a report")
+@router.post("/{report_id}/share", summary="Enable public share link for a report")
 async def create_share_link(
-    id: uuid.UUID,
+    report_id: uuid.UUID,
     body: dict = Body(default={}),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
         select(SolvencyReport).where(
-            SolvencyReport.id == id,
+            SolvencyReport.id == report_id,
             SolvencyReport.is_deleted.is_(False),
         )
     )
@@ -194,15 +208,15 @@ async def create_share_link(
     }
 
 
-@router.delete("/{id}/share", summary="Disable public share link")
+@router.delete("/{report_id}/share", summary="Disable public share link")
 async def delete_share_link(
-    id: uuid.UUID,
+    report_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
         select(SolvencyReport).where(
-            SolvencyReport.id == id,
+            SolvencyReport.id == report_id,
             SolvencyReport.is_deleted.is_(False),
         )
     )

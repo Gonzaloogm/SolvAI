@@ -134,3 +134,27 @@ async def change_password(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     
     return {"detail": "Password changed successfully"}
+
+@router.get(
+    "/me",
+    summary="Get current user",
+)
+async def get_me(current_user = Depends(get_current_user)):
+    return current_user
+
+@router.post(
+    "/admin/reset-demo-password",
+    summary="Temporary endpoint to reset demo password",
+)
+async def reset_demo_password(db: AsyncSession = Depends(get_db)):
+    from app.models.user import User
+    from app.core.security import get_password_hash
+    from sqlalchemy import select
+
+    result = await db.execute(select(User).where(User.email == "demo@solvai.com"))
+    user = result.scalar_one_or_none()
+    if not user:
+        return {"detail": "Demo user not found"}
+    user.hashed_password = get_password_hash("Demo2026!")
+    await db.commit()
+    return {"detail": "Password reset to Demo2026!"}

@@ -1,7 +1,8 @@
 import uuid
 import secrets
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from pydantic import BaseModel
 from passlib.context import CryptContext
 
@@ -26,17 +27,18 @@ class ApiKeyCreateOut(ApiKeyOut):
     key: str
 
 @router.get("/", response_model=list[ApiKeyOut])
-def list_api_keys(
-    db: Session = Depends(get_db),
+async def list_api_keys(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    keys = db.query(ApiKey).filter(ApiKey.organization_id == current_user.organization_id).all()
+    result = await db.execute(select(ApiKey).where(ApiKey.organization_id == current_user.organization_id))
+    keys = result.scalars().all()
     return keys
 
 @router.post("/", response_model=ApiKeyCreateOut)
-def create_api_key(
+async def create_api_key(
     data: ApiKeyCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     raw_key = f"sk-solv-{secrets.token_hex(24)}"
@@ -51,8 +53,8 @@ def create_api_key(
         key_prefix=key_prefix,
     )
     db.add(db_key)
-    db.commit()
-    db.refresh(db_key)
+    await db.commit()
+    await db.refresh(db_key)
     
     return {
         "id": db_key.id,
@@ -63,15 +65,16 @@ def create_api_key(
     }
 
 @router.delete("/{key_id}")
-def revoke_api_key(
+async def revoke_api_key(
     key_id: uuid.UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_key = db.query(ApiKey).filter(ApiKey.id == key_id, ApiKey.organization_id == current_user.organization_id).first()
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id, ApiKey.organization_id == current_user.organization_id))
+    db_key = result.scalar_one_or_none()
     if not db_key:
         raise HTTPException(status_code=404, detail="API Key not found")
     
-    db.delete(db_key)
-    db.commit()
+    await db.delete(db_key)
+    await db.commit()
     return {"message": "API Key revoked"}

@@ -12,6 +12,8 @@ const TYPE_STYLES = {
   Risk: 'badge-risk',
   Compliance: 'badge-compliance',
   Custom: 'badge-custom',
+  'Solvency Assessment': 'badge-financial',
+  'Rental Certificate': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
 };
 
 const STATUS_STYLES = {
@@ -326,7 +328,13 @@ export default function ReportDetailModal({ report, onClose }) {
   
   const createdDate = report.createdAt || report.created || report.created_at;
   const formattedDate = createdDate ? new Date(createdDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-  const title = reportData?.narrative ? (reportData.narrative.slice(0, 60) + '...') : ("Solvency Report " + (report.id || '').slice(0,8).toUpperCase());
+  
+  const reportTypeLabel = {
+    'FULL_SOLVENCY': 'Solvency Assessment',
+    'RENTAL_CERTIFICATE': 'Rental Certificate'
+  }[report.report_type] || 'Report';
+  
+  const title = `${reportTypeLabel} — ${formattedDate}`;
   const overallScore = reportData?.overall_score ? reportData.overall_score + '%' : '—';
 
   const features = [];
@@ -350,7 +358,7 @@ export default function ReportDetailModal({ report, onClose }) {
 
   const getMarkdown = () => {
     let md = `# ${title}\n\n`;
-    md += `**Type:** ${report.type} | **Status:** ${report.status} | **Created:** ${formattedDate}\n\n`;
+    md += `**Type:** ${reportTypeLabel} | **Status:** ${report.status} | **Created:** ${formattedDate}\n\n`;
     md += `## Metadata\n| Field | Value |\n|-------|-------|\n`;
     const avgRev = reportData.financial_summary?.avg_monthly_revenue;
     md += `| Data Source | ${dataSourceName} |\n| Model | ${modelName} |\n| Overall Score | ${overallScore} |\n| Avg Monthly Revenue | ${avgRev ? '$' + avgRev.toLocaleString() : '—'} |\n| Rating | ${reportData.rating || '—'} |\n\n`;
@@ -456,7 +464,7 @@ export default function ReportDetailModal({ report, onClose }) {
             <h1 className="text-2xl font-bold text-primary mb-3">{title}</h1>
             <div className="flex items-center gap-2">
               <span className={cn(STATUS_STYLES[report.status] || STATUS_STYLES.Draft)}>{report.status}</span>
-              <span className={cn(TYPE_STYLES[report.type] || TYPE_STYLES.Custom)}>{report.type}</span>
+              <span className={cn(TYPE_STYLES[report.type] || TYPE_STYLES.Custom)}>{reportTypeLabel}</span>
               {reportData.rating && (
                 <span className={cn(
                   'px-2.5 py-0.5 rounded-full text-xs font-medium border',

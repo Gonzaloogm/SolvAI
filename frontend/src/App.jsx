@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
  LayoutDashboard,
@@ -16,6 +16,7 @@ import {
 /* ── Contexts ──────────────────────────────────────────────────────────────── */
 import { ThemeProvider, useTheme } from './context/ThemeContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
+import { ReportGenerationProvider } from './context/ReportGenerationContext.jsx';
 
 /* ── Lazy-load pages ───────────────────────────────────────────────────────── */
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -209,16 +210,18 @@ export default function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/r/:token" element={<PublicReport />} />
-          <Route path="/*" element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          } />
-        </Routes>
+        <ReportGenerationProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/r/:token" element={<PublicReport />} />
+            <Route path="/*" element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </ReportGenerationProvider>
       </ToastProvider>
     </ThemeProvider>
   );

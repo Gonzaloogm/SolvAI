@@ -340,7 +340,31 @@ def _build_financial_summary(sources) -> dict:
             )
 
             try:
-                metrics = fetch_stripe_metrics(api_key=api_key)
+                # Support demo mode directly from connection_details
+                is_demo = stripe_source and stripe_source.connection_details and stripe_source.connection_details.get("demo_mode")
+                
+                if is_demo:
+                    demo_series = stripe_source.connection_details.get("monthly_revenue_series", [])
+                    total_rev = sum(m.get("revenue", 0) for m in demo_series)
+                    span = len(demo_series) or 1
+                    avg_mon = total_rev / span
+                    
+                    metrics = {
+                        "avg_monthly": avg_mon,
+                        "status": "CONNECTED",
+                        "data_points": stripe_source.connection_details.get("records_count", span * 10),
+                        "transactions_sample": [],
+                        "monthly_revenue": [
+                            {"month": m["month"], "total": m["revenue"], "transaction_count": m["transactions"]} 
+                            for m in demo_series
+                        ],
+                        "growth_trend_signal": "Stable",
+                        "seasonality_signal": "No significant seasonality",
+                        "client_concentration": stripe_source.connection_details.get("client_concentration", {}),
+                        "span_months": span
+                    }
+                else:
+                    metrics = fetch_stripe_metrics(api_key=api_key)
                 avg_monthly_map["STRIPE"] = metrics["avg_monthly"]
                 platform_breakdown["STRIPE"] = {
                     "avg_monthly": metrics["avg_monthly"],

@@ -124,7 +124,7 @@ export default function DashboardPage({ onNavigate }) {
  const scoredReports = realReports.filter(r => r.report_data?.overall_score || r.report_data?.solvency_score);
  const avgScore = scoredReports.length > 0
    ? (scoredReports.reduce((sum, r) => sum + (r.report_data?.overall_score ?? r.report_data?.solvency_score ?? 0), 0) / scoredReports.length).toFixed(1)
-   : '\u2014';
+   : '—';
 
  const statCards = [
  {
@@ -142,8 +142,8 @@ export default function DashboardPage({ onNavigate }) {
  },
  {
  label: t('dashboard.avgScore'),
- value: avgScore !== '\u2014' ? `${avgScore}%` : '\u2014',
- badge: avgScore !== '\u2014' && parseFloat(avgScore) >= 70 ? 'Good' : null,
+ value: avgScore !== '—' ? `${avgScore}%` : '—',
+ badge: avgScore !== '—' && parseFloat(avgScore) >= 70 ? 'Good' : null,
  badgeType: 'success',
  icon: TrendingUp,
  },
@@ -160,7 +160,7 @@ export default function DashboardPage({ onNavigate }) {
  name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
  type: 'Solvency',
  status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? t('status.failed') : t('status.pending'),
- created: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '\u2014',
+ created: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '—',
  accuracy: r.report_data?.overall_score ? `${r.report_data.overall_score}%` : null,
  hasDownload: r.status === 'COMPLETED',
  _raw: r,
@@ -171,7 +171,7 @@ export default function DashboardPage({ onNavigate }) {
  icon: Database,
  bgColor: (s.source_type || s.type || '').toLowerCase() === 'stripe' ? 'bg-[#635bff]' : (s.source_type || s.type || '').toLowerCase() === 'xero' ? 'bg-[#00b0e0]' : 'bg-[#336791]',
  connected: (s.status || '').toUpperCase() === 'CONNECTED',
- lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(new Date(s.created_at)) : '\u2014',
+ lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(new Date(s.created_at)) : '—',
  }));
 
  const usageItems = [
@@ -182,7 +182,7 @@ export default function DashboardPage({ onNavigate }) {
  const derivedActivities = realReports.slice(0, 5).map(r => ({
  color: r.status === 'COMPLETED' ? 'bg-[#1a9e6e]' : r.status === 'FAILED' ? 'bg-[#df1b41]' : 'bg-[#0570de]',
  text: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''} ${r.status?.toLowerCase() || ''}`,
- time: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(r.created_at)) : '\u2014',
+ time: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(r.created_at)) : '—',
  }));
 
  const typeBadgeStyles = {

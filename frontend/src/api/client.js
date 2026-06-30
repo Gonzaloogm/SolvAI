@@ -98,6 +98,12 @@ export const solvencyReports = {
   create: (data = {}) => apiClient.post('/solvency-reports/', data),
 
   /**
+   * Trigger new rental certificate generation.
+   * POST /solvency-reports/rental
+   */
+  createRental: (data = {}) => apiClient.post('/solvency-reports/rental', data),
+
+  /**
    * Get a single report.
    * GET /solvency-reports/{id}
    */

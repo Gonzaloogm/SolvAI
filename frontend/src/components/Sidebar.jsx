@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { alerts } from '../api/client';
+import { Loader2 } from 'lucide-react';
+import { useReportGeneration } from '../context/ReportGenerationContext.jsx';
 
 /* ── Icon SVGs ──────────────────────────────────────────────────────────── */
 const IconBell = () => (
@@ -91,6 +93,8 @@ export default function Sidebar() {
  const userInfo = getUserInfo();
  const { t, i18n } = useTranslation();
  const [unreadCount, setUnreadCount] = useState(0);
+ const { generatingReports } = useReportGeneration();
+ const isGenerating = Object.keys(generatingReports).length > 0;
 
  useEffect(() => {
    alerts.getAll().then(res => {
@@ -159,7 +163,12 @@ export default function Sidebar() {
  }
  >
  <span className="sidebar__nav-icon">{item.icon}</span>
- <span className="sidebar__nav-label">{t(item.tKey)}</span>
+ <span className="sidebar__nav-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+   {t(item.tKey)}
+   {item.to === '/reports' && isGenerating && (
+     <Loader2 className="w-4 h-4 animate-spin text-[#0570de]" />
+   )}
+ </span>
  </NavLink>
  )}
  </li>

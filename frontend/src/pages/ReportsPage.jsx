@@ -19,6 +19,7 @@ import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { solvencyReports } from '../api/client.js';
 import ReportDetailModal from '../components/ReportDetailModal.jsx';
+import { useReportGeneration } from '../context/ReportGenerationContext.jsx';
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -29,6 +30,8 @@ const TYPE_STYLES = {
  Risk: 'badge-risk',
  Compliance: 'badge-compliance',
  Custom: 'badge-custom',
+ 'Solvency Assessment': 'badge-financial',
+ 'Rental Certificate': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
 };
 
 const STATUS_STYLES = {
@@ -46,44 +49,48 @@ const getAccuracyColor = (val) => {
 };
 
 // ── Component ────────────────────────────────────────────────────────────────
-export default function ReportsPage() {
- const [reports, setReports] = useState([]);
- const [selectedRows, setSelectedRows] = useState(new Set());
- const [searchQuery, setSearchQuery] = useState('');
- const [statusFilter, setStatusFilter] = useState('all');
- const [typeFilter, setTypeFilter] = useState('all');
- const [dateFilter, setDateFilter] = useState('all');
- const [downloadingPdfId, setDownloadingPdfId] = useState(null);
- 
- const [openMenuId, setOpenMenuId] = useState(null);
- const [currentPage, setCurrentPage] = useState(1);
- const [isModalOpen, setIsModalOpen] = useState(false);
- const [showUpgradeModal, setShowUpgradeModal] = useState(false);
- const navigate = useNavigate();
- 
- // New States
- const { addToast } = useToast();
- const [isProcessing, setIsProcessing] = useState(false);
- const [loading, setLoading] = useState(true);
- const [generating, setGenerating] = useState(false);
- const [generatingType, setGeneratingType] = useState("FULL");
- const { t } = useTranslation();
+ export default function ReportsPage() {
+  const [reports, setReports] = useState([]);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [downloadingPdfId, setDownloadingPdfId] = useState(null);
+  
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const navigate = useNavigate();
+  
+  // New States
+  const { addToast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [generatingType, setGeneratingType] = useState("FULL");
+  const { t } = useTranslation();
+  
+  const { generatingReports, startPolling } = useReportGeneration();
+  
+  const isGeneratingFull = Object.values(generatingReports).some(r => r.type === 'FULL_SOLVENCY');
+  const isGeneratingRental = Object.values(generatingReports).some(r => r.type === 'RENTAL_CERTIFICATE');
 
- const fetchReports = useCallback(async () => {
-   setLoading(true);
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
    try {
      const res = await solvencyReports.list();
      const data = Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
      data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-     const mapped = data.map(r => ({
-       id: r.id,
-       name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
-       subtitle: `Gemini \u00b7 ${r.report_data?.financial_summary?.connected_platforms?.join(', ') || 'SolvAI'}`,
-       type: 'Solvency',
-       status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? t('status.failed') : t('status.pending'),
-       dataSource: r.report_data?.financial_summary?.connected_platforms?.[0] || 'Stripe',
-       accuracy: r.report_data?.overall_score ?? null,
-       createdAt: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '\u2014',
+      const mapped = data.map(r => ({
+        id: r.id,
+        name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
+        subtitle: `Gemini \u00b7 ${r.report_data?.financial_summary?.connected_platforms?.join(', ') || 'SolvAI'}`,
+        type: r.report_type === 'RENTAL_CERTIFICATE' ? 'Rental Certificate' : 'Solvency Assessment',
+        status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? t('status.failed') : t('status.pending'),
+        dataSource: r.report_data?.financial_summary?.connected_platforms?.[0] || 'Stripe',
+        accuracy: r.report_data?.overall_score ?? null,
+       createdAt: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '—',
        _raw: r,
      }));
      setReports(mapped);
@@ -92,11 +99,17 @@ export default function ReportsPage() {
    } finally {
      setLoading(false);
    }
- }, []);
+ }, [t]);
 
- useEffect(() => {
-   fetchReports();
- }, [fetchReports]);
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
+  useEffect(() => {
+    const handler = () => fetchReports();
+    window.addEventListener('solvai:report-completed', handler);
+    return () => window.removeEventListener('solvai:report-completed', handler);
+  }, [fetchReports]);
  
  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
  const [confirmConfig, setConfirmConfig] = useState({ title: '', description: '', action: () => {}, confirmLabel: '', confirmVariant: 'primary' });
@@ -280,43 +293,24 @@ export default function ReportsPage() {
  };
 
  const handleAddReport = async (e) => {
- if (e) e.preventDefault();
- setIsModalOpen(false);
- setGenerating(true);
- try {
- const res = await solvencyReports.create({ report_type: generatingType });
- const newId = res.data?.id;
- if (!newId) throw new Error('No report ID returned');
- addToast('Report generation started \u2014 analyzing financial data...', 'info');
- const poll = setInterval(async () => {
- try {
- const pollRes = await solvencyReports.get(newId);
- const status = pollRes.data?.status;
- if (status === 'COMPLETED') {
- clearInterval(poll);
- setGenerating(false);
- addToast('Report generated successfully!', 'success');
- fetchReports();
- } else if (status === 'FAILED') {
- clearInterval(poll);
- setGenerating(false);
- const errMsg = pollRes.data?.report_data?.error || 'Report generation failed';
- addToast(errMsg, 'error');
- fetchReports();
- }
- } catch (e) {
- clearInterval(poll);
- setGenerating(false);
- }
- }, 3000);
- } catch (err) {
- setGenerating(false);
- if (generatingType === 'RENTAL' && (err.response?.status === 402 || err.response?.data?.detail?.includes('limit'))) {
-   setShowUpgradeModal(true);
- } else {
-   addToast(err?.response?.data?.detail || 'Failed to start report generation', 'error');
- }
- }
+  if (e) e.preventDefault();
+  setIsModalOpen(false);
+  try {
+    let res;
+    if (generatingType === 'FULL') {
+      res = await solvencyReports.create({});
+      startPolling(res.data.id, 'FULL_SOLVENCY');
+    } else {
+      res = await solvencyReports.createRental({});
+      startPolling(res.data.id, 'RENTAL_CERTIFICATE');
+    }
+  } catch (err) {
+    if (generatingType === 'RENTAL' && (err.response?.status === 402 || err.response?.data?.detail?.includes('limit'))) {
+      setShowUpgradeModal(true);
+    } else {
+      addToast(err?.response?.data?.detail || 'Failed to start report generation', 'error');
+    }
+  }
  };
 
  const handlePrevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
@@ -331,53 +325,74 @@ export default function ReportsPage() {
  }
 
  return (
- <div className="page-enter">
- {/* ── 1. PAGE HEADER ─────────────────────────────────────────────────── */}
- <div className="flex justify-between items-start">
- <div>
- <h1 className="text-xl font-semibold text-primary">{t('reports.title')}</h1>
- <p className="text-sm text-muted mt-1">
- {t('reports.subtitle')}
- </p>
- </div>
- <div className="flex gap-2">
- <button 
- onClick={() => {
-   setGeneratingType("FULL");
-   setIsModalOpen(true);
- }}
- disabled={generating}
- className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors disabled:opacity-50"
- >
- {generating && generatingType === "FULL" ? (
- <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
- ) : (
- <><Plus className="w-4 h-4" /> {t('reports.fullSolvency') || "Generate Full Report"}</>
- )}
- </button>
- <button 
- onClick={() => {
-   setGeneratingType("RENTAL");
-   setIsModalOpen(true);
- }}
- disabled={generating}
- className="bg-[#10b981] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#059669] flex items-center gap-2 transition-colors disabled:opacity-50"
- >
- {generating && generatingType === "RENTAL" ? (
- <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
- ) : (
- <><Plus className="w-4 h-4" /> {t('reports.rentalCertificate') || "Generate Rental Certificate"}</>
- )}
- </button>
- </div>
- </div>
+  <div className="page-enter">
+  {/* ── 1. PAGE HEADER ─────────────────────────────────────────────────── */}
+  <div className="flex justify-between items-start">
+    <div>
+      <h1 className="text-xl font-semibold text-primary">{t('reports.title')}</h1>
+      <p className="text-sm text-muted mt-1">
+        {t('reports.subtitle')}
+      </p>
+    </div>
+    <div className="flex gap-2">
+      <button 
+        onClick={() => {
+          setGeneratingType("FULL");
+          setIsModalOpen(true);
+        }}
+        disabled={isGeneratingFull}
+        className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors disabled:opacity-50"
+      >
+        {isGeneratingFull ? (
+          <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
+        ) : (
+          <><Plus className="w-4 h-4" /> {t('reports.fullSolvency') || "Generate Full Report"}</>
+        )}
+      </button>
+      <button 
+        onClick={() => {
+          setGeneratingType("RENTAL");
+          setIsModalOpen(true);
+        }}
+        disabled={isGeneratingRental}
+        className="bg-[#10b981] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#059669] flex items-center gap-2 transition-colors disabled:opacity-50"
+      >
+        {isGeneratingRental ? (
+          <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
+        ) : (
+          <><Plus className="w-4 h-4" /> {t('reports.rentalCertificate') || "Generate Rental Certificate"}</>
+        )}
+      </button>
+    </div>
+  </div>
 
- {generating && (
- <div className="mt-4 bg-[#eff6ff] dark:bg-[#0d1f3c] border border-[#0570de]/30 rounded-lg px-4 py-3 flex items-center gap-3">
- <Loader2 className="w-5 h-5 animate-spin text-[#0570de]" />
- <span className="text-sm font-medium text-[#0570de]">Generating report \u2014 analyzing your financial data...</span>
- </div>
- )}
+  {Object.values(generatingReports).length > 0 && (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '14px 16px',
+      background: 'var(--bg-blue-soft, #eff6ff)',
+      border: '1px solid var(--border-blue-soft, #bfdbfe)',
+      borderRadius: '8px',
+      marginTop: '16px'
+    }} className="dark:bg-[#0570de]/10 dark:border-[#0570de]/30">
+      <Loader2 size={18} color="#0570de" className="animate-spin" />
+      <div>
+        <div style={{
+          fontSize: '14px', 
+          fontWeight: 500, 
+        }} className="text-[#0a2540] dark:text-[#60a5fa]">
+          Generating your report
+        </div>
+        <div style={{
+          fontSize: '12px', 
+        }} className="text-[#425466] dark:text-[#93c5fd]">
+          Analyzing your financial data with AI — this usually takes 30-60 seconds
+        </div>
+      </div>
+    </div>
+  )}
 
  {/* ── 2. FILTER BAR ──────────────────────────────────────────────────── */}
  <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -808,7 +823,9 @@ export default function ReportsPage() {
  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
  <div className="bg-card rounded-xl w-full max-w-md shadow-2xl overflow-hidden border border-border">
  <div className="flex justify-between items-center p-6 border-b border-border">
- <h2 className="text-lg font-semibold text-primary">New Report</h2>
+ <h2 className="text-lg font-semibold text-primary">
+   {generatingType === 'FULL' ? 'Generate Solvency Report' : 'Generate Rental Certificate'}
+ </h2>
  <button 
  onClick={() => setIsModalOpen(false)}
  className="text-muted hover:text-primary transition-colors"
@@ -817,62 +834,12 @@ export default function ReportsPage() {
  </button>
  </div>
  
- <form onSubmit={handleAddReport}>
- <div className="p-6 space-y-4">
- <div>
- <label className="block text-sm font-medium text-secondary mb-1.5">
- Name <span className="text-[#df1b41]">*</span>
- </label>
- <input
- name="name"
- required
- autoFocus
- placeholder="e.g., Q4 Analysis"
- className="w-full h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de] placeholder:text-muted dark:placeholder-[#666666]"
- />
- </div>
- 
- <div>
- <label className="block text-sm font-medium text-secondary mb-1.5">
- Type
- </label>
- <select
- name="type"
- className="w-full h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]"
- >
- <option value="Financial">Financial</option>
- <option value="Risk">Risk</option>
- <option value="Compliance">Compliance</option>
- <option value="Custom">Custom</option>
- </select>
- </div>
-
- <div>
- <label className="block text-sm font-medium text-secondary mb-1.5">
- Data Source
- </label>
- <select
- name="dataSource"
- className="w-full h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]"
- >
- <option value="Salesforce">Salesforce</option>
- <option value="PostgreSQL">PostgreSQL</option>
- <option value="Google Sheets">Google Sheets</option>
- <option value="REST API">REST API</option>
- </select>
- </div>
-
- <div>
- <label className="block text-sm font-medium text-secondary mb-1.5">
- Description
- </label>
- <textarea
- name="description"
- placeholder="Optional description"
- rows={3}
- className="w-full p-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de] placeholder:text-muted dark:placeholder-[#666666] resize-none"
- />
- </div>
+ <div className="p-6">
+   <p className="text-sm text-secondary mb-4">
+     {generatingType === 'FULL' 
+       ? "We'll analyze your connected financial data sources and generate a comprehensive solvency report using AI. This typically takes 30-60 seconds."
+       : "We'll create a simplified rental solvency certificate showing your income stability and recommended maximum rent, based on your connected financial data."}
+   </p>
  </div>
 
  <div className="p-6 border-t border-border bg-page flex justify-end gap-3">
@@ -884,15 +851,15 @@ export default function ReportsPage() {
  {t('common.cancel')}
  </button>
  <button
- type="submit"
+ type="button"
+ onClick={handleAddReport}
  disabled={isProcessing}
  className="bg-[#0570de] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors disabled:opacity-50 flex items-center gap-2"
  >
  {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
- Create
+ {generatingType === 'FULL' ? 'Generate Report' : 'Generate Certificate'}
  </button>
  </div>
- </form>
  </div>
  </div>
  )}

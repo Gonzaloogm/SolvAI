@@ -120,7 +120,7 @@ export default function DataSourcesPage() {
            statusText: (s.status || '').toUpperCase() === 'CONNECTED' ? t('dataSources.connected') : t('dataSources.error'),
            statusTextColor: (s.status || '').toUpperCase() === 'CONNECTED' ? 'text-[#1a9e6e]' : 'text-[#df1b41]',
            badge: isStripe ? 'Payments' : 'Accounting',
-           lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(s.created_at)) : '\u2014',
+           lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(s.created_at)) : '—',
            records: s.record_count?.toLocaleString() || '0',
            isSyncing: false,
          };

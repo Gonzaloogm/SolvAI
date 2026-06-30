@@ -37,6 +37,7 @@ COPY --from=builder /install /usr/local
 # Copy application code
 COPY app/ ./app/
 COPY alembic/ ./alembic/
+COPY scripts/ ./scripts/
 COPY alembic.ini .
 
 # Non-root user for security

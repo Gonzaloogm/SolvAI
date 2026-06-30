@@ -319,90 +319,96 @@ def _build_financial_summary(sources) -> dict:
     client_concentration = None
 
     span_months = 12
-    for t in source_types:
-        if t == "STRIPE":
-            from app.core.security import decrypt_dict
-            stripe_source = next((s for s in sources if s.type == "STRIPE"), None)
+    monthly_revenue_series = []
+    computed_growth_trend = "Stable"
+    computed_seasonality_signal = "No significant seasonality"
+    client_concentration = None
+    merged_series = {}
 
+    for source in sources:
+        t = source.type
+        metrics = None
+
+        if source.connection_details and source.connection_details.get("monthly_revenue_series"):
+            demo_series = source.connection_details.get("monthly_revenue_series", [])
+            total_rev = sum(m.get("revenue", 0) for m in demo_series)
+            span = len(demo_series) or 1
+            avg_mon = total_rev / span
+
+            metrics = {
+                "avg_monthly": avg_mon,
+                "status": "CONNECTED",
+                "data_points": source.connection_details.get("records_count", span * 10),
+                "transactions_sample": [],
+                "monthly_revenue": [
+                    {"month": m["month"], "total": m["revenue"], "transaction_count": m["transactions"]} 
+                    for m in demo_series
+                ],
+                "growth_trend_signal": "Stable",
+                "seasonality_signal": "No significant seasonality",
+                "client_concentration": source.connection_details.get("client_concentration", {}),
+                "span_months": span
+            }
+        elif t == "STRIPE":
+            from app.core.security import decrypt_dict
             api_key = None
-            if stripe_source and stripe_source.connection_details:
-                enc_data = stripe_source.connection_details.get("encrypted_data")
+            if source.connection_details:
+                enc_data = source.connection_details.get("encrypted_data")
                 if enc_data:
                     dec_data = decrypt_dict(enc_data)
                     api_key = dec_data.get("api_key")
                 else:
-                    # fallback for existing unencrypted data
-                    api_key = stripe_source.connection_details.get("api_key")
-
-            logger.info(
-                f"[_build_financial_summary] STRIPE source found, "
-                f"api_key={'SET' if api_key else 'MISSING'}"
-            )
+                    api_key = source.connection_details.get("api_key")
 
             try:
-                # Support demo mode directly from connection_details
-                is_demo = stripe_source and stripe_source.connection_details and stripe_source.connection_details.get("demo_mode")
-                
-                if is_demo:
-                    demo_series = stripe_source.connection_details.get("monthly_revenue_series", [])
-                    total_rev = sum(m.get("revenue", 0) for m in demo_series)
-                    span = len(demo_series) or 1
-                    avg_mon = total_rev / span
-                    
-                    metrics = {
-                        "avg_monthly": avg_mon,
-                        "status": "CONNECTED",
-                        "data_points": stripe_source.connection_details.get("records_count", span * 10),
-                        "transactions_sample": [],
-                        "monthly_revenue": [
-                            {"month": m["month"], "total": m["revenue"], "transaction_count": m["transactions"]} 
-                            for m in demo_series
-                        ],
-                        "growth_trend_signal": "Stable",
-                        "seasonality_signal": "No significant seasonality",
-                        "client_concentration": stripe_source.connection_details.get("client_concentration", {}),
-                        "span_months": span
-                    }
-                else:
-                    metrics = fetch_stripe_metrics(api_key=api_key)
-                avg_monthly_map["STRIPE"] = metrics["avg_monthly"]
-                platform_breakdown["STRIPE"] = {
-                    "avg_monthly": metrics["avg_monthly"],
-                    "status": metrics["status"],
-                    "data_points": metrics["data_points"],
-                    "recent_transactions": metrics.get("transactions_sample", []),
-                }
-                
-                # Assign root level metrics
-                monthly_revenue_series = metrics.get("monthly_revenue", [])
-                computed_growth_trend = metrics.get("growth_trend_signal", "Stable")
-                computed_seasonality_signal = metrics.get("seasonality_signal", "No significant seasonality")
-                client_concentration = metrics.get("client_concentration", None)
-                span_months = metrics.get("span_months", 12) or 1
-                logger.info(
-                    f"[_build_financial_summary] STRIPE metrics: "
-                    f"avg_monthly={metrics['avg_monthly']:.2f}, "
-                    f"data_points={metrics['data_points']}"
-                )
+                metrics = fetch_stripe_metrics(api_key=api_key)
             except Exception as e:
                 logger.error(f"Error fetching Stripe data: {e}")
-                avg_monthly_map["STRIPE"] = 0
-                platform_breakdown["STRIPE"] = {
+                metrics = {
                     "avg_monthly": 0,
                     "status": "ERROR",
                     "data_points": 0,
                 }
         else:
-            platform_breakdown[t] = {
-                "avg_monthly": avg_monthly_map.get(t, 3_000),
+            # Fallback
+            metrics = {
+                "avg_monthly": 3_000,
                 "status": "CONNECTED",
                 "data_points": 52,
             }
 
-    avg_monthly = sum(avg_monthly_map.get(t, 3_000) for t in source_types)
-    # If no sources at all, default to 0 (not a fake 3500)
+        avg_monthly_map[t] = avg_monthly_map.get(t, 0) + metrics.get("avg_monthly", 0)
+        
+        # Initialize platform_breakdown if not exists
+        if t not in platform_breakdown:
+            platform_breakdown[t] = {
+                "avg_monthly": 0,
+                "status": metrics.get("status", "CONNECTED"),
+                "data_points": 0,
+                "recent_transactions": metrics.get("transactions_sample", [])
+            }
+        
+        platform_breakdown[t]["avg_monthly"] += metrics.get("avg_monthly", 0)
+        platform_breakdown[t]["data_points"] += metrics.get("data_points", 0)
+        
+        if metrics.get("status") == "ERROR":
+            platform_breakdown[t]["status"] = "ERROR"
+
+        for m in metrics.get("monthly_revenue", []):
+            month_str = m["month"]
+            if month_str not in merged_series:
+                merged_series[month_str] = {"month": month_str, "total": 0, "transaction_count": 0}
+            merged_series[month_str]["total"] += m["total"]
+            merged_series[month_str]["transaction_count"] += m.get("transaction_count", 0)
+            
+        if metrics.get("client_concentration") and not client_concentration:
+            client_concentration = metrics.get("client_concentration")
+
+    avg_monthly = sum(avg_monthly_map.values())
     if not source_types:
         avg_monthly = 0
+
+    monthly_revenue_series = sorted(list(merged_series.values()), key=lambda x: x["month"])
 
     summary = {
         "data_source_count": source_count,

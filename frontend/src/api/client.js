@@ -87,6 +87,24 @@ export const dataSources = {
    * GET /data-sources
    */
   list: () => apiClient.get('/data-sources/'),
+
+  uploadCSV: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post('/data-sources/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  confirmUpload: (uploadToken) =>
+    apiClient.post('/data-sources/upload/confirm', { upload_token: uploadToken }),
+    
+  authXero: () => apiClient.get('/data-sources/xero/auth'),
+  
+  connectPayPal: () => apiClient.post('/data-sources/connect/paypal'),
+
+  getBelvoInstitutions: () => apiClient.get('/data-sources/belvo/institutions'),
+  connectBelvo: (data) => apiClient.post('/data-sources/connect/belvo', data),
 };
 
 // ─── Solvency Reports ─────────────────────────────────────────────────────────

@@ -75,20 +75,22 @@ const initialConnectedSources = [
  },
 ];
 
-const initialAvailableIntegrations = [
- { name: 'MySQL', iconBg: 'bg-[#00758f]', Icon: Database, available: true, badge: 'Database' },
- { name: 'MongoDB', iconBg: 'bg-[#1a9e6e]', Icon: HardDrive, available: true, badge: 'Database' },
- { name: 'Snowflake', iconBg: 'bg-[#29b5e8]', Icon: Cloud, available: true, badge: 'Data Warehouse' },
- { name: 'BigQuery', iconBg: 'bg-[#4285f4]', Icon: BarChart3, available: true, badge: 'Data Warehouse' },
- { name: 'HubSpot', iconBg: 'bg-[#ff7a59]', Icon: Users, available: false, badge: 'CRM' },
- { name: 'Stripe', iconBg: 'bg-[#635bff]', Icon: CreditCard, available: true, badge: 'Payments' },
- { name: 'Bank Account (Open Banking)', iconBg: 'bg-[#0570de]', Icon: Globe, available: false, badge: 'Bank', tooltip: 'Connect your bank account directly. Available in EU soon.' },
- { name: 'Notion', iconBg: 'bg-[#0a2540]', Icon: FileText, available: false, badge: 'Docs' },
- { name: 'CSV Upload', iconBg: 'bg-[#697386]', Icon: FileUp, available: true, badge: 'File' },
- { name: 'Amazon S3', iconBg: 'bg-[#ff9900]', Icon: HardDrive, available: false, badge: 'Storage' },
- { name: 'Airtable', iconBg: 'bg-[#18bfff]', Icon: LayoutGrid, available: false, badge: 'Spreadsheet' },
- { name: 'Tableau', iconBg: 'bg-[#e97627]', Icon: BarChart2, available: false, badge: 'BI' },
- { name: 'Kafka', iconBg: 'bg-[#0a2540]', Icon: Server, available: false, badge: 'Event Stream' },
+ const initialAvailableIntegrations = [
+  { name: 'MySQL', iconBg: 'bg-[#00758f]', Icon: Database, available: true, badge: 'Database' },
+  { name: 'MongoDB', iconBg: 'bg-[#1a9e6e]', Icon: HardDrive, available: true, badge: 'Database' },
+  { name: 'Snowflake', iconBg: 'bg-[#29b5e8]', Icon: Cloud, available: true, badge: 'Data Warehouse' },
+  { name: 'BigQuery', iconBg: 'bg-[#4285f4]', Icon: BarChart3, available: true, badge: 'Data Warehouse' },
+  { name: 'HubSpot', iconBg: 'bg-[#ff7a59]', Icon: Users, available: false, badge: 'CRM' },
+  { name: 'Stripe', iconBg: 'bg-[#635bff]', Icon: CreditCard, available: true, badge: 'Payments' },
+  { name: 'Xero', iconBg: 'bg-[#00b0e0]', Icon: Database, available: true, badge: 'Accounting' },
+  { name: 'PayPal', iconBg: 'bg-[#003087]', Icon: CreditCard, available: true, badge: 'Payments' },
+  { name: 'Bank Account (Open Banking)', iconBg: 'bg-[#0570de]', Icon: Globe, available: true, badge: 'Bank' },
+  { name: 'Notion', iconBg: 'bg-[#0a2540]', Icon: FileText, available: false, badge: 'Docs' },
+  { name: 'CSV Upload', iconBg: 'bg-[#697386]', Icon: FileUp, available: true, badge: 'File' },
+  { name: 'Amazon S3', iconBg: 'bg-[#ff9900]', Icon: HardDrive, available: false, badge: 'Storage' },
+  { name: 'Airtable', iconBg: 'bg-[#18bfff]', Icon: LayoutGrid, available: false, badge: 'Spreadsheet' },
+  { name: 'Tableau', iconBg: 'bg-[#e97627]', Icon: BarChart2, available: false, badge: 'BI' },
+  { name: 'Kafka', iconBg: 'bg-[#0a2540]', Icon: Server, available: false, badge: 'Event Stream' },
 ];
 
 export default function DataSourcesPage() {
@@ -100,28 +102,56 @@ export default function DataSourcesPage() {
  const [disconnectModal, setDisconnectModal] = useState(null);
  const [isConnecting, setIsConnecting] = useState(false);
  const [loading, setLoading] = useState(true);
+
+ const [csvFile, setCsvFile] = useState(null);
+ const [uploadPreview, setUploadPreview] = useState(null);
+ 
+ const [belvoInstitutions, setBelvoInstitutions] = useState(null);
+ const [belvoCountry, setBelvoCountry] = useState("Spain");
+ 
  const { addToast } = useToast();
  const { t } = useTranslation();
 
  useEffect(() => {
    const fetchData = async () => {
      try {
+       try {
+         const belvoRes = await dataSourcesApi.getBelvoInstitutions();
+         setBelvoInstitutions(belvoRes.data);
+       } catch (e) {
+         console.error("Failed to fetch belvo institutions", e);
+       }
+       
        const res = await dataSourcesApi.list();
        const data = Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
        const mapped = data.map(s => {
          const typeLower = (s.source_type || s.type || '').toLowerCase();
          const isStripe = typeLower === 'stripe';
          const isXero = typeLower === 'xero';
+         const isBelvo = typeLower === 'belvo';
+         const isPayPal = typeLower === 'paypal';
+         
+         let iconBg = 'bg-[#336791]';
+         let Icon = Cloud;
+         let badge = 'Source';
+         let mappedName = (s.source_type || s.type || 'Source').charAt(0).toUpperCase() + (s.source_type || s.type || 'Source').slice(1).toLowerCase();
+         
+         if (isStripe) { iconBg = 'bg-[#635bff]'; Icon = CreditCard; badge = 'Payments'; mappedName = 'Stripe'; }
+         else if (isXero) { iconBg = 'bg-[#00b0e0]'; Icon = Database; badge = 'Accounting'; mappedName = 'Xero'; }
+         else if (isBelvo) { iconBg = 'bg-[#0570de]'; Icon = Globe; badge = 'Bank'; mappedName = 'Bank Account (Open Banking)'; }
+         else if (isPayPal) { iconBg = 'bg-[#003087]'; Icon = CreditCard; badge = 'Payments'; mappedName = 'PayPal'; }
+         else if (typeLower === 'manual_upload' || typeLower === 'csv') { iconBg = 'bg-[#697386]'; Icon = FileUp; badge = 'File'; mappedName = 'CSV Upload'; }
+         
          return {
-           name: (s.source_type || s.type || 'Source').charAt(0).toUpperCase() + (s.source_type || s.type || 'Source').slice(1),
-           iconBg: isStripe ? 'bg-[#635bff]' : isXero ? 'bg-[#00b0e0]' : 'bg-[#336791]',
-           Icon: isStripe ? CreditCard : isXero ? Database : Cloud,
+           name: mappedName,
+           iconBg,
+           Icon,
            statusColor: (s.status || '').toUpperCase() === 'CONNECTED' ? 'bg-[#1a9e6e]' : 'bg-[#df1b41]',
            statusText: (s.status || '').toUpperCase() === 'CONNECTED' ? t('dataSources.connected') : t('dataSources.error'),
            statusTextColor: (s.status || '').toUpperCase() === 'CONNECTED' ? 'text-[#1a9e6e]' : 'text-[#df1b41]',
-           badge: isStripe ? 'Payments' : 'Accounting',
+           badge,
            lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(s.created_at)) : '—',
-           records: s.record_count?.toLocaleString() || '0',
+           records: s.record_count?.toLocaleString() || s.connection_details?.records_count?.toLocaleString() || '0',
            isSyncing: false,
          };
        });
@@ -136,7 +166,7 @@ export default function DataSourcesPage() {
      }
    };
    fetchData();
- }, []);
+ }, [t]);
 
  const handleSync = async (name) => {
  setConnected((prev) =>
@@ -426,11 +456,28 @@ export default function DataSourcesPage() {
  'bg-card border border-border rounded-lg p-4 flex flex-col items-center text-center hover:shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-shadow cursor-pointer relative group',
  !integration.available && 'opacity-60 cursor-not-allowed'
  )}
- onClick={() => {
+ onClick={async () => {
  if (integration.available) {
- setConnectModal(integration);
+  if (integration.name === 'Xero') {
+   try {
+    const res = await dataSourcesApi.authXero();
+    window.location.href = res.data.url;
+   } catch (e) {
+    addToast("Failed to initiate Xero connection", "error");
+   }
+  } else if (integration.name === 'PayPal') {
+   try {
+    await dataSourcesApi.connectPayPal();
+    addToast("PayPal connected!", "success");
+    window.location.reload();
+   } catch (e) {
+    addToast("Failed to connect PayPal", "error");
+   }
+  } else {
+   setConnectModal(integration);
+  }
  } else {
- addToast("This integration is coming soon. Join the waitlist!", "info");
+  addToast("This integration is coming soon. Join the waitlist!", "info");
  }
  }}
  >
@@ -485,9 +532,157 @@ export default function DataSourcesPage() {
  <X className="w-5 h-5" />
  </button>
  </div>
- 
- <form onSubmit={handleConnect} className="p-5 space-y-4">
- {connectModal.name === 'Stripe' ? (
+  {connectModal.name === 'CSV Upload' ? (
+    <div className="p-5">
+      {!uploadPreview ? (
+        <div 
+          className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-page transition-colors cursor-pointer"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); setCsvFile(e.dataTransfer.files[0]); }}
+          onClick={() => document.getElementById('csv-upload').click()}
+        >
+          <input type="file" id="csv-upload" className="hidden" accept=".csv,.pdf" onChange={(e) => setCsvFile(e.target.files[0])} />
+          <FileUp className="w-8 h-8 text-muted mx-auto mb-3" />
+          <p className="text-sm font-medium text-primary mb-1">{csvFile ? csvFile.name : "Click to upload or drag and drop"}</p>
+          <p className="text-xs text-muted">CSV or PDF invoices</p>
+          
+          <button type="button" 
+                  disabled={!csvFile || isConnecting}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setIsConnecting(true);
+                    try {
+                      const res = await dataSourcesApi.uploadCSV(csvFile);
+                      setUploadPreview(res.data);
+                    } catch (e) {
+                      addToast("Failed to upload file", "error");
+                    } finally {
+                      setIsConnecting(false);
+                    }
+                  }}
+                  className="mt-4 bg-[#0570de] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[#0462c7] disabled:opacity-50">
+            {isConnecting ? "Uploading..." : "Preview Upload"}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-primary font-medium">Found {uploadPreview.total_rows} transactions totaling €{uploadPreview.total_income_detected?.toLocaleString()}</p>
+          <div className="overflow-auto border border-border rounded-md max-h-48">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-page border-b border-border text-muted sticky top-0">
+                <tr>
+                  <th className="p-2">Date</th>
+                  <th className="p-2">Client</th>
+                  <th className="p-2">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {uploadPreview.preview_rows.map((row, i) => (
+                  <tr key={i} className="border-b border-border">
+                    <td className="p-2">{row.date}</td>
+                    <td className="p-2">{row.client}</td>
+                    <td className="p-2">€{row.amount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <button type="button" onClick={() => setUploadPreview(null)} className="px-4 py-2 text-sm text-muted">Cancel</button>
+            <button type="button" disabled={isConnecting} onClick={async () => {
+              setIsConnecting(true);
+              try {
+                await dataSourcesApi.confirmUpload(uploadPreview.upload_token);
+                addToast("CSV Data connected!", "success");
+                setConnectModal(null);
+                setUploadPreview(null);
+                window.location.reload();
+              } catch (e) {
+                addToast("Confirmation failed", "error");
+              } finally {
+                setIsConnecting(false);
+              }
+            }} className="bg-[#1a9e6e] text-white rounded-md px-4 py-2 text-sm hover:bg-[#148259] disabled:opacity-50">
+              {isConnecting ? "Confirming..." : "Confirm & Connect"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  ) : connectModal.name === 'Bank Account (Open Banking)' ? (
+    <form onSubmit={async (e) => {
+      e.preventDefault();
+      setIsConnecting(true);
+      const fd = new FormData(e.target);
+      const data = Object.fromEntries(fd.entries());
+      try {
+        await dataSourcesApi.connectBelvo(data);
+        addToast("Bank connected successfully!", "success");
+        setConnectModal(null);
+        window.location.reload();
+      } catch (err) {
+        addToast("Failed to connect bank", "error");
+      } finally {
+        setIsConnecting(false);
+      }
+    }} className="p-5 space-y-4">
+      <p className="text-sm text-secondary mb-4">
+        Connect your bank account securely using Open Banking to analyze your financial history.
+      </p>
+      
+      {belvoInstitutions ? (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-primary mb-1">Country</label>
+            <select 
+              className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+              value={belvoCountry}
+              onChange={(e) => setBelvoCountry(e.target.value)}
+            >
+              {Object.keys(belvoInstitutions).map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-primary mb-1">Bank</label>
+            <select 
+              name="institution"
+              className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+              required
+            >
+              {belvoInstitutions[belvoCountry]?.map(inst => (
+                <option key={inst.id} value={inst.id}>{inst.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-primary mb-1">Username</label>
+            <input type="text" name="username" required className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]" placeholder="Online banking username" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-primary mb-1">Password</label>
+            <input type="password" name="password" required className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]" placeholder="Online banking password" />
+          </div>
+          
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+            <button type="button" onClick={() => setConnectModal(null)} className="px-4 py-2 text-sm font-medium text-muted hover:text-primary transition-colors">Cancel</button>
+            <button type="submit" disabled={isConnecting} className="bg-[#0570de] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors flex items-center gap-2 disabled:opacity-50">
+              {isConnecting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isConnecting ? "Connecting..." : "Connect Bank"}
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading supported banks...
+        </div>
+      )}
+    </form>
+  ) : (
+  <form onSubmit={handleConnect} className="p-5 space-y-4">
+  {connectModal.name === 'Stripe' ? (
    <>
      <p className="text-sm text-secondary mb-4">
        Connect your Stripe account to analyze your payment history and generate solvency reports.
@@ -590,15 +785,16 @@ export default function DataSourcesPage() {
  type="submit"
  disabled={isConnecting}
  className="bg-[#0570de] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors flex items-center gap-2 disabled:opacity-50"
- >
- {isConnecting && <Loader2 className="w-4 h-4 animate-spin" />}
- {isConnecting ? 'Connecting...' : 'Connect'}
- </button>
- </div>
- </form>
- </div>
- </div>
- )}
+  >
+  {isConnecting && <Loader2 className="w-4 h-4 animate-spin" />}
+  {isConnecting ? "Connecting..." : "Connect"}
+  </button>
+  </div>
+  </form>
+  )}
+  </div>
+  </div>
+  )}
 
  {/* DISCONNECT MODAL */}
  <ConfirmModal

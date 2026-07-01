@@ -752,7 +752,7 @@ const getAccuracyColor = (val) => {
           Upgrade to Generate Reports
         </h2>
         <p style={{color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px'}}>
-          You've reached your free plan limit. Upgrade to Pro for unlimited solvency reports and rental certificates.
+          You&apos;ve reached your free plan limit. Upgrade to Pro for unlimited solvency reports and rental certificates.
         </p>
         <div style={{
           background: 'var(--bg-page)',

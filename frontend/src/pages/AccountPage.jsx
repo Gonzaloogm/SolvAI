@@ -647,7 +647,7 @@ export default function AccountPage() {
  <X className="w-5 h-5"/>
  </button>
  <h2 className={`text-xl font-semibold ${textPrimary} mb-2`}>Contact sales</h2>
- <p className={`text-sm ${textSecondary} mb-6`}>Tell us about your needs and we'll get back to you shortly.</p>
+ <p className={`text-sm ${textSecondary} mb-6`}>Tell us about your needs and we&apos;ll get back to you shortly.</p>
 
  <form onSubmit={(e) => {
  e.preventDefault();

@@ -478,20 +478,20 @@ export default function ReportDetailModal({ report, onClose }) {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <button onClick={handleCopyMD} className="px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Copy MD</button>
-            <button onClick={handleDownloadMD} className="px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Download MD</button>
+            <button onClick={handleCopyMD} className="px-2 py-1 text-xs font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Copy MD</button>
+            <button onClick={handleDownloadMD} className="px-2 py-1 text-xs font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Download MD</button>
             {(report.status === 'Complete' || report.status === 'COMPLETED') && (
               <>
                 <button 
                   onClick={() => setShareModalOpen(true)} 
-                  className="px-3 py-1.5 text-sm font-medium bg-[#10b981] text-white rounded-md hover:bg-[#059669] transition-colors"
+                  className="px-2 py-1 text-xs font-medium bg-[#10b981] text-white rounded-md hover:bg-[#059669] transition-colors"
                 >
                   {t('reports.actions.share')}
                 </button>
                 <button 
                   onClick={handleDownloadPDF} 
                   disabled={downloadingPDF}
-                  className="px-3 py-1.5 text-sm font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  className="px-2 py-1 text-xs font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   {downloadingPDF ? (
                     <>

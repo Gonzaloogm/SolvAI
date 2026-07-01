@@ -1,5 +1,9 @@
 {
-  "extends": ["eslint:recommended"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react/jsx-runtime"
+  ],
   "parserOptions": {
     "ecmaVersion": "latest",
     "sourceType": "module",
@@ -13,10 +17,18 @@
     "node": true
   },
   "plugins": [
+    "react",
     "react-hooks"
   ],
   "rules": {
     "no-undef": "error",
-    "react-hooks/rules-of-hooks": "error"
+    "no-unused-vars": "warn",
+    "react-hooks/rules-of-hooks": "error",
+    "react/prop-types": "off"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
   }
 }

@@ -77,11 +77,11 @@ export default function Register() {
       <div className="w-full max-w-[420px] flex flex-col gap-6 relative z-10 animate-slideUp">
         {/* Logo */}
         <div className="flex items-center gap-3 justify-center">
-          <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center text-[22px] font-extrabold text-black shadow-[0_4px_12px_rgba(0,0,0,0.1)] shrink-0">
+          <div className="w-11 h-11 bg-card rounded-xl flex items-center justify-center text-[22px] font-extrabold text-primary shadow-[0_4px_12px_rgba(0,0,0,0.1)] shrink-0">
             S
           </div>
           <div>
-            <div className="text-2xl font-bold text-[#0a2540] tracking-tight leading-tight">
+            <div className="text-2xl font-bold text-primary tracking-tight leading-tight">
               SolvAI<span className="text-[#0570de]">.</span>
             </div>
             <div className="text-[10px] sm:text-xs text-[#697386] tracking-wider uppercase font-medium mt-0.5">
@@ -91,10 +91,10 @@ export default function Register() {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-[#e3e8ef]">
+        <div className="bg-card rounded-2xl p-8 shadow-sm border border-border">
           <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold text-[#0a2540] mb-1">{t('auth.createAccount')}</h1>
-            <p className="text-[#425466]">Get the same explainable credit analysis used by large banks</p>
+            <h1 className="text-2xl font-bold text-primary mb-1">{t('auth.createAccount')}</h1>
+            <p className="text-secondary">Get the same explainable credit analysis used by large banks</p>
           </div>
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
@@ -106,10 +106,10 @@ export default function Register() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-org">{t('auth.company')}</label>
+              <label className="text-sm font-medium text-secondary" htmlFor="reg-org">{t('auth.company')}</label>
               <input
                 id="reg-org"
-                className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
                 type="text"
                 placeholder="Acme Consulting Ltd."
                 value={orgName}
@@ -120,10 +120,10 @@ export default function Register() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-email">{t('auth.email')}</label>
+              <label className="text-sm font-medium text-secondary" htmlFor="reg-email">{t('auth.email')}</label>
               <input
                 id="reg-email"
-                className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
                 type="email"
                 placeholder="you@company.com"
                 value={email}
@@ -134,10 +134,10 @@ export default function Register() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-password">{t('auth.password')}</label>
+              <label className="text-sm font-medium text-secondary" htmlFor="reg-password">{t('auth.password')}</label>
               <input
                 id="reg-password"
-                className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
                 type="password"
                 placeholder="Min. 8 characters"
                 value={password}
@@ -165,10 +165,10 @@ export default function Register() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#425466]" htmlFor="reg-confirm">Confirm password</label>
+              <label className="text-sm font-medium text-secondary" htmlFor="reg-confirm">Confirm password</label>
               <input
                 id="reg-confirm"
-                className="h-10 px-3 rounded-md border border-[#e3e8ef] bg-white text-[#0a2540] focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
                 type="password"
                 placeholder="Repeat password"
                 value={confirm}
@@ -202,17 +202,17 @@ export default function Register() {
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-[#e3e8ef] flex items-center justify-center gap-2 text-[14px]">
-            <span className="text-[#425466]">{t('auth.hasAccount')}</span>
+          <div className="mt-6 pt-5 border-t border-border flex items-center justify-center gap-2 text-[14px]">
+            <span className="text-secondary">{t('auth.hasAccount')}</span>
             <Link to="/login" className="font-medium text-[#0570de] hover:text-[#0462c7]">{t('auth.signIn')}</Link>
           </div>
         </div>
 
         <p className="text-center text-xs text-[#697386] leading-relaxed px-4">
           By creating an account you agree to our{' '}
-          <a href="#" className="underline text-[#425466] hover:text-[#0a2540]">Terms of Service</a>
+          <a href="#" className="underline text-secondary hover:text-primary">Terms of Service</a>
           {' '}and{' '}
-          <a href="#" className="underline text-[#425466] hover:text-[#0a2540]">Privacy Policy</a>.
+          <a href="#" className="underline text-secondary hover:text-primary">Privacy Policy</a>.
         </p>
       </div>
     </div>

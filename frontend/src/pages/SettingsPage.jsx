@@ -142,7 +142,7 @@ export default function SettingsPage() {
  React.useEffect(() => {
    const savedNotifications = localStorage.getItem('solvai_notifications');
    if (savedNotifications) {
-     try { setNotifications(JSON.parse(savedNotifications)); } catch (e) {}
+      try { setNotifications(JSON.parse(savedNotifications)); } catch (e) { /* ignore */ }
    }
    const savedWebhook = localStorage.getItem('solvai_webhook');
    if (savedWebhook) setWebhook(savedWebhook);
@@ -564,7 +564,7 @@ export default function SettingsPage() {
  </div>
  <div className="flex justify-end mt-2">
  <button onClick={() => setNewApiKey(null)} className="bg-[#0570de] hover:bg-[#0462c7] text-white px-4 py-2 rounded-lg text-sm font-medium">
- I've saved it
+ I&apos;ve saved it
  </button>
  </div>
  </div>

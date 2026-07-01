@@ -1,4 +1,16 @@
 steps:
+# 0. Install Frontend Dependencies
+- name: 'node:20'
+  dir: 'frontend'
+  entrypoint: 'npm'
+  args: ['ci']
+
+# 0.1. Lint Frontend
+- name: 'node:20'
+  dir: 'frontend'
+  entrypoint: 'npm'
+  args: ['run', 'lint']
+
 # 1. Build Backend Image
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'europe-west1-docker.pkg.dev/$PROJECT_ID/solvai/solvai-api:latest', './backend']

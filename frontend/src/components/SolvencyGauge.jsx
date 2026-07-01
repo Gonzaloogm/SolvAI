@@ -94,6 +94,7 @@ export default function SolvencyGauge({ score = 0, size = 200, showLabel = true 
  <div style={{ position: 'relative', display: 'inline-block', lineHeight: 0 }}>
 
  <svg
+ className="opacity-100 dark:opacity-85 transition-opacity"
  width={size}
  height={size}
  viewBox={`0 0 ${size} ${size}`}

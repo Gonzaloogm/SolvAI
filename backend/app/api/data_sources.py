@@ -22,6 +22,28 @@ from app.core.config import settings
 
 router = APIRouter()
 
+@router.delete("/{source_type}")
+async def delete_data_source(
+    source_type: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from sqlalchemy import delete
+    source_type = source_type.upper()
+    if source_type not in _VALID_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid source type")
+    
+    # Delete all instances of this source_type for the user (handles duplicates)
+    await db.execute(
+        delete(FinancialDataSource).where(
+            FinancialDataSource.user_id == current_user.id,
+            FinancialDataSource.type == source_type
+        )
+    )
+    await db.commit()
+    
+    return {"message": f"Successfully deleted {source_type}"}
+
 _VALID_TYPES = {"STRIPE", "XERO", "PAYPAL", "MANUAL_UPLOAD", "BELVO"}
 
 
@@ -58,6 +80,7 @@ async def connect_data_source(
     )
     db.add(source)
     await db.flush()
+    await db.refresh(source)
 
     return DataSourceResponse.model_validate(source)
 
@@ -128,6 +151,7 @@ async def connect_belvo(
         )
         db.add(source)
         await db.flush()
+        await db.refresh(source)
         
         return DataSourceResponse.model_validate(source)
     except Exception as e:
@@ -168,6 +192,7 @@ async def connect_paypal(
         )
         db.add(source)
         await db.commit()
+        await db.refresh(source)
         return DataSourceResponse.model_validate(source)
     except Exception as e:
         logger.error(f"PayPal connect error: {e}")
@@ -268,6 +293,7 @@ async def confirm_upload(
         
     source.status = "CONNECTED"
     await db.commit()
+    await db.refresh(source)
     
     return DataSourceResponse.model_validate(source)
 

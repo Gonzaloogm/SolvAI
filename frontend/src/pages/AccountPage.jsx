@@ -30,14 +30,21 @@ export default function AccountPage() {
        setLoading(false);
      }
    };
+
+   const params = new URLSearchParams(window.location.search);
+   const checkout = params.get('checkout');
+   if (checkout === 'success') {
+     addToast("Subscription activated!", "success");
+     window.history.replaceState({}, document.title, window.location.pathname);
+   } else if (checkout === 'cancelled') {
+     addToast("Checkout cancelled", "info");
+     window.history.replaceState({}, document.title, window.location.pathname);
+   }
+
    fetchData();
  }, []);
 
- // Modal states
- const [showPaymentModal, setShowPaymentModal] = useState(false);
- const [paymentModalMode, setPaymentModalMode] = useState('upgrade'); // 'upgrade' | 'addCard'
- const [paymentSuccess, setPaymentSuccess] = useState(false);
- const [isSubmitting, setIsSubmitting] = useState(false);
+ const [upgrading, setUpgrading] = useState(null);
  
  const [showContactModal, setShowContactModal] = useState(false);
  const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -45,12 +52,6 @@ export default function AccountPage() {
 
  // Billing State
  const [paymentMethod, setPaymentMethod] = useState(null);
-
- // Payment Form State
- const [cardInput, setCardInput] = useState('');
- const [expiry, setExpiry] = useState('');
- const [cvc, setCvc] = useState('');
- const [nameOnCard, setNameOnCard] = useState('');
 
  // Contact Modal Form State
  const [contactName, setContactName] = useState('');
@@ -69,27 +70,6 @@ export default function AccountPage() {
  const [showReportsTooltip, setShowReportsTooltip] = useState(false);
  const [showApiTooltip, setShowApiTooltip] = useState(false);
 
- const formatCardNumber = (val) => {
- const digits = val.replace(/\D/g, '');
- const matches = digits.match(/.{1,4}/g);
- return matches ? matches.join(' ').substring(0, 19) : '';
- };
- 
- const formatExpiry = (val) => {
- const digits = val.replace(/\D/g, '');
- if (digits.length >= 3) {
- return `${digits.substring(0, 2)}/${digits.substring(2, 4)}`;
- }
- return digits;
- };
-
- const detectCardBrand = (number) => {
- if (number.startsWith('4')) return 'Visa';
- if (/^5[1-5]/.test(number)) return 'Mastercard';
- if (/^3[47]/.test(number)) return 'Amex';
- return 'Card';
- };
-
  const getUsageColor = (percentage) => {
  if (percentage < 70) return 'bg-[#0570de]';
  if (percentage <= 90) return 'bg-[#f59e0b]';
@@ -103,49 +83,19 @@ export default function AccountPage() {
 
  const inputClasses = "w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary placeholder-[#697386] dark:placeholder-[#666666] focus:outline-none focus:border-[#0570de] disabled:opacity-50";
 
- const isPaymentFormValid = cardInput.length === 19 && expiry.length === 5 && cvc.length >= 3 && nameOnCard.trim().length > 0;
-
- const handlePaymentSubmit = async (e) => {
- e.preventDefault();
- if (!isPaymentFormValid) return;
- 
- setIsSubmitting(true);
+ const handleUpgrade = async (plan) => {
+ setUpgrading(plan);
  try {
- if (paymentModalMode === 'upgrade') {
- setCurrentPlan('Pro');
- setPaymentSuccess(true);
- addToast("Upgrade request submitted — Stripe Checkout integration required", "info");
- } else {
- const last4 = cardInput.replace(/\s/g, '').slice(-4);
- setPaymentMethod({ last4, brand: detectCardBrand(cardInput.replace(/\s/g, '')), expiry });
- setPaymentSuccess(true);
- addToast("Card saved locally", "success");
- }
+ const res = await billing.createCheckoutSession(plan);
+ window.location.href = res.data.checkout_url;
  } catch (error) {
- addToast("An error occurred", "error");
- } finally {
- setIsSubmitting(false);
+ addToast("An error occurred starting checkout", "error");
+ setUpgrading(null);
  }
  };
 
- const openUpgradeModal = () => {
- setPaymentModalMode('upgrade');
- setPaymentSuccess(false);
- setCardInput('');
- setExpiry('');
- setCvc('');
- setNameOnCard('');
- setShowPaymentModal(true);
- };
-
- const openAddCardModal = () => {
- setPaymentModalMode('addCard');
- setPaymentSuccess(false);
- setCardInput('');
- setExpiry('');
- setCvc('');
- setNameOnCard('');
- setShowPaymentModal(true);
+ const handleAddCard = async () => {
+ addToast("Please upgrade to add a payment method", "info");
  };
 
  const handleRemoveCard = () => {
@@ -182,9 +132,11 @@ export default function AccountPage() {
 
  {currentPlan !== 'Pro' && (
  <button 
- onClick={openUpgradeModal}
- className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] transition-colors"
+ onClick={() => handleUpgrade('pro')}
+ disabled={upgrading === 'pro'}
+ className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] transition-colors flex items-center justify-center gap-2"
  >
+ {upgrading === 'pro' && <Loader2 className="w-4 h-4 animate-spin" />}
  {t('account.upgrade')}
  </button>
  )}
@@ -314,9 +266,11 @@ export default function AccountPage() {
  </div>
  ) : (
  <button 
- onClick={openUpgradeModal}
- className="mt-6 w-full bg-[#0570de] text-white hover:bg-[#0462c7] rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors"
+ onClick={() => handleUpgrade('pro')}
+ disabled={upgrading === 'pro'}
+ className="mt-6 w-full bg-[#0570de] text-white hover:bg-[#0462c7] rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors flex items-center justify-center gap-2"
  >
+ {upgrading === 'pro' && <Loader2 className="w-4 h-4 animate-spin" />}
  Upgrade to Pro
  </button>
  )}
@@ -355,10 +309,12 @@ export default function AccountPage() {
  </ul>
 
  <button 
- onClick={() => setShowContactModal(true)}
- className="mt-6 w-full bg-card border border-border text-secondary hover:bg-page hover:text-primary rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors"
+ onClick={() => handleUpgrade('business')}
+ disabled={upgrading === 'business'}
+ className="mt-6 w-full bg-card border border-border text-secondary hover:bg-page hover:text-primary rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors flex items-center justify-center gap-2"
  >
- Contact sales
+ {upgrading === 'business' && <Loader2 className="w-4 h-4 animate-spin" />}
+ Upgrade to Business
  </button>
  </div>
  </div>
@@ -398,7 +354,7 @@ export default function AccountPage() {
  <p className={`text-sm font-medium ${textPrimary} mt-3`}>{t('account.noPayment')}</p>
  <p className={`text-xs ${textSecondary} mt-1`}>Add a card to enable automatic billing</p>
  <button 
- onClick={openAddCardModal}
+ onClick={handleAddCard}
  className="mt-3 text-sm font-medium text-[#0570de] border border-border dark:hover:border-[#0570de] rounded-lg px-4 py-2 hover:bg-page /10 transition-colors"
  >
  {t('account.addCard')}
@@ -508,133 +464,7 @@ export default function AccountPage() {
 
  {/* ── MODALS ── */}
 
- {/* Payment / Upgrade Modal */}
- {showPaymentModal && (
- <div className="fixed inset-0 bg-[#0a2540]/20 dark:bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
- <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 relative">
- <button 
- onClick={() => !isSubmitting && setShowPaymentModal(false)} 
- className="absolute top-4 right-4 text-muted hover:text-primary "
- disabled={isSubmitting}
- >
- <X className="w-5 h-5"/>
- </button>
-
- {paymentSuccess ? (
- <div className="flex flex-col items-center justify-center py-6 text-center">
- <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-500 rounded-full flex items-center justify-center mb-4">
- <Check className="w-6 h-6" />
- </div>
- <h2 className={`text-xl font-semibold ${textPrimary} mb-2`}>
- {paymentModalMode === 'upgrade' ? "You're now on Pro!" : "Card added successfully!"}
- </h2>
- <button 
- onClick={() => setShowPaymentModal(false)}
- className="mt-4 px-6 py-2 text-sm font-medium text-white bg-[#0570de] hover:bg-[#0462c7] rounded-lg transition-colors"
- >
- Continue
- </button>
- </div>
- ) : (
- <>
- <h2 className={`text-xl font-semibold ${textPrimary} mb-2`}>
- {paymentModalMode === 'upgrade' ? 'Upgrade to Pro' : 'Add Payment Method'}
- </h2>
- <p className={`text-sm ${textSecondary} mb-6`}>
- {paymentModalMode === 'upgrade' 
- ? 'Get access to 1,000 reports/mo, 10 data sources, and more.' 
- : 'Add a card for automatic billing.'}
- </p>
-
- <form onSubmit={handlePaymentSubmit}>
- <div className="space-y-4">
- <div>
- <label className={`block text-sm font-medium ${textPrimary} mb-1 flex justify-between`}>
- <span>Card number</span>
- {cardInput && (
- <span className="text-xs font-semibold text-[#0570de]">
- {detectCardBrand(cardInput)}
- </span>
- )}
- </label>
- <div className="relative">
- <CreditCard className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${textSecondary}`} />
- <input 
- type="text"
- required
- disabled={isSubmitting}
- className={`${inputClasses} pl-10`}
- placeholder="0000 0000 0000 0000"
- value={cardInput}
- onChange={(e) => setCardInput(formatCardNumber(e.target.value))}
- />
- </div>
- </div>
- <div className="grid grid-cols-2 gap-4">
- <div>
- <label className={`block text-sm font-medium ${textPrimary} mb-1`}>Expiry</label>
- <input 
- type="text"
- required
- disabled={isSubmitting}
- className={inputClasses}
- placeholder="MM/YY"
- value={expiry}
- onChange={(e) => setExpiry(formatExpiry(e.target.value))}
- />
- </div>
- <div>
- <label className={`block text-sm font-medium ${textPrimary} mb-1`}>CVC</label>
- <input 
- type="text"
- required
- disabled={isSubmitting}
- maxLength={4}
- className={inputClasses}
- placeholder="123"
- value={cvc}
- onChange={(e) => setCvc(e.target.value.replace(/\D/g, ''))}
- />
- </div>
- </div>
- <div>
- <label className={`block text-sm font-medium ${textPrimary} mb-1`}>Name on card</label>
- <input 
- type="text"
- required
- disabled={isSubmitting}
- className={inputClasses}
- placeholder="Jane Doe"
- value={nameOnCard}
- onChange={(e) => setNameOnCard(e.target.value)}
- />
- </div>
- </div>
-
- <div className="mt-6 flex items-center justify-end gap-3">
- <button 
- type="button" 
- onClick={() => setShowPaymentModal(false)}
- disabled={isSubmitting}
- className={`px-4 py-2 text-sm font-medium ${textPrimary} hover:bg-[#f0f2f5] disabled:opacity-50 rounded-lg transition-colors`}
- >
- Cancel
- </button>
- <button 
- type="submit"
- disabled={isSubmitting || !isPaymentFormValid}
- className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0570de] hover:bg-[#0462c7] disabled:opacity-70 disabled:cursor-not-allowed rounded-lg transition-colors"
- >
- {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
- {paymentModalMode === 'upgrade' ? 'Subscribe - €29/mo' : 'Save card'}
- </button>
- </div>
- </form>
- </>
- )}
- </div>
- </div>
- )}
+ {/* Payment / Upgrade Modal logic removed */}
 
  {/* Contact Sales Modal */}
  {showContactModal && (

@@ -155,4 +155,27 @@ async def stripe_webhook(
             logger.error(f"Database error during customer.subscription.deleted: {db_err}")
             await db.rollback()
             
+    elif event['type'] == 'customer.subscription.updated':
+        sub = event['data']['object']
+        try:
+            result = await db.execute(
+                select(Organization).where(Organization.stripe_subscription_id == sub['id'])
+            )
+            org = result.scalar_one_or_none()
+            if org:
+                status = sub.get('status')
+                if status == 'active':
+                    pass
+                elif status == 'past_due':
+                    logger.warning(f"Subscription {sub['id']} is past due. Alerting user.")
+                elif status == 'canceled':
+                    org.plan = 'free'
+                    org.status = 'active'
+                    org.stripe_subscription_id = None
+                await db.commit()
+                logger.info(f"Organization {org.id} subscription updated to status {status}")
+        except Exception as db_err:
+            logger.error(f"Database error during customer.subscription.updated: {db_err}")
+            await db.rollback()
+
     return {'received': True}

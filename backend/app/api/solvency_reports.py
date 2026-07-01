@@ -171,6 +171,21 @@ async def download_solvency_report_pdf(
     org_res = await db.execute(select(Organization).where(Organization.id == current_user.organization_id))
     org_obj = org_res.scalar_one_or_none()
     
+    if not report.share_token:
+        report.share_enabled = True
+        report.share_expires_at = datetime.now(timezone.utc) + timedelta(days=90)
+        report.share_token = secrets.token_urlsafe(24)
+        await db.commit()
+
+    from app.utils.qr_generator import generate_verification_url, generate_qr_base64
+    verify_url = generate_verification_url(str(report.id), report.share_token)
+    qr_code_b64 = generate_qr_base64(verify_url)
+    verification_id = report.share_token[-8:]
+
+    report.qr_code_b64 = qr_code_b64
+    report.verification_id = verification_id
+    report.verify_url = verify_url
+
     # PDF paywall removed for demo purposes
 
     pdf_buffer = generate_solvency_pdf(report)

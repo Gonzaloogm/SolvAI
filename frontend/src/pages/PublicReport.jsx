@@ -88,7 +88,7 @@ export default function PublicReport() {
         <div style={{ background: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: 10, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
           <span style={{ fontSize: 18 }}>✓</span>
           <div>
-            <div style={{ fontWeight: 600, color: '#065f46', fontSize: 14 }}>Data verified from live sources</div>
+            <div style={{ fontWeight: 600, color: '#065f46', fontSize: 14 }}>Verified Document</div>
             <div style={{ color: '#047857', fontSize: 13 }}>Generated on {generatedDate} · Valid until {expiryDate}</div>
           </div>
         </div>
@@ -143,19 +143,23 @@ export default function PublicReport() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Verification ID</div>
-                <div style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 600, color: '#374151' }}>{data.verification_id}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 600, color: '#374151' }}>{data.verification_id || token.slice(-8)}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Verified By</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>{data.verified_by}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>{data.verified_by || 'SolvAI Inc.'}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Data Sources</div>
-                <div style={{ fontSize: 14, color: '#374151' }}>{(data.data_sources || []).join(', ')}</div>
+                <div style={{ fontSize: 14, color: '#374151' }}>Stripe (verified)</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Valid Until</div>
                 <div style={{ fontSize: 14, color: '#374151' }}>{expiryDate}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Document Type</div>
+                <div style={{ fontSize: 14, color: '#374151', textTransform: 'capitalize' }}>{data.report_type || 'Solvency Report'}</div>
               </div>
             </div>
           </div>

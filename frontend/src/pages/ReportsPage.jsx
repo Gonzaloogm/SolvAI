@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { solvencyReports } from '../api/client.js';
+import apiClient from '../api/client.js';
 import ReportDetailModal from '../components/ReportDetailModal.jsx';
 import { useReportGeneration } from '../context/ReportGenerationContext.jsx';
 
@@ -62,6 +63,9 @@ const getAccuracyColor = (val) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isPLModalOpen, setIsPLModalOpen] = useState(false);
+  const [plData, setPLData] = useState(null);
+  const [isLoadingPL, setIsLoadingPL] = useState(false);
   const navigate = useNavigate();
   
   // New States
@@ -316,6 +320,37 @@ const getAccuracyColor = (val) => {
  const handlePrevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
  const handleNextPage = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
 
+ const handlePreviewPL = async () => {
+   setIsLoadingPL(true);
+   setIsPLModalOpen(true);
+   try {
+     const res = await apiClient.get('/reports/pl-statement?months=12');
+     setPLData(res.data);
+   } catch (err) {
+     addToast('Failed to load P&L statement', 'error');
+     setIsPLModalOpen(false);
+   } finally {
+     setIsLoadingPL(false);
+   }
+ };
+
+ const handleDownloadPL = async () => {
+   addToast('Downloading P&L PDF...', 'info');
+   try {
+     const res = await apiClient.get('/reports/pl-statement/pdf?months=12', { responseType: 'blob' });
+     const blob = new Blob([res.data], { type: 'application/pdf' });
+     const url = URL.createObjectURL(blob);
+     const a = document.createElement('a');
+     a.href = url;
+     a.download = `pl_statement.pdf`;
+     a.click();
+     URL.revokeObjectURL(url);
+     addToast('PDF downloaded', 'success');
+   } catch (e) {
+     addToast('Failed to download PDF', 'error');
+   }
+ };
+
  if (loading) {
  return (
  <div className="flex items-center justify-center" style={{minHeight: '60vh'}}>
@@ -479,6 +514,31 @@ const getAccuracyColor = (val) => {
  </div>
  </div>
 
+ {/* ── 3.5. FINANCIAL STATEMENTS CARD ──────────────────────────────────── */}
+ <div className="mt-6 bg-card border border-border rounded-lg overflow-hidden p-6 mb-6">
+   <h2 className="text-lg font-semibold text-primary mb-4">Financial Statements</h2>
+   <div className="flex items-center justify-between bg-page p-4 rounded-lg border border-border">
+     <div>
+       <h3 className="font-medium text-primary">Profit &amp; Loss Statement</h3>
+       <p className="text-sm text-muted">Auto-generated P&amp;L based on your connected data sources.</p>
+     </div>
+     <div className="flex gap-2">
+       <button 
+         onClick={handlePreviewPL}
+         className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-[#f0f2f5] text-secondary flex items-center gap-2"
+       >
+         <Eye className="w-4 h-4" /> Preview
+       </button>
+       <button 
+         onClick={handleDownloadPL}
+         className="px-4 py-2 bg-[#0570de] text-white rounded-lg text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2"
+       >
+         <Download className="w-4 h-4" /> Download PDF
+       </button>
+     </div>
+   </div>
+ </div>
+
  {/* ── 4. TABLE CARD ──────────────────────────────────────────────────── */}
  <div className="mt-4 bg-card border border-border rounded-lg overflow-hidden">
  {/* Results count */}
@@ -501,16 +561,16 @@ const getAccuracyColor = (val) => {
  className="w-4 h-4 rounded border-gray-300 accent-[#0570de] cursor-pointer"
  />
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '28%' }}>
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '22%' }}>
  {t('reports.columns.name')}
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '12%' }}>
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '18%' }}>
  {t('reports.columns.type')}
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '12%' }}>
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '14%' }}>
  {t('reports.columns.status')}
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '15%' }}>
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '13%' }}>
  {t('reports.columns.source')}
  </th>
  <th className="py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '10%' }}>
@@ -564,18 +624,18 @@ const getAccuracyColor = (val) => {
  </td>
 
  {/* Type badge */}
- <td className="py-3 px-4 whitespace-nowrap">
- <span className={TYPE_STYLES[report.type] || TYPE_STYLES.Custom}>
- {report.type}
- </span>
- </td>
+  <td className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis">
+    <span className={cn(TYPE_STYLES[report.type] || TYPE_STYLES.Custom, "block truncate max-w-full")}>
+      {report.type}
+    </span>
+  </td>
 
  {/* Status badge */}
- <td className="py-3 px-4 whitespace-nowrap">
- <span className={STATUS_STYLES[report.status] || STATUS_STYLES.Draft}>
- {report.status}
- </span>
- </td>
+  <td className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis">
+    <span className={cn(STATUS_STYLES[report.status] || STATUS_STYLES.Draft, "block truncate max-w-full")}>
+      {report.status}
+    </span>
+  </td>
 
  {/* Data Source */}
  <td className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis">
@@ -882,6 +942,103 @@ const getAccuracyColor = (val) => {
  confirmVariant={confirmConfig.confirmVariant}
  onConfirm={confirmConfig.action}
  />
+
+ {/* ── 9. PL PREVIEW MODAL ───────────────────────────────────────────────── */}
+ {isPLModalOpen && (
+   <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+     <div className="bg-card rounded-xl w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden border border-border flex flex-col">
+       <div className="flex justify-between items-center p-6 border-b border-border">
+         <h2 className="text-lg font-semibold text-primary">Profit &amp; Loss Statement Preview</h2>
+         <button 
+           onClick={() => setIsPLModalOpen(false)}
+           className="text-muted hover:text-primary transition-colors"
+         >
+           <X className="w-5 h-5" />
+         </button>
+       </div>
+       
+       <div className="p-6 overflow-y-auto flex-1">
+         {isLoadingPL ? (
+           <div className="flex justify-center items-center py-20">
+             <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+           </div>
+         ) : plData ? (
+           <div>
+             <div className="grid grid-cols-4 gap-4 mb-6">
+               <div className="p-4 bg-page rounded-lg border border-border text-center">
+                 <div className="text-xs text-muted uppercase">Total Revenue</div>
+                 <div className="text-lg font-bold mt-1 text-primary">
+                   {plData.revenue.total.toLocaleString()} {plData.currency}
+                 </div>
+               </div>
+               <div className="p-4 bg-page rounded-lg border border-border text-center">
+                 <div className="text-xs text-muted uppercase">Avg Monthly</div>
+                 <div className="text-lg font-bold mt-1 text-primary">
+                   {plData.revenue.avg_monthly.toLocaleString()} {plData.currency}
+                 </div>
+               </div>
+               <div className="p-4 bg-page rounded-lg border border-border text-center">
+                 <div className="text-xs text-muted uppercase">YoY Growth</div>
+                 <div className="text-lg font-bold mt-1 text-[#1a9e6e]">
+                   +{plData.growth.yoy_change}%
+                 </div>
+               </div>
+               <div className="p-4 bg-page rounded-lg border border-border text-center">
+                 <div className="text-xs text-muted uppercase">Concentration</div>
+                 <div className="text-lg font-bold mt-1 text-[#c9870c]">
+                   {plData.client_analysis.concentration_risk}
+                 </div>
+               </div>
+             </div>
+             
+             <h3 className="font-semibold text-primary mb-3">Monthly Revenue</h3>
+             <div className="border border-border rounded-lg overflow-hidden">
+               <table className="w-full text-sm text-left">
+                 <thead className="bg-page border-b border-border text-muted">
+                   <tr>
+                     <th className="p-3 font-medium">Month</th>
+                     <th className="p-3 font-medium text-right">Revenue</th>
+                     <th className="p-3 font-medium text-right">Expenses</th>
+                     <th className="p-3 font-medium text-right">Net Profit</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {plData.revenue.monthly.map((m, i) => (
+                     <tr key={i} className="border-b border-border last:border-0 hover:bg-page">
+                       <td className="p-3 text-secondary">{m.month}</td>
+                       <td className="p-3 text-right text-secondary">{m.revenue.toLocaleString()}</td>
+                       <td className="p-3 text-right text-secondary">{m.expenses.toLocaleString()}</td>
+                       <td className="p-3 text-right text-primary font-medium">{(m.revenue - m.expenses).toLocaleString()}</td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+         ) : (
+           <div className="text-center py-20 text-muted">No data available.</div>
+         )}
+       </div>
+
+       <div className="p-6 border-t border-border bg-page flex justify-end gap-3">
+         <button
+           type="button"
+           onClick={() => setIsPLModalOpen(false)}
+           className="px-4 py-2 text-sm font-medium text-secondary hover:text-primary transition-colors"
+         >
+           Close
+         </button>
+         <button
+           type="button"
+           onClick={handleDownloadPL}
+           className="bg-[#0570de] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors flex items-center gap-2"
+         >
+           <Download className="w-4 h-4" /> Download PDF
+         </button>
+       </div>
+     </div>
+   </div>
+ )}
 
  {/* ── PROCESSING OVERLAY ─────────────────────────────────────────────── */}
  {isProcessing && (

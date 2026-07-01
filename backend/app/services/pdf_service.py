@@ -382,7 +382,10 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
         "report_id": str(report.id),
         "generated_at": report.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if report.created_at else "N/A",
         "data": data_for_template,
-        "raw_data": raw_data_for_template
+        "raw_data": raw_data_for_template,
+        "qr_code_b64": getattr(report, "qr_code_b64", None),
+        "verification_id": getattr(report, "verification_id", None),
+        "verify_url": getattr(report, "verify_url", None)
     }
     
     # ==========================================

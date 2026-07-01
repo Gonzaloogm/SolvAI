@@ -626,10 +626,10 @@ function ScoreEvolutionCard({ history, onGenerateReport }) {
     if (active && payload && payload.length) {
       const item = payload[0].payload;
       return (
-        <div style={{ background: 'var(--color-surface, #fff)', border: '1px solid var(--color-border, #e2e8f0)', borderRadius: 8, padding: '10px 14px', fontSize: 13, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
-          <div style={{ fontWeight: 600, color: 'var(--color-text-primary, #0f172a)' }}>{item.fullMonth}</div>
+        <div className="bg-card border border-border rounded-lg p-3 px-4 shadow-sm text-[13px]">
+          <div className="font-semibold text-primary">{item.fullMonth}</div>
           <div style={{ color: getScoreColor(item.score), fontWeight: 700, fontSize: 18 }}>{item.score}</div>
-          <div style={{ color: 'var(--color-text-secondary, #64748b)' }}>{item.rating}</div>
+          <div className="text-muted">{item.rating}</div>
         </div>
       );
     }
@@ -637,11 +637,11 @@ function ScoreEvolutionCard({ history, onGenerateReport }) {
   };
   
   return (
-    <div style={{ background: 'var(--color-surface, #fff)', border: '1px solid var(--color-border, #e2e8f0)', borderRadius: 12, padding: '24px', marginBottom: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+    <div className="bg-card border border-border rounded-xl p-6 mb-6">
+      <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-primary, #0f172a)', margin: '0 0 4px' }}>{t('score.evolution')}</h2>
-          <p style={{ fontSize: 13, color: 'var(--color-text-secondary, #64748b)', margin: 0 }}>Financial solvency evolution</p>
+          <h2 className="text-base font-semibold text-primary m-0 mb-1">{t('score.evolution')}</h2>
+          <p className="text-sm text-muted m-0">Financial solvency evolution</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ fontSize: 48, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>
@@ -682,7 +682,7 @@ function ScoreEvolutionCard({ history, onGenerateReport }) {
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <p style={{ color: '#64748b', fontSize: 14, margin: '16px 0 0' }}>
+        <p className="text-sm text-muted mt-4 mb-0">
           {t('score.trackEvolution')}
         </p>
       )}

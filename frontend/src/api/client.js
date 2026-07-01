@@ -178,6 +178,8 @@ export const billing = {
    * GET /billing/subscription
    */
   getSubscription: () => apiClient.get('/billing/subscription'),
+  
+  createCheckoutSession: (plan) => apiClient.post('/billing/create-checkout-session', {plan}),
 };
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────

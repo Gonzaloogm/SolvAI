@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Profit & Loss Statement</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 10pt;
+                color: #666;
+            }
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+            line-height: 1.5;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #0570de;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #0570de;
+            margin: 0;
+        }
+        .summary-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .metrics-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            display: table-cell;
+            width: 33.33%;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+            background: #fff;
+        }
+        .metric-title {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        .metric-val {
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .qr-placeholder {
+            position: absolute;
+            bottom: 20mm;
+            right: 20mm;
+            width: 100px;
+            height: 100px;
+            border: 2px dashed #ccc;
+            text-align: center;
+            line-height: 100px;
+            font-size: 10px;
+            color: #999;
+        }
+        .footer-note {
+            font-size: 10px;
+            color: #999;
+            text-align: center;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <!-- PAGE 1 -->
+    <div class="header">
+        <h1>SolvAI</h1>
+        <h2>Profit & Loss Statement</h2>
+        <p>{{ data.period_start }} to {{ data.period_end }}</p>
+    </div>
+
+    <div class="summary-box">
+        <strong>AI Summary:</strong>
+        <p>{{ data.summary_text }}</p>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-title">Total Revenue</div>
+            <div class="metric-val">{{ "{:,.2f}".format(data.revenue.total) }} {{ data.currency }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">Avg Monthly</div>
+            <div class="metric-val">{{ "{:,.2f}".format(data.revenue.avg_monthly) }} {{ data.currency }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">YoY Growth</div>
+            <div class="metric-val">{{ data.growth.yoy_change }}%</div>
+        </div>
+    </div>
+
+    <h3>Monthly Revenue</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th class="text-right">Revenue</th>
+                <th class="text-right">Expenses</th>
+                <th class="text-right">Net Profit</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in data.revenue.monthly %}
+            <tr>
+                <td>{{ m.month }}</td>
+                <td class="text-right">{{ "{:,.2f}".format(m.revenue) }}</td>
+                <td class="text-right">{{ "{:,.2f}".format(m.expenses) }}</td>
+                <td class="text-right">{{ "{:,.2f}".format(m.revenue - m.expenses) }}</td>
+            </tr>
+            {% endendfor %}
+        </tbody>
+    </table>
+
+    <div class="chart-container">
+        <img src="data:image/png;base64,{{ rev_chart_b64 }}" alt="Revenue Chart">
+    </div>
+    
+    <div class="qr-placeholder">
+        [QR Code]
+    </div>
+
+    <!-- PAGE 2 -->
+    <div class="page-break"></div>
+    
+    <div class="header">
+        <h1>SolvAI</h1>
+        <h2>Client Concentration & Analysis</h2>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-title">Total Clients</div>
+            <div class="metric-val">{{ data.client_analysis.total_clients }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">Top Client Share</div>
+            <div class="metric-val">{{ data.client_analysis.top_client_share }}%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">Concentration Risk</div>
+            <div class="metric-val">{{ data.client_analysis.concentration_risk }}</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h3>Client Revenue Distribution</h3>
+        <img src="data:image/png;base64,{{ client_chart_b64 }}" alt="Client Concentration Chart" style="max-width: 60%;">
+    </div>
+
+    <div class="footer-note">
+        <p>Data Sources: {{ data.data_sources | join(', ') }}</p>
+        <p>Generated at: {{ data.generated_at }}</p>
+        <p>This report is auto-generated by SolvAI. Not for official tax filing purposes.</p>
+    </div>
+
+</body>
+</html>

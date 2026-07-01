@@ -14,6 +14,7 @@ const TYPE_STYLES = {
   Custom: 'badge-custom',
   'Solvency Assessment': 'badge-financial',
   'Rental Certificate': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  'Mortgage Assessment': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
 };
 
 const STATUS_STYLES = {
@@ -331,7 +332,9 @@ export default function ReportDetailModal({ report, onClose }) {
   
   const reportTypeLabel = {
     'FULL_SOLVENCY': 'Solvency Assessment',
-    'RENTAL_CERTIFICATE': 'Rental Certificate'
+    'RENTAL_CERTIFICATE': 'Rental Certificate',
+    'RENTAL': 'Rental Certificate',
+    'MORTGAGE_ASSESSMENT': 'Mortgage Assessment'
   }[report.report_type] || 'Report';
   
   const title = `${reportTypeLabel} — ${formattedDate}`;

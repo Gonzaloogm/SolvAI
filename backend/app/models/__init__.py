@@ -9,6 +9,7 @@ from app.models.solvency_report import SolvencyReport
 from app.models.lender_profile import LenderManifest
 from app.models.alert import Alert
 from app.models.api_key import ApiKey
+from app.models.verification_request import VerificationRequest
 
 __all__ = [
     "Organization",
@@ -18,4 +19,5 @@ __all__ = [
     "LenderManifest",
     "Alert",
     "ApiKey",
+    "VerificationRequest",
 ]

@@ -33,6 +33,7 @@ const TYPE_STYLES = {
  Custom: 'badge-custom',
  'Solvency Assessment': 'badge-financial',
  'Rental Certificate': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+ 'Mortgage Assessment': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
 };
 
 const STATUS_STYLES = {
@@ -79,6 +80,7 @@ const getAccuracyColor = (val) => {
   
   const isGeneratingFull = Object.values(generatingReports).some(r => r.type === 'FULL_SOLVENCY');
   const isGeneratingRental = Object.values(generatingReports).some(r => r.type === 'RENTAL_CERTIFICATE');
+  const isGeneratingMortgage = Object.values(generatingReports).some(r => r.type === 'MORTGAGE_ASSESSMENT');
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -90,7 +92,7 @@ const getAccuracyColor = (val) => {
         id: r.id,
         name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
         subtitle: `Gemini \u00b7 ${r.report_data?.financial_summary?.connected_platforms?.join(', ') || 'SolvAI'}`,
-        type: r.report_type === 'RENTAL_CERTIFICATE' ? 'Rental Certificate' : 'Solvency Assessment',
+        type: r.report_type === 'RENTAL_CERTIFICATE' || r.report_type === 'RENTAL' ? 'Rental Certificate' : r.report_type === 'MORTGAGE_ASSESSMENT' ? 'Mortgage Assessment' : 'Solvency Assessment',
         status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? t('status.failed') : t('status.pending'),
         dataSource: r.report_data?.financial_summary?.connected_platforms?.[0] || 'Stripe',
         accuracy: r.report_data?.overall_score ?? null,
@@ -296,26 +298,29 @@ const getAccuracyColor = (val) => {
  setOpenMenuId(null);
  };
 
- const handleAddReport = async (e) => {
-  if (e) e.preventDefault();
-  setIsModalOpen(false);
-  try {
-    let res;
-    if (generatingType === 'FULL') {
-      res = await solvencyReports.create({});
-      startPolling(res.data.id, 'FULL_SOLVENCY');
-    } else {
-      res = await solvencyReports.createRental({});
-      startPolling(res.data.id, 'RENTAL_CERTIFICATE');
-    }
-  } catch (err) {
-    if (generatingType === 'RENTAL' && (err.response?.status === 402 || err.response?.data?.detail?.includes('limit'))) {
-      setShowUpgradeModal(true);
-    } else {
-      addToast(err?.response?.data?.detail || 'Failed to start report generation', 'error');
-    }
-  }
- };
+  const handleAddReport = async (e) => {
+   if (e) e.preventDefault();
+   setIsModalOpen(false);
+   try {
+     let res;
+     if (generatingType === 'FULL') {
+       res = await solvencyReports.create({});
+       startPolling(res.data.id, 'FULL_SOLVENCY');
+     } else if (generatingType === 'RENTAL') {
+       res = await solvencyReports.createRental({});
+       startPolling(res.data.id, 'RENTAL_CERTIFICATE');
+     } else if (generatingType === 'MORTGAGE') {
+       res = await solvencyReports.createMortgage({});
+       startPolling(res.data.id, 'MORTGAGE_ASSESSMENT');
+     }
+   } catch (err) {
+     if (generatingType === 'RENTAL' && (err.response?.status === 402 || err.response?.data?.detail?.includes('limit'))) {
+       setShowUpgradeModal(true);
+     } else {
+       addToast(err?.response?.data?.detail || 'Failed to start report generation', 'error');
+     }
+   }
+  };
 
  const handlePrevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
  const handleNextPage = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
@@ -395,7 +400,21 @@ const getAccuracyColor = (val) => {
         {isGeneratingRental ? (
           <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
         ) : (
-          <><Plus className="w-4 h-4" /> {t('reports.rentalCertificate') || "Generate Rental Certificate"}</>
+          <><Plus className="w-4 h-4" /> {t('reports.rentalCertificate') || "Rental Certificate"}</>
+        )}
+      </button>
+      <button 
+        onClick={() => {
+          setGeneratingType("MORTGAGE");
+          setIsModalOpen(true);
+        }}
+        disabled={isGeneratingMortgage}
+        className="bg-[#6366f1] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#4f46e5] flex items-center gap-2 transition-colors disabled:opacity-50"
+      >
+        {isGeneratingMortgage ? (
+          <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
+        ) : (
+          <><Plus className="w-4 h-4" /> Mortgage Assessment</>
         )}
       </button>
     </div>
@@ -884,7 +903,7 @@ const getAccuracyColor = (val) => {
  <div className="bg-card rounded-xl w-full max-w-md shadow-2xl overflow-hidden border border-border">
  <div className="flex justify-between items-center p-6 border-b border-border">
  <h2 className="text-lg font-semibold text-primary">
-   {generatingType === 'FULL' ? 'Generate Solvency Report' : 'Generate Rental Certificate'}
+   {generatingType === 'FULL' ? 'Generate Solvency Report' : generatingType === 'RENTAL' ? 'Generate Rental Certificate' : 'Generate Mortgage Assessment'}
  </h2>
  <button 
  onClick={() => setIsModalOpen(false)}
@@ -898,7 +917,8 @@ const getAccuracyColor = (val) => {
    <p className="text-sm text-secondary mb-4">
      {generatingType === 'FULL' 
        ? "We'll analyze your connected financial data sources and generate a comprehensive solvency report using AI. This typically takes 30-60 seconds."
-       : "We'll create a simplified rental solvency certificate showing your income stability and recommended maximum rent, based on your connected financial data."}
+       : generatingType === 'RENTAL' ? "We'll create a simplified rental solvency certificate showing your income stability and recommended maximum rent, based on your connected financial data."
+       : "We'll analyze your income over 24 months and generate a mortgage assessment showing your maximum borrowing capacity and lender readiness."}
    </p>
  </div>
 
@@ -917,7 +937,7 @@ const getAccuracyColor = (val) => {
  className="bg-[#0570de] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors disabled:opacity-50 flex items-center gap-2"
  >
  {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
- {generatingType === 'FULL' ? 'Generate Report' : 'Generate Certificate'}
+ {generatingType === 'FULL' ? 'Generate Report' : generatingType === 'RENTAL' ? 'Generate Certificate' : 'Generate Assessment'}
  </button>
  </div>
  </div>

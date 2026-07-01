@@ -383,6 +383,7 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
         "generated_at": report.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if report.created_at else "N/A",
         "data": data_for_template,
         "raw_data": raw_data_for_template,
+        "report_data": rd,  # Include raw report data for mortgage template
         "qr_code_b64": getattr(report, "qr_code_b64", None),
         "verification_id": getattr(report, "verification_id", None),
         "verify_url": getattr(report, "verify_url", None)
@@ -396,7 +397,13 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
     env = Environment(loader=FileSystemLoader(template_dir))
     
     report_type = getattr(report, "report_type", "FULL")
-    template_name = "rental_template.html" if report_type == "RENTAL" else "report_template.html"
+    if report_type == "RENTAL":
+        template_name = "rental_template.html"
+    elif report_type == "MORTGAGE_ASSESSMENT":
+        template_name = "mortgage_template.html"
+    else:
+        template_name = "report_template.html"
+        
     template = env.get_template(template_name)
     html_out = template.render(context)
     

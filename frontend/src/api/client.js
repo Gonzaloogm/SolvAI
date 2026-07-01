@@ -122,6 +122,12 @@ export const solvencyReports = {
   createRental: (data = {}) => apiClient.post('/solvency-reports/rental', data),
 
   /**
+   * Trigger new mortgage assessment generation.
+   * POST /solvency-reports/mortgage
+   */
+  createMortgage: (data = {}) => apiClient.post('/solvency-reports/mortgage', data),
+
+  /**
    * Get a single report.
    * GET /solvency-reports/{id}
    */

@@ -48,7 +48,48 @@ IMPORTANT: This is a RENTAL SOLVENCY CERTIFICATE intended for a landlord or prop
 - The tone should be formal, reassuring to landlords, and directly address tenant viability.
 """
 
-    prompt = f"""You are SolvAI's Underwriter Agent.
+    if report_type == "MORTGAGE_ASSESSMENT":
+        prompt = f"""You are SolvAI's mortgage assessment engine.
+Analyze this freelancer's financial data for mortgage qualification purposes.
+
+Lenders assess freelancers differently from employees. Focus on:
+1. Income stability over 24 months (if available) or trend projection from 12 months
+2. Average annual income (monthly × 12)
+3. Maximum mortgage estimate (annual income × 4.5, standard EU multiplier)
+4. Income trend: growing/stable/declining
+5. Income volatility: lenders prefer CoV < 25%
+6. Self-employment duration signals (from data age)
+7. Debt service capacity: can income support a mortgage payment?
+
+Financial Summary: {json.dumps(state.get("financial_summary", {}))}
+Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}
+Previous Auditor Feedback: {state.get("auditor_feedback", "None. This is the first draft.")}
+
+Return ONLY valid JSON:
+{{
+  "overall_score": <0-100 integer>,
+  "mortgage_score": <0-100 integer, same as overall_score>,
+  "rating": "<STRONG|ACCEPTABLE|BORDERLINE|WEAK>",
+  "avg_annual_income": <float>,
+  "estimated_max_mortgage": <float>,
+  "income_trend": "<GROWING|STABLE|DECLINING>",
+  "income_volatility": "<LOW|MEDIUM|HIGH>",
+  "cov_percentage": <float>,
+  "lender_readiness": "<READY|NEEDS_IMPROVEMENT|NOT_READY>",
+  "narrative": "<3-4 professional paragraphs>",
+  "strengths": ["list of 3-5 positives"],
+  "concerns": ["list of 0-3 concerns"],
+  "recommendations": ["list of 3 actionable steps"],
+  "required_documents": [
+    "24 months of bank statements",
+    "2 years tax returns",
+    "proof of identification",
+    "proof of address"
+  ]
+}}
+"""
+    else:
+        prompt = f"""You are SolvAI's Underwriter Agent.
 {rental_context}
 Generate a JSON solvency report based on the following data:
 Financial Summary: {json.dumps(state.get("financial_summary", {}))}

@@ -129,6 +129,20 @@ async def create_rental_certificate(
     body.report_type = "RENTAL"
     return await create_solvency_report(body, current_user, db)
 
+@router.post(
+    "/mortgage",
+    response_model=SolvencyReportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Initiate a new mortgage assessment generation",
+)
+async def create_mortgage_assessment(
+    body: SolvencyReportCreateRequest = SolvencyReportCreateRequest(),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SolvencyReportResponse:
+    body.report_type = "MORTGAGE_ASSESSMENT"
+    return await create_solvency_report(body, current_user, db)
+
 
 # ── PDF endpoint MUST come BEFORE the /{id} catch-all ──────────────────────
 @router.get(

@@ -13,8 +13,8 @@ const TYPE_STYLES = {
   Compliance: 'badge-compliance',
   Custom: 'badge-custom',
   'Solvency Assessment': 'badge-financial',
-  'Rental Certificate': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  'Mortgage Assessment': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  'Rental Certificate': 'badge-custom',
+  'Mortgage Assessment': 'badge-mortgage',
 };
 
 const STATUS_STYLES = {

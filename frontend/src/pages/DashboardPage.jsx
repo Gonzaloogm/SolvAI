@@ -190,6 +190,9 @@ export default function DashboardPage({ onNavigate }) {
  Risk: 'badge-risk',
  Compliance: 'badge-compliance',
  Custom: 'badge-custom',
+ 'Solvency Assessment': 'badge-financial',
+ 'Rental Certificate': 'badge-custom',
+ 'Mortgage Assessment': 'badge-mortgage',
  };
 
  const statusBadgeStyles = {

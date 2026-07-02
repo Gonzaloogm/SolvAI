@@ -323,16 +323,16 @@ export default function DashboardPage({ onNavigate }) {
  </button>
  </div>
  <div className="w-full overflow-x-auto min-h-[200px]">
- <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '700px' }}>
+ <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '780px' }}>
  <thead>
  <tr className="bg-page">
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '40%' }}>
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '35%' }}>
  {t('reports.columns.name')}
  </th>
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '15%' }}>
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '13%' }}>
  {t('reports.columns.type')}
  </th>
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '15%' }}>
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '22%' }}>
  {t('reports.columns.status')}
  </th>
  <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '15%' }}>

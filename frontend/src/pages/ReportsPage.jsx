@@ -570,7 +570,7 @@ const getAccuracyColor = (val) => {
 
  {/* Table */}
  <div className="overflow-x-auto w-full min-h-[300px]">
- <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '800px' }}>
+ <table className="w-full text-left border-collapse" style={{ minWidth: '950px' }}>
  <thead className="bg-page">
  <tr>
  <th className="py-3 px-4" style={{ width: '40px' }}>
@@ -584,13 +584,13 @@ const getAccuracyColor = (val) => {
  <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '22%' }}>
  {t('reports.columns.name')}
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '18%' }}>
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '14%' }}>
  {t('reports.columns.type')}
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '14%' }}>
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '20%' }}>
  {t('reports.columns.status')}
  </th>
- <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '13%' }}>
+ <th className="py-3 px-4 text-left text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '11%' }}>
  {t('reports.columns.source')}
  </th>
  <th className="py-3 px-4 text-right text-xs font-medium text-muted uppercase tracking-wider" style={{ width: '10%' }}>

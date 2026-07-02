@@ -353,7 +353,7 @@ export default function LandingPage() {
             {[1,2,3,4,5].map(i => <Star key={i} className="w-6 h-6 fill-current" />)}
           </div>
           <blockquote className="text-2xl md:text-3xl font-medium mb-8 leading-relaxed">
-            "SolvAI cut our loan underwriting time from 3 days to about 45 seconds. The automated income verification and risk flagging is a game changer for our operations team."
+            &quot;SolvAI cut our loan underwriting time from 3 days to about 45 seconds. The automated income verification and risk flagging is a game changer for our operations team.&quot;
           </blockquote>
           <div className="flex items-center justify-center gap-4">
             <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden">

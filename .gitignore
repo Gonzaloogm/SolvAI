@@ -64,3 +64,7 @@ celerybeat.pid
 *.pem
 *.key
 *.crt
+
+# Credenciales confidenciales de Google Cloud Platform
+backend/gcp-credentials.json
+.env

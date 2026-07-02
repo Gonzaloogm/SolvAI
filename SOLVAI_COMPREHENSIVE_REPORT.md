@@ -21,11 +21,13 @@ SolvAI is built using a modern, scalable stack designed for AI integration and d
 ## 3. Current Implementation Status
 The project has reached a mature state of integration, moving from MVP mocks to live end-to-end functionality:
 
-- **Frontend UI/UX:** Complete, featuring a responsive design, dark mode, dynamic metric cards, and detailed report modals. Recent updates ensured visual consistency across all badge types (e.g., matching pill shapes for Solvency, Rental, and Mortgage reports).
+- **Frontend UI/UX:** Complete, featuring a responsive design, dark mode, dynamic metric cards, and detailed report modals. Recent updates ensured visual consistency across all badge types (e.g., matching pill shapes and violet colors for Solvency, Rental, and Mortgage reports) and introduced conditional Mortgage Capacity Metrics to the detail views.
 - **Backend & Database:** The async database session issues have been completely resolved, ensuring stable query execution. The Celery worker safely handles native framework (WeasyPrint) execution on macOS and deployed environments.
-- **AI Generation:** The Gemini pipeline correctly accepts pre-computed financial summaries, strictly adheres to schema requirements, and falls back gracefully when needed.
-- **PDF Engine:** Fully functional and produces robust 9-page explainability reports.
-- **Production Deployment:** Successfully containerized and deployed to Google Cloud Platform (Cloud Run for services, Cloud SQL for PostgreSQL, and Memorystore for Redis). Necessary environment variables (including Resend keys) are securely injected.
+- **AI Generation:** The Gemini pipeline correctly accepts pre-computed financial summaries, strictly adheres to schema requirements, and falls back gracefully when needed. Expanded the prompt to support dedicated logic for Mortgage reports, fetching specific fields like Est. Max Mortgage and DTI limit.
+- **PDF Engine:** Fully functional and produces robust 9-page explainability reports. Fixed a critical Jinja templating bug (`endendfor`) that was causing HTTP 500 errors during generation, alongside rectifying a Cloud Build race condition to ensure reliable deployments.
+- **Production Deployment:** Successfully containerized and deployed to Google Cloud Platform (Cloud Run for services, Cloud SQL for PostgreSQL, and Memorystore for Redis). Necessary environment variables (including Resend keys and Frontend URL references) are securely injected.
+- **Integrations:** Resolved Stripe Checkout API issues by properly mapping `pro` and `business` price IDs between the deployed backend code and the active Stripe production account.
+- **Verification Portal:** Fixed QR codes in generated PDFs to correctly point to the deployed frontend validation portal instead of `localhost`.
 
 ## 4. Market Strategy & Competitors
 - **Target Market:** $1.2B TAM / $180M SAM (EU/UK, 2024-2029).

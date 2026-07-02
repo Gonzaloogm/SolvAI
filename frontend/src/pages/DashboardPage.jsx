@@ -159,10 +159,11 @@ export default function DashboardPage({ onNavigate }) {
  id: r.id,
  name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
  type: 'Solvency',
- status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? t('status.failed') : t('status.pending'),
+ status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? 'Generation Failed' : t('status.pending'),
  created: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '—',
  accuracy: r.report_data?.overall_score ? `${r.report_data.overall_score}%` : null,
- hasDownload: r.status === 'COMPLETED',
+ hasDownload: r.status === 'COMPLETED' && !!r.document_uri,
+ document_uri: r.document_uri,
  _raw: r,
  }));
 
@@ -199,6 +200,7 @@ export default function DashboardPage({ onNavigate }) {
  Complete: 'badge-complete',
  Processing: 'badge-processing',
  Failed: 'badge-failed',
+ 'Generation Failed': 'badge-failed',
  Draft: 'badge-draft',
  };
 
@@ -404,14 +406,12 @@ export default function DashboardPage({ onNavigate }) {
  try {
    const reportId = report._raw?.id || report.id;
    const res = await solvencyReports.getPDF(reportId);
-   const blob = new Blob([res.data], { type: 'application/pdf' });
-   const url = URL.createObjectURL(blob);
-   const a = document.createElement('a');
-   a.href = url;
-   a.download = `solvai_report_${reportId}.pdf`;
-   a.click();
-   URL.revokeObjectURL(url);
-   addToast('PDF downloaded successfully', 'success');
+   if (res.data?.download_url) {
+     window.open(res.data.download_url, '_blank');
+     addToast('PDF downloaded successfully', 'success');
+   } else {
+     throw new Error('No download URL returned');
+   }
  } catch (e) {
    console.error('PDF download error:', e);
    addToast('Failed to download PDF', 'error');

@@ -175,48 +175,22 @@ async def download_solvency_report_pdf(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this report",
         )
-    if report.status != "COMPLETED":
+    if report.status != "COMPLETED" or not report.document_uri:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Report is not completed yet",
+            detail="Document generation failed or is incomplete.",
+        )
+        
+    from app.services.storage_service import storage_service
+    presigned_url = storage_service.generate_presigned_download_url(report.document_uri)
+    
+    if not presigned_url:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate secure download link.",
         )
 
-    from app.models.organization import Organization
-    org_res = await db.execute(select(Organization).where(Organization.id == current_user.organization_id))
-    org_obj = org_res.scalar_one_or_none()
-    
-    if not report.share_token:
-        report.share_enabled = True
-        report.share_expires_at = datetime.now(timezone.utc) + timedelta(days=90)
-        report.share_token = secrets.token_urlsafe(24)
-        await db.commit()
-
-    from app.utils.qr_generator import generate_verification_url, generate_qr_base64
-    verify_url = generate_verification_url(str(report.id), report.share_token)
-    qr_code_b64 = generate_qr_base64(verify_url)
-    verification_id = report.share_token[-8:]
-
-    report.qr_code_b64 = qr_code_b64
-    report.verification_id = verification_id
-    report.verify_url = verify_url
-
-    # PDF paywall removed for demo purposes
-
-    pdf_buffer = generate_solvency_pdf(report)
-    org_name = org_obj.name if org_obj else "unknown-org"
-
-    slug = re.sub(r'[^a-z0-9]+', '-', org_name.lower()).strip('-')
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    short_id = str(id)[:4]
-    filename = f"solvai-report_{slug}_{date_str}_{short_id}.pdf"
-
-    pdf_buffer.seek(0)
-    
-    return StreamingResponse(
-        iter([pdf_buffer.getvalue()]),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-    )
+    return {"download_url": presigned_url}
 
 
 @router.post("/{report_id}/share", summary="Enable public share link for a report")

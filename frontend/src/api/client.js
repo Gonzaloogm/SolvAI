@@ -154,8 +154,9 @@ export const solvencyReports = {
   /**
    * Download the WeasyPrint PDF for a completed report.
    * GET /solvency-reports/{id}/pdf
+   * Now returns JSON with a pre-signed S3 download_url.
    */
-  getPDF: (id) => apiClient.get(`/solvency-reports/${id}/pdf`, { responseType: 'blob' }),
+  getPDF: (id) => apiClient.get(`/solvency-reports/${id}/pdf`),
 
   /**
    * Create share link for a report.

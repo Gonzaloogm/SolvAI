@@ -40,6 +40,7 @@ const STATUS_STYLES = {
  Complete: 'badge-complete',
  Processing: 'badge-processing',
  Failed: 'badge-failed',
+ 'Generation Failed': 'badge-failed',
  Draft: 'badge-draft',
 };
 
@@ -93,11 +94,13 @@ const getAccuracyColor = (val) => {
         name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
         subtitle: `Gemini \u00b7 ${r.report_data?.financial_summary?.connected_platforms?.join(', ') || 'SolvAI'}`,
         type: r.report_type === 'RENTAL_CERTIFICATE' || r.report_type === 'RENTAL' ? 'Rental Certificate' : r.report_type === 'MORTGAGE_ASSESSMENT' ? 'Mortgage Assessment' : 'Solvency Assessment',
-        status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? t('status.failed') : t('status.pending'),
+        status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? 'Generation Failed' : t('status.pending'),
         dataSource: r.report_data?.financial_summary?.connected_platforms?.[0] || 'Stripe',
         accuracy: r.report_data?.overall_score ?? null,
-       createdAt: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '—',
-       _raw: r,
+        hasDownload: r.status === 'COMPLETED' && !!r.document_uri,
+        document_uri: r.document_uri,
+        createdAt: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(r.created_at)) : '—',
+        _raw: r,
      }));
      setReports(mapped);
    } catch (err) {
@@ -251,18 +254,16 @@ const getAccuracyColor = (val) => {
  const handleDownloadPDF = async (report) => {
  setDownloadingPdfId(report.id || report.name);
  addToast('Downloading PDF...', 'info');
- try {
- const reportId = report._raw?.id || report.id;
- const res = await solvencyReports.getPDF(reportId);
- const blob = new Blob([res.data], { type: 'application/pdf' });
- const url = URL.createObjectURL(blob);
- const a = document.createElement('a');
- a.href = url;
- a.download = `solvai_report_${reportId}.pdf`;
- a.click();
- URL.revokeObjectURL(url);
- addToast('PDF downloaded', 'success');
- } catch (e) {
+  try {
+  const reportId = report._raw?.id || report.id;
+  const res = await solvencyReports.getPDF(reportId);
+  if (res.data?.download_url) {
+    window.open(res.data.download_url, '_blank');
+    addToast('PDF downloaded', 'success');
+  } else {
+    throw new Error('No download URL returned');
+  }
+  } catch (e) {
  addToast(e?.response?.data?.detail || 'Failed to download PDF', 'error');
  } finally {
  setDownloadingPdfId(null);
@@ -712,6 +713,7 @@ const getAccuracyColor = (val) => {
  <Eye className="w-4 h-4" />
  {t('reports.actions.view')}
  </button>
+ {report.hasDownload && (
  <button 
  onClick={(e) => {
  e.stopPropagation();
@@ -732,6 +734,7 @@ const getAccuracyColor = (val) => {
  </>
  )}
  </button>
+ )}
  <button 
  onClick={(e) => {
  e.stopPropagation();

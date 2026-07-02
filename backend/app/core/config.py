@@ -53,11 +53,8 @@ class Settings(BaseSettings):
     # ── Email (Resend) ────────────────────────────────────────────────────────
     RESEND_API_KEY: str = ""
 
-    # ── AWS / S3 ──────────────────────────────────────────────────────────────
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    AWS_S3_BUCKET: str = "solvai-documents"
-    AWS_REGION: str = "eu-west-1"
+    # ── GCP / Storage ─────────────────────────────────────────────────────────
+    GCP_BUCKET_NAME: str = "solvai-documents"
 
     # ── CORS ──────────────────────────────────────────────────────────────────
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]

@@ -21,6 +21,7 @@ const STATUS_STYLES = {
   Complete: 'badge-complete',
   Processing: 'badge-processing',
   Failed: 'badge-failed',
+  'Generation Failed': 'badge-failed',
   Draft: 'badge-draft',
 };
 
@@ -432,15 +433,12 @@ export default function ReportDetailModal({ report, onClose }) {
         throw new Error(`HTTP ${response.status}`);
       }
       
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `solvai_report_${report.id.slice(0,8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const data = await response.json();
+      if (data.download_url) {
+        window.open(data.download_url, '_blank');
+      } else {
+        throw new Error('No download URL returned from server');
+      }
       
       addToast('PDF downloaded successfully', 'success');
     } catch (err) {
@@ -491,23 +489,25 @@ export default function ReportDetailModal({ report, onClose }) {
                 >
                   {t('reports.actions.share')}
                 </button>
-                <button 
-                  onClick={handleDownloadPDF} 
-                  disabled={downloadingPDF}
-                  className="px-2 py-1 text-xs font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5"
-                >
-                  {downloadingPDF ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Download size={14} />
-                      Download PDF
-                    </>
-                  )}
-                </button>
+                {report.hasDownload && (
+              <button 
+                onClick={handleDownloadPDF} 
+                disabled={downloadingPDF}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-50"
+              >
+                {downloadingPDF ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download size={14} />
+                    Download PDF
+                  </>
+                )}
+              </button>
+            )}
               </>
             )}
             <button onClick={onClose} className="ml-2 text-muted hover:text-primary transition-colors"><X className="w-5 h-5" /></button>

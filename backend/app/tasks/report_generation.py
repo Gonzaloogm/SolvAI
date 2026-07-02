@@ -196,9 +196,55 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                 
             report_data["financial_summary"] = financial_summary
 
-            # ── 6. Persist results ────────────────────────────────────────────
-            report.status = "COMPLETED"
+            # ── 6. Persist results and Upload to S3 ───────────────────────────────
             report.report_data = report_data
+            
+            # Generate PDF in background
+            try:
+                import secrets
+                from datetime import timedelta
+                from app.services.pdf_service import generate_solvency_pdf
+                from app.services.storage_service import storage_service
+                from app.utils.qr_generator import generate_verification_url, generate_qr_base64
+                
+                # Pre-generate share token and QR code for the PDF
+                if not report.share_token:
+                    report.share_enabled = True
+                    report.share_expires_at = datetime.now(timezone.utc) + timedelta(days=90)
+                    report.share_token = secrets.token_urlsafe(24)
+                
+                verify_url = generate_verification_url(str(report.id), report.share_token)
+                qr_code_b64 = generate_qr_base64(verify_url)
+                report.qr_code_b64 = qr_code_b64
+                report.verification_id = report.share_token[-8:]
+                report.verify_url = verify_url
+
+                pdf_buffer = generate_solvency_pdf(report)
+                pdf_bytes = pdf_buffer.getvalue()
+                
+                try:
+                    document_uri = storage_service.upload_report_pdf(
+                        pdf_bytes, 
+                        str(report.organization_id), 
+                        str(report.id)
+                    )
+                    report.document_uri = document_uri
+                    report.status = "COMPLETED"
+                    logger.info(f"PDF uploaded to GCS: {document_uri}")
+                except Exception as upload_err:
+                    logger.error(f"Failed to upload PDF to GCS: {upload_err}")
+                    report.document_uri = None
+                    report.status = "FAILED"
+                    db.commit()
+                    return {"status": "failed", "report_id": report_id, "error": "GCS Upload Failed"}
+                    
+            except Exception as e:
+                logger.error(f"Failed to generate/upload PDF: {e}")
+                report.document_uri = None
+                report.status = "FAILED"
+                db.commit()
+                return {"status": "failed", "report_id": report_id, "error": str(e)}
+                
             report.generated_at = datetime.now(timezone.utc)
             report.updated_at = datetime.now(timezone.utc)
 

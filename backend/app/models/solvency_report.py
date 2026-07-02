@@ -57,6 +57,12 @@ class SolvencyReport(Base, TimestampMixin, SoftDeleteMixin):
         nullable=True,
         default=None,
     )
+    document_uri: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        default=None,
+        comment="GCS object key or URI for the generated PDF",
+    )
     share_token: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,

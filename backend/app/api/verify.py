@@ -50,7 +50,7 @@ async def create_verification_request(
         try:
             import resend
             resend.api_key = settings.RESEND_API_KEY
-            frontend_url = "http://localhost:5173" if settings.ENVIRONMENT == "development" else "https://app.solvai.com"
+            frontend_url = settings.FRONTEND_URL
             auth_link = f"{frontend_url}/verify/authorize/{token}"
             
             body = (

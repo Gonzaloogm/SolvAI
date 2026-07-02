@@ -86,7 +86,7 @@ app.include_router(public_reports.router, tags=["Public Reports"])
 app.include_router(alerts.router, prefix="/alerts", tags=["Alerts"])
 app.include_router(api_keys.router, prefix="/api-keys", tags=["API Keys"])
 app.include_router(public_api.router, prefix="/v1", tags=["Public API"])
-app.include_router(simulate.router, prefix="/v1", tags=["Score Simulator"])
+app.include_router(simulate.router, tags=["Score Simulator"])
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
 app.include_router(verify.router, prefix="/verify", tags=["Verify"])
 

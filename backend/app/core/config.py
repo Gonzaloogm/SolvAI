@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import List
 
@@ -12,6 +13,11 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+    )
+
+    FRONTEND_URL: str = os.getenv(
+        "FRONTEND_URL",
+        "https://solvai-frontend-879357866699.europe-west1.run.app"
     )
 
     # ── Database ──────────────────────────────────────────────────────────────

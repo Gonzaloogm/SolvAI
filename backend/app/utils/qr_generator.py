@@ -20,8 +20,10 @@ def generate_qr_base64(url: str, size: int = 150) -> str:
     b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return f"data:image/png;base64,{b64}"
 
+from app.core.config import settings
+
 def generate_verification_url(report_id: str, token: str = None) -> str:
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+    frontend_url = settings.FRONTEND_URL
     if token:
         return f"{frontend_url}/r/{token}"
     return f"{frontend_url}/verify/{report_id}"

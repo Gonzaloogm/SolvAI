@@ -249,7 +249,8 @@ async def create_share_link(
     report.share_expires_at = expires_at
     await db.flush()
 
-    share_url = f"/r/{token}"
+    from app.core.config import settings
+    share_url = f"{settings.FRONTEND_URL}/r/{token}"
 
     return {
         "share_url": share_url,

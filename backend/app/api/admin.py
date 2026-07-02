@@ -38,7 +38,33 @@ async def create_beta_user(
             org_name=f"Beta User ({body.email})",
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        # If user exists, update password
+        from app.models.user import User
+        from app.core.security import get_password_hash
+        result = await db.execute(select(User).where(User.email == body.email))
+        user = result.scalar_one_or_none()
+        if user:
+            user.hashed_password = get_password_hash(body.password)
+            
+            # Also upgrade organization if needed
+            org_result = await db.execute(select(Organization).where(Organization.id == user.organization_id))
+            org = org_result.scalar_one_or_none()
+            if org:
+                org.plan = body.plan
+                org.status = "active"
+                org.current_period_end = datetime(2099, 12, 31, 23, 59, 59)
+                db.add(org)
+            
+            db.add(user)
+            await db.commit()
+            return CreateBetaUserResponse(
+                email=body.email,
+                password=body.password,
+                plan=body.plan,
+                login_url="https://solvai-frontend-879357866699.europe-west1.run.app/login"
+            )
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     
     # Upgrade organization
     org.plan = body.plan

@@ -60,6 +60,9 @@ Lenders assess freelancers differently from employees. Focus on:
 5. Income volatility: lenders prefer CoV < 25%
 6. Self-employment duration signals (from data age)
 7. Debt service capacity: can income support a mortgage payment?
+8. Estimated monthly payment capacity based on a 33% debt-to-income (DTI) limit.
+9. Recommended downpayment percentage (e.g. 20% for freelancers) and absolute amount based on max mortgage.
+10. Industry stability and specific risk mitigations.
 
 Financial Summary: {json.dumps(state.get("financial_summary", {}))}
 Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}
@@ -72,13 +75,18 @@ Return ONLY valid JSON:
   "rating": "<STRONG|ACCEPTABLE|BORDERLINE|WEAK>",
   "avg_annual_income": <float>,
   "estimated_max_mortgage": <float>,
+  "estimated_monthly_payment_capacity": <float>,
+  "debt_to_income_ratio": "<string, e.g. '33%'>",
+  "downpayment_recommendation": "<string, e.g. '20% (€50,000)'>",
   "income_trend": "<GROWING|STABLE|DECLINING>",
   "income_volatility": "<LOW|MEDIUM|HIGH>",
   "cov_percentage": <float>,
+  "industry_stability": "<STRONG|MODERATE|VULNERABLE>",
   "lender_readiness": "<READY|NEEDS_IMPROVEMENT|NOT_READY>",
   "narrative": "<3-4 professional paragraphs>",
   "strengths": ["list of 3-5 positives"],
   "concerns": ["list of 0-3 concerns"],
+  "risk_mitigation_strategies": ["list of 2-3 actionable ways to mitigate lender concerns"],
   "recommendations": ["list of 3 actionable steps"],
   "required_documents": [
     "24 months of bank statements",

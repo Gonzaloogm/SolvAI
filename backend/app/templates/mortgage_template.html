@@ -36,7 +36,7 @@
         .logo-text {
             font-size: 28px;
             font-weight: 700;
-            color: #6366f1;
+            color: #8b5cf6;
             letter-spacing: -0.5px;
             margin: 0;
         }
@@ -73,7 +73,7 @@
         .score-value {
             font-size: 48px;
             font-weight: 700;
-            color: #6366f1;
+            color: #8b5cf6;
             line-height: 1;
         }
 
@@ -87,7 +87,7 @@
         }
 
         .rating-badge {
-            background-color: #6366f1;
+            background-color: #8b5cf6;
             color: white;
             padding: 8px 16px;
             border-radius: 999px;
@@ -121,7 +121,7 @@
         .metric-card {
             background-color: #f9fafb;
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid #e5e7eb;
         }
         
@@ -174,7 +174,7 @@
         }
         
         .verify-link {
-            color: #6366f1;
+            color: #8b5cf6;
             font-weight: 600;
         }
     </style>
@@ -208,15 +208,35 @@
         </div>
         
         <!-- FINANCIAL SUMMARY -->
-        <h2 class="section-title">Financial Summary</h2>
+        <h2 class="section-title">Mortgage Capacity Assessment</h2>
+        <div class="grid">
+            <div class="metric-card">
+                <div class="metric-label">Estimated Max Mortgage</div>
+                <div class="metric-value">€{{ "{:,.2f}".format(report_data.estimated_max_mortgage|default(0)) }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Estimated Monthly Payment Limit</div>
+                <div class="metric-value">€{{ "{:,.2f}".format(report_data.estimated_monthly_payment_capacity|default(0)) }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Est. Debt-to-Income (DTI)</div>
+                <div class="metric-value">{{ report_data.debt_to_income_ratio|default('N/A') }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Downpayment Rec.</div>
+                <div class="metric-value">{{ report_data.downpayment_recommendation|default('N/A') }}</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Income & Stability Profile</h2>
         <div class="grid">
             <div class="metric-card">
                 <div class="metric-label">Estimated Avg Annual Income</div>
                 <div class="metric-value">€{{ "{:,.2f}".format(report_data.avg_annual_income|default(0)) }}</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Estimated Max Mortgage</div>
-                <div class="metric-value">€{{ "{:,.2f}".format(report_data.estimated_max_mortgage|default(0)) }}</div>
+                <div class="metric-label">Industry Stability</div>
+                <div class="metric-value">{{ report_data.industry_stability|default('N/A') }}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Income Trend</div>
@@ -253,12 +273,24 @@
         </div>
         
         <!-- RECOMMENDATIONS -->
-        <h2 class="section-title">Actionable Recommendations</h2>
-        <ul>
-            {% for rec in report_data.recommendations|default([]) %}
-                <li>{{ rec }}</li>
-            {% endfor %}
-        </ul>
+        <div class="grid">
+            <div>
+                <h3 style="font-size: 14px; font-weight: 600; color: #4f46e5;">Actionable Recommendations</h3>
+                <ul>
+                    {% for rec in report_data.recommendations|default([]) %}
+                        <li>{{ rec }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div>
+                <h3 style="font-size: 14px; font-weight: 600; color: #8b5cf6;">Risk Mitigation Strategies</h3>
+                <ul>
+                    {% for strat in report_data.risk_mitigation_strategies|default([]) %}
+                        <li>{{ strat }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
         
         <!-- REQUIRED DOCUMENTS -->
         <h2 class="section-title">Standard Required Documents</h2>

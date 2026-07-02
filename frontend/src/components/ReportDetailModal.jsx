@@ -546,6 +546,30 @@ export default function ReportDetailModal({ report, onClose }) {
               {explanationText}
             </div>
           </div>
+          
+          {report.report_type === 'MORTGAGE_ASSESSMENT' && (
+            <div>
+              <h3 className="text-sm font-semibold text-[#8b5cf6] mb-3">Mortgage Capacity Metrics</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl border border-border" style={{ backgroundColor: '#f5f3ff' }}>
+                <div>
+                  <div className="text-xs text-secondary font-semibold uppercase tracking-wider mb-1">Estimated Max Mortgage</div>
+                  <div className="text-xl font-bold text-[#6d28d9]">€{reportData.estimated_max_mortgage?.toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-secondary font-semibold uppercase tracking-wider mb-1">Monthly Capacity</div>
+                  <div className="text-xl font-bold text-[#6d28d9]">€{reportData.estimated_monthly_payment_capacity?.toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-secondary font-semibold uppercase tracking-wider mb-1">Est. DTI</div>
+                  <div className="text-xl font-bold text-primary">{reportData.debt_to_income_ratio || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-secondary font-semibold uppercase tracking-wider mb-1">Downpayment</div>
+                  <div className="text-xl font-bold text-primary">{reportData.downpayment_recommendation || 'N/A'}</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <KeyFindings reportData={reportData} />
         </div>

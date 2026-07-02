@@ -311,7 +311,7 @@ async def xero_callback(
     db: AsyncSession = Depends(get_db),
 ):
     from loguru import logger
-    frontend_url = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:5173"
+    frontend_url = settings.FRONTEND_URL
     api_base = getattr(settings, "API_BASE_URL", "http://localhost:8000")
     redirect_uri = f"{api_base.rstrip('/')}/api/v1/data-sources/xero/callback"
     

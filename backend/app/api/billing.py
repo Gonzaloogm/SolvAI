@@ -17,8 +17,8 @@ router = APIRouter()
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 PRICE_IDS = {
-    'pro': 'price_1TmXbZDkCeEPqzVBHcP9LP9i',
-    'business': 'price_1TmXbYDkCeEPqzVBZfdqb8fr',
+    'pro': 'price_1TmX7KDkuwjSfJyUTIzQTc8g',
+    'business': 'price_1TmX8lDkuwjSfJyU1HExVfGF',
 }
 
 FRONTEND_URL = getattr(settings, 'FRONTEND_URL', None) or 'https://solvai-frontend-879357866699.europe-west1.run.app'
@@ -101,6 +101,9 @@ async def stripe_webhook(
         except Exception as e:
             raise HTTPException(400, f"Error parsing payload: {str(e)}")
     else:
+        if not sig:
+            logger.error("Missing signature header")
+            raise HTTPException(400, "Missing signature")
         try:
             event = stripe.Webhook.construct_event(
                 payload, sig, webhook_secret

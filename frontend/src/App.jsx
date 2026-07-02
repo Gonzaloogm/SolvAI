@@ -29,6 +29,9 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import PublicReport from './pages/PublicReport.jsx';
 import ApiDocs from './pages/ApiDocs.jsx';
+import LandingPage from './pages/LandingPage.jsx';
+import Privacy from './pages/Privacy.jsx';
+import Terms from './pages/Terms.jsx';
 import VerifyPortal from './pages/verify/VerifyPortal.jsx';
 import VerifyAuthorize from './pages/verify/VerifyAuthorize.jsx';
 import VerifyTrack from './pages/verify/VerifyTrack.jsx';
@@ -209,14 +212,25 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function PublicRoute({ children }) {
+  const token = localStorage.getItem('solvai_token');
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
         <ReportGenerationProvider>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/r/:token" element={<PublicReport />} />
             <Route path="/verify" element={<VerifyPortal />} />
             <Route path="/verify/authorize/:token" element={<VerifyAuthorize />} />

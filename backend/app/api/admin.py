@@ -8,8 +8,10 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.core.database import get_db
 from app.schemas.admin import CreateBetaUserRequest, CreateBetaUserResponse
+from app.schemas.promo_code import PromoCodeCreate, PromoCodeResponse
 from app.services import auth_service
 from app.models.organization import Organization
+from app.models.promo_code import PromoCode
 
 router = APIRouter()
 
@@ -80,3 +82,53 @@ async def create_beta_user(
         plan=org.plan,
         login_url="https://solvai-frontend-879357866699.europe-west1.run.app/login"
     )
+
+@router.post(
+    "/create-promo",
+    response_model=PromoCodeResponse,
+    summary="Admin: Create a promo code",
+)
+async def create_promo(
+    body: PromoCodeCreate,
+    x_admin_key: str = Header(...),
+    db: AsyncSession = Depends(get_db),
+) -> PromoCodeResponse:
+    if not settings.ADMIN_KEY or x_admin_key != settings.ADMIN_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing X-Admin-Key",
+        )
+    
+    promo = PromoCode(
+        code=body.code,
+        plan=body.plan,
+        max_uses=body.max_uses,
+        expires_at=body.expires_at,
+    )
+    db.add(promo)
+    try:
+        await db.commit()
+        await db.refresh(promo)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not create promo code (maybe code already exists)")
+    return promo
+
+@router.get(
+    "/promo-stats",
+    response_model=list[PromoCodeResponse],
+    summary="Admin: Get promo code stats",
+)
+async def promo_stats(
+    x_admin_key: str = Header(...),
+    db: AsyncSession = Depends(get_db),
+):
+    if not settings.ADMIN_KEY or x_admin_key != settings.ADMIN_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing X-Admin-Key",
+        )
+    
+    result = await db.execute(select(PromoCode))
+    return result.scalars().all()
+

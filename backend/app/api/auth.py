@@ -4,12 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from jose import JWTError, jwt
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import create_access_token, create_refresh_token, get_current_user
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, ChangePasswordRequest
+from app.schemas.promo_code import PromoValidateRequest, PromoValidateResponse
 from app.services import auth_service
+from app.services.email_service import send_welcome_email_async
 
 router = APIRouter()
 
@@ -22,6 +25,7 @@ router = APIRouter()
 )
 async def register(
     body: RegisterRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     try:
@@ -30,15 +34,48 @@ async def register(
             email=body.email,
             password=body.password,
             org_name=body.organization_name,
+            full_name=body.full_name,
+            promo_code=body.promo_code,
         )
+        await db.commit()
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    background_tasks.add_task(send_welcome_email_async, user.email, _org.plan)
 
     token_payload = {"sub": str(user.id)}
     return TokenResponse(
         access_token=create_access_token(token_payload),
         refresh_token=create_refresh_token(token_payload),
     )
+
+
+@router.post(
+    "/validate-promo",
+    response_model=PromoValidateResponse,
+    summary="Validate a promo code",
+)
+async def validate_promo(
+    body: PromoValidateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> PromoValidateResponse:
+    from app.models.promo_code import PromoCode
+    from sqlalchemy import select
+    from datetime import datetime, timezone
+
+    result = await db.execute(select(PromoCode).where(PromoCode.code == body.code))
+    promo = result.scalar_one_or_none()
+
+    if not promo:
+        return PromoValidateResponse(valid=False, message="Invalid promo code")
+    if not promo.is_active:
+        return PromoValidateResponse(valid=False, message="Promo code is inactive")
+    if promo.uses_count >= promo.max_uses:
+        return PromoValidateResponse(valid=False, message="Promo code usage limit reached")
+    if promo.expires_at and promo.expires_at < datetime.now(timezone.utc):
+        return PromoValidateResponse(valid=False, message="Promo code has expired")
+
+    return PromoValidateResponse(valid=True, plan=promo.plan, message="Promo code is valid")
 
 
 @router.post(

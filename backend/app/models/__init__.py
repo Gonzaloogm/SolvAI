@@ -10,6 +10,7 @@ from app.models.lender_profile import LenderManifest
 from app.models.alert import Alert
 from app.models.api_key import ApiKey
 from app.models.verification_request import VerificationRequest
+from app.models.promo_code import PromoCode
 
 __all__ = [
     "Organization",
@@ -20,4 +21,5 @@ __all__ = [
     "Alert",
     "ApiKey",
     "VerificationRequest",
+    "PromoCode",
 ]

@@ -6,21 +6,15 @@ from pydantic import BaseModel, EmailStr, field_validator
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
-    organization_name: str
+    full_name: str | None = None
+    organization_name: str | None = None
+    promo_code: str | None = None
 
     @field_validator("password")
     @classmethod
     def password_min_length(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters long")
-        return v
-
-    @field_validator("organization_name")
-    @classmethod
-    def org_name_not_empty(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Organization name must not be empty")
         return v
 
 

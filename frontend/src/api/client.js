@@ -41,8 +41,11 @@ export const auth = {
    * Register a new user + org.
    * POST /auth/register
    */
-  register: (email, password, org_name) =>
-    apiClient.post('/auth/register', { email, password, organization_name: org_name }),
+  register: (email, password, org_name, full_name, promo_code) =>
+    apiClient.post('/auth/register', { email, password, organization_name: org_name, full_name, promo_code }),
+
+  validatePromo: (code) =>
+    apiClient.post('/auth/validate-promo', { code }),
 
   /**
    * Login — returns { access_token, refresh_token, token_type }

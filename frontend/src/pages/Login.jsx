@@ -2,7 +2,17 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../api/client.js';
-import { IconWarning } from '../components/Icons.jsx';
+
+// Simple Eye Icons
+const EyeIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+);
+const EyeOffIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+);
+const WarningIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+);
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,6 +22,7 @@ export default function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +42,6 @@ export default function Login() {
       const token = data.access_token;
       localStorage.setItem('solvai_token', token);
 
-      // Decode JWT payload for user info
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         localStorage.setItem('solvai_user', JSON.stringify(payload));
@@ -49,45 +59,42 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fa] flex items-center justify-center p-6 relative">
-      <div className="w-full max-w-[400px] flex flex-col gap-6 relative z-10 animate-slideUp">
-        {/* Logo */}
-        <div className="flex items-center gap-3 justify-center">
-          <div className="w-11 h-11 bg-card rounded-xl flex items-center justify-center text-[22px] font-extrabold text-primary shadow-[0_4px_12px_rgba(0,0,0,0.1)] shrink-0">
-            S
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-primary tracking-tight leading-tight">
+    <div className="min-h-screen bg-[#f6f8fa] dark:bg-[#0f0f0f] flex flex-col items-center justify-center p-6 transition-colors duration-200 relative">
+      <div className="w-full max-w-[420px] flex flex-col items-center gap-6 relative z-10 animate-slideUp">
+        {/* Header */}
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-3 justify-center mb-3">
+            <div className="w-11 h-11 bg-white dark:bg-[#1a1a1a] rounded-xl flex items-center justify-center text-[22px] font-extrabold text-gray-900 dark:text-white shadow-sm shrink-0 border border-gray-200 dark:border-gray-800">
+              S
+            </div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
               SolvAI<span className="text-[#0570de]">.</span>
             </div>
-            <div className="text-[10px] sm:text-xs text-[#697386] tracking-wider uppercase font-medium mt-0.5">
-              Self-serve credit AI for freelancers
-            </div>
           </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+            AI-powered financial identity for freelancers
+          </p>
         </div>
 
         {/* Card */}
-        <div className="bg-card rounded-2xl p-8 shadow-sm border border-border">
-          <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold text-primary mb-1">{t('auth.welcome')}</h1>
-            <p className="text-secondary">Enter your details to access your account</p>
-          </div>
-
+        <div className="w-full bg-white dark:bg-[#1a1a1a] rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-800">
+          <h1 className="text-[20px] font-semibold text-gray-900 dark:text-white mb-6">Welcome back</h1>
+          
           <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
             {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex gap-2 items-center border border-red-100">
-                <span className="shrink-0"><IconWarning size={16} /></span> 
+              <div className="text-[#d92d20] text-sm flex gap-2 items-center">
+                <span className="shrink-0"><WarningIcon /></span> 
                 <span>{error}</span>
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-secondary" htmlFor="login-email">{t('auth.email')}</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="login-email">Email</label>
               <input
                 id="login-email"
-                className="h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors placeholder:text-gray-400"
                 type="email"
-                placeholder="you@company.com"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -96,48 +103,66 @@ export default function Login() {
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-secondary" htmlFor="login-password">{t('auth.password')}</label>
-              <input
-                id="login-password"
-                className="h-10 px-3 rounded-md border border-border bg-card text-primary focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-shadow placeholder:text-gray-400"
-                type="password"
-                placeholder="••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
+            <div className="flex flex-col gap-1.5 relative">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="login-password">Password</label>
+                <a href="#" className="text-sm text-[#0570de] hover:underline font-medium">Forgot password?</a>
+              </div>
+              <div className="relative">
+                <input
+                  id="login-password"
+                  className="w-full h-10 pl-3 pr-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors placeholder:text-gray-400"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
 
             <button
               id="login-submit"
               type="submit"
-              className="mt-2 w-full bg-[#0570de] hover:bg-[#0462c7] text-white font-medium h-11 rounded-lg flex items-center justify-center transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              className="mt-2 w-full bg-[#0570de] hover:bg-[#0462c7] text-white font-medium h-10 rounded-md flex items-center justify-center transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                  {t('auth.signingIn')}
-                </>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Signing in...
+                </div>
               ) : (
-                <>{t('auth.signIn')} →</>
+                "Sign in →"
               )}
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-border flex items-center justify-center gap-2 text-[14px]">
-            <span className="text-secondary">{t('auth.noAccount')}</span>
-            <Link to="/register" className="font-medium text-[#0570de] hover:text-[#0462c7]">{t('auth.signUp')}</Link>
+          <div className="my-6 flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+            <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">or</span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+          </div>
+
+          <div className="text-center text-[14px]">
+            <span className="text-gray-600 dark:text-gray-400">Don't have an account? </span>
+            <Link to="/register" className="font-medium text-[#0570de] hover:underline">Create account</Link>
           </div>
         </div>
 
-        <p className="text-center text-xs text-[#697386] leading-relaxed px-4">
+        <p className="text-center text-xs text-gray-500 dark:text-gray-500 leading-relaxed px-4">
           By signing in you agree to our{' '}
-          <a href="#" className="underline text-secondary hover:text-primary">Terms of Service</a>
+          <a href="#" className="underline hover:text-gray-700 dark:hover:text-gray-300">Terms of Service</a>
           {' '}and{' '}
-          <a href="#" className="underline text-secondary hover:text-primary">Privacy Policy</a>.
+          <a href="#" className="underline hover:text-gray-700 dark:hover:text-gray-300">Privacy Policy</a>.
         </p>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { alerts } from '../api/client';
+import { alerts, users } from '../api/client';
 import { Loader2 } from 'lucide-react';
 import { useReportGeneration } from '../context/ReportGenerationContext.jsx';
 
@@ -91,36 +91,23 @@ const NAV_ITEMS = [
 export default function Sidebar() {
  const navigate = useNavigate();
  const userInfo = getUserInfo();
- const { t, i18n } = useTranslation();
+ const { t } = useTranslation();
  const [unreadCount, setUnreadCount] = useState(0);
  const { generatingReports } = useReportGeneration();
  const isGenerating = Object.keys(generatingReports).length > 0;
 
- useEffect(() => {
-   alerts.getAll().then(res => {
-     const count = res.data.filter(a => !a.is_read).length;
-     setUnreadCount(count);
-   }).catch(err => console.error("Failed to fetch alerts:", err));
- }, []);
+  const [userProfile, setUserProfile] = useState(null);
 
- const LANGUAGES = [
-   { code: 'en', label: 'EN' },
-   { code: 'es', label: 'ES' },
-   { code: 'fr', label: 'FR' },
-   { code: 'de', label: 'DE' },
-   { code: 'it', label: 'IT' },
-   { code: 'pt', label: 'PT' }
- ];
+  useEffect(() => {
+    users.me().then(res => {
+      setUserProfile(res.data);
+    }).catch(err => console.error("Failed to fetch user:", err));
 
- const cycleLanguage = () => {
-   const currentIndex = LANGUAGES.findIndex(l => l.code === i18n.language);
-   const nextIndex = (currentIndex + 1) % LANGUAGES.length;
-   const nextLang = LANGUAGES[nextIndex].code;
-   i18n.changeLanguage(nextLang);
-   localStorage.setItem('solvai-language', nextLang);
- };
-
- const currentLangLabel = LANGUAGES.find(l => l.code === i18n.language)?.label || 'EN';
+    alerts.getAll().then(res => {
+      const count = res.data.filter(a => !a.is_read).length;
+      setUnreadCount(count);
+    }).catch(err => console.error("Failed to fetch alerts:", err));
+  }, []);
 
  const handleLogout = () => {
  localStorage.removeItem('solvai_token');
@@ -128,8 +115,9 @@ export default function Sidebar() {
  navigate('/login', { replace: true });
  };
 
- const userEmail = userInfo?.email ?? userInfo?.sub ?? 'Account';
- const userInitial = userEmail.charAt(0).toUpperCase();
+  const userEmail = userProfile?.email ?? userInfo?.email ?? userInfo?.sub ?? 'Account';
+  const userPlan = userProfile?.organization?.plan ?? 'free';
+  const userInitial = userEmail.charAt(0).toUpperCase();
 
  return (
  <aside className="sidebar">
@@ -166,7 +154,7 @@ export default function Sidebar() {
  <span className="sidebar__nav-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
    {t(item.tKey)}
    {item.to === '/reports' && isGenerating && (
-     <Loader2 className="w-4 h-4 animate-spin text-[#0570de]" />
+     <Loader2 className="w-4 h-4 animate-spin text-[var(--brand-blue)]" />
    )}
  </span>
  </NavLink>
@@ -184,6 +172,11 @@ export default function Sidebar() {
  <span className="sidebar__user-email" title={userEmail}>
  {userEmail}
  </span>
+ {userPlan && (
+   <span style={{ fontSize: '11px', color: 'var(--color-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+     {userPlan} plan
+   </span>
+ )}
  </div>
  </div>
  <div className="sidebar__actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -204,11 +197,6 @@ export default function Sidebar() {
    <IconLogout />
    </button>
  </div>
- </div>
- <div style={{ display: 'flex', justifyContent: 'center', padding: '8px' }}>
-   <button onClick={cycleLanguage} style={{ fontSize: '12px', background: 'transparent', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
-     {currentLangLabel}
-   </button>
  </div>
 
  <style>{`

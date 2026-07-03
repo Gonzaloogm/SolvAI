@@ -104,6 +104,18 @@ async def list_data_sources(
     return [DataSourceResponse.model_validate(s) for s in sources]
 
 
+@router.get(
+    "/available-integrations",
+    summary="Get available integrations dynamically based on configured credentials",
+)
+async def get_available_integrations():
+    return {
+        "xero": bool(settings.XERO_CLIENT_ID and settings.XERO_CLIENT_SECRET),
+        "paypal": bool(settings.PAYPAL_CLIENT_ID and settings.PAYPAL_SECRET),
+        "bank_account": bool(settings.BELVO_SECRET_ID and settings.BELVO_SECRET_PASSWORD),
+    }
+
+
 @router.get("/belvo/institutions", summary="Get supported Belvo institutions")
 async def get_belvo_institutions():
     return belvo_service.get_institutions()

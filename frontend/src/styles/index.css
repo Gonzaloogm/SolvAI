@@ -20,6 +20,8 @@
   --text-nav-active: #0570de;
   --bg-row-hover: #f6f8fa;
   --bg-badge: #f0f4f8;
+  --brand-blue: #0570de;
+  --brand-blue-hover: #0462c7;
 }
 
 html.dark {
@@ -36,6 +38,8 @@ html.dark {
   --text-nav-active: #60a5fa;
   --bg-row-hover: #161616;
   --bg-badge: #1a1a1a;
+  --brand-blue: #0570de;
+  --brand-blue-hover: #0462c7;
 }
 
 @theme {

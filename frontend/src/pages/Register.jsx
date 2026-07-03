@@ -74,7 +74,7 @@ export default function Register() {
       setError('You must accept the terms and conditions.');
       return;
     }
-    if (showPromo && promoCode && promoStatus !== 'valid') {
+    if (promoCode && promoStatus !== 'valid') {
       setError('Please apply a valid promo code or clear it.');
       return;
     }
@@ -107,7 +107,11 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fa] dark:bg-[#0f0f0f] flex flex-col items-center justify-center p-6 transition-colors duration-200 relative py-12">
+    <div 
+      className="min-h-screen bg-[var(--bg-page)] dark:bg-[#0f0f0f] flex flex-col items-center justify-center p-6 transition-colors duration-200 relative py-12"
+      data-force-light="true"
+      style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+    >
       <div className="w-full max-w-[420px] flex flex-col items-center gap-6 relative z-10 animate-slideUp">
         
         {/* Header */}
@@ -117,7 +121,7 @@ export default function Register() {
               S
             </div>
             <div className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
-              SolvAI<span className="text-[#0570de]">.</span>
+              SolvAI<span className="text-[var(--brand-blue)]">.</span>
             </div>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
@@ -141,7 +145,7 @@ export default function Register() {
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="reg-name">Full name</label>
               <input
                 id="reg-name"
-                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-colors placeholder:text-gray-400"
                 type="text"
                 placeholder="Jane Doe"
                 value={fullName}
@@ -155,7 +159,7 @@ export default function Register() {
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="reg-email">Email</label>
               <input
                 id="reg-email"
-                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-colors placeholder:text-gray-400"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
@@ -170,7 +174,7 @@ export default function Register() {
               <div className="relative">
                 <input
                   id="reg-password"
-                  className="w-full h-10 pl-3 pr-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors placeholder:text-gray-400"
+                  className="w-full h-10 pl-3 pr-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-colors placeholder:text-gray-400"
                   type={showPassword ? "text" : "password"}
                   placeholder="Min. 8 characters"
                   value={password}
@@ -192,7 +196,7 @@ export default function Register() {
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="reg-confirm">Confirm password</label>
               <input
                 id="reg-confirm"
-                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-colors placeholder:text-gray-400"
                 type="password"
                 placeholder="Repeat password"
                 value={confirm}
@@ -204,71 +208,64 @@ export default function Register() {
 
             {/* Promo code section */}
             <div className="pt-2">
-              {!showPromo ? (
-                <button
-                  type="button"
-                  className="text-sm text-[#0570de] hover:underline font-medium"
-                  onClick={() => setShowPromo(true)}
-                >
-                  Have a promo code?
-                </button>
-              ) : (
-                <div className="flex flex-col gap-1.5 animate-fadeIn">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="reg-promo">Promo code <span className="text-gray-400 font-normal">(optional)</span></label>
-                  <div className="flex gap-2">
-                    <input
-                      id="reg-promo"
-                      className="flex-1 h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors uppercase"
-                      type="text"
-                      placeholder="e.g. EARLYBIRD"
-                      value={promoCode}
-                      onChange={(e) => {
-                        setPromoCode(e.target.value);
-                        setPromoStatus(null);
-                        setPromoMessage('');
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="px-4 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-md transition-colors whitespace-nowrap disabled:opacity-50"
-                      onClick={handleValidatePromo}
-                      disabled={!promoCode.trim() || promoStatus === 'loading'}
-                    >
-                      {promoStatus === 'loading' ? 'Checking...' : 'Apply'}
-                    </button>
-                  </div>
-                  {promoStatus === 'valid' && (
-                    <div className="text-sm text-green-600 dark:text-green-500 font-medium flex items-center gap-1.5 mt-1">
-                      <CheckIcon /> {promoMessage}
-                    </div>
-                  )}
-                  {promoStatus === 'invalid' && (
-                    <div className="text-sm text-[#d92d20] flex items-center gap-1.5 mt-1">
-                      <WarningIcon /> {promoMessage}
-                    </div>
-                  )}
+              <div className="flex flex-col gap-1.5 animate-fadeIn">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="reg-promo">Promo code <span className="text-gray-400 font-normal">(optional)</span></label>
+                <div className="flex gap-2">
+                  <input
+                    id="reg-promo"
+                    className="flex-1 h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-colors uppercase"
+                    type="text"
+                    placeholder="e.g. SOLVAI-FOUNDER"
+                    value={promoCode}
+                    onChange={(e) => {
+                      setPromoCode(e.target.value);
+                      setPromoStatus(null);
+                      setPromoMessage('');
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="px-4 h-10 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-md transition-colors whitespace-nowrap disabled:opacity-50"
+                    onClick={handleValidatePromo}
+                    disabled={!promoCode.trim() || promoStatus === 'loading'}
+                  >
+                    {promoStatus === 'loading' ? 'Checking...' : 'Apply'}
+                  </button>
                 </div>
-              )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Enter a promo code to get Pro plan access for free — no credit card needed
+                </p>
+                {promoStatus === 'valid' && (
+                  <div className="text-sm text-green-600 dark:text-green-500 font-medium flex items-center gap-1.5 mt-1">
+                    <CheckIcon /> Pro plan activated! No payment required.
+                  </div>
+                )}
+                {promoStatus === 'invalid' && (
+                  <div className="text-sm text-[#d92d20] flex items-center gap-1.5 mt-1">
+                    <WarningIcon /> {promoMessage}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-start gap-2 mt-2">
               <input
                 id="terms"
                 type="checkbox"
-                className="mt-1 w-4 h-4 rounded border-gray-300 text-[#0570de] focus:ring-[#0570de]"
+                className="mt-1 w-4 h-4 rounded border-gray-300 text-[var(--brand-blue)] focus:ring-[var(--brand-blue)]"
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
                 required
               />
               <label htmlFor="terms" className="text-sm text-gray-600 dark:text-gray-400">
-                I agree to the <a href="#" className="text-[#0570de] hover:underline">Terms of Service</a> and <a href="#" className="text-[#0570de] hover:underline">Privacy Policy</a>
+                I agree to the <a href="#" className="text-[var(--brand-blue)] hover:underline">Terms of Service</a> and <a href="#" className="text-[var(--brand-blue)] hover:underline">Privacy Policy</a>
               </label>
             </div>
 
             <button
               id="register-submit"
               type="submit"
-              className="mt-4 w-full bg-[#0570de] hover:bg-[#0462c7] text-white font-medium h-10 rounded-md flex items-center justify-center transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              className="mt-4 w-full bg-[var(--brand-blue)] hover:bg-[var(--brand-blue-hover)] text-white font-medium h-10 rounded-md flex items-center justify-center transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? (
@@ -277,7 +274,7 @@ export default function Register() {
                   Creating account...
                 </div>
               ) : (
-                "Create account →"
+                promoStatus === 'valid' ? "Create Pro account →" : "Create account →"
               )}
             </button>
           </form>
@@ -288,7 +285,7 @@ export default function Register() {
 
           <div className="text-center text-[14px]">
             <span className="text-gray-600 dark:text-gray-400">Already have an account? </span>
-            <Link to="/login" className="font-medium text-[#0570de] hover:underline">Sign in</Link>
+            <Link to="/login" className="font-medium text-[var(--brand-blue)] hover:underline">Sign in</Link>
           </div>
         </div>
       </div>

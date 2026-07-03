@@ -1,0 +1,9 @@
+[data-force-light="true"],
+[data-force-light="true"] * {
+  --bg-page: #f6f8fa !important;
+  --bg-card: #ffffff !important;
+  --text-primary: #0a2540 !important;
+  --text-secondary: #425466 !important;
+  --text-muted: #697386 !important;
+  --border-color: #e3e8ef !important;
+}

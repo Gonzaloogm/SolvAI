@@ -181,7 +181,7 @@ export default function DashboardPage({ onNavigate }) {
  ];
 
  const derivedActivities = realReports.slice(0, 5).map(r => ({
- color: r.status === 'COMPLETED' ? 'bg-[#1a9e6e]' : r.status === 'FAILED' ? 'bg-[#df1b41]' : 'bg-[#0570de]',
+ color: r.status === 'COMPLETED' ? 'bg-[#1a9e6e]' : r.status === 'FAILED' ? 'bg-[#df1b41]' : 'bg-[var(--brand-blue)]',
  text: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''} ${r.status?.toLowerCase() || ''}`,
  time: r.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(r.created_at)) : '—',
  }));
@@ -196,18 +196,18 @@ export default function DashboardPage({ onNavigate }) {
  'Mortgage Assessment': 'badge-mortgage',
  };
 
- const statusBadgeStyles = {
- Complete: 'badge-complete',
- Processing: 'badge-processing',
- Failed: 'badge-failed',
- 'Generation Failed': 'badge-failed',
- Draft: 'badge-draft',
- };
+  const statusBadgeStyles = {
+  COMPLETED: 'badge-complete',
+  GENERATING: 'badge-processing',
+  FAILED: 'badge-failed',
+  PENDING: 'badge-draft',
+  DRAFT: 'badge-draft',
+  };
 
  if (loading) {
    return (
      <div className="page-enter flex items-center justify-center" style={{minHeight: '60vh'}}>
-       <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+       <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-blue)]" />
      </div>
    );
  }
@@ -225,7 +225,7 @@ export default function DashboardPage({ onNavigate }) {
  <button
    onClick={handleGenerate}
    disabled={generating}
-   className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors disabled:opacity-50"
+   className="bg-[var(--brand-blue)] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[var(--brand-blue-hover)] flex items-center gap-2 transition-colors disabled:opacity-50"
  >
    {generating ? (
      <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
@@ -292,9 +292,9 @@ export default function DashboardPage({ onNavigate }) {
  </span>
  )}
  {card.progress !== undefined && (
- <div className="h-1.5 bg-[#e3e8ef] rounded-full mt-1">
+ <div className="h-1.5 bg-[var(--border-color)] rounded-full mt-1">
  <div
- className="bg-[#0570de] rounded-full h-full"
+ className="bg-[var(--brand-blue)] rounded-full h-full"
  style={{ width: `${card.progress}%` }}
  />
  </div>
@@ -322,26 +322,23 @@ export default function DashboardPage({ onNavigate }) {
  {t('dashboard.viewAll')} →
  </button>
  </div>
- <div className="w-full overflow-x-auto min-h-[200px]">
- <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '780px' }}>
+ <div className="w-full overflow-x-auto">
+ <table className="w-full" style={{ tableLayout: 'fixed' }}>
  <thead>
  <tr className="bg-page">
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '35%' }}>
- {t('reports.columns.name')}
- </th>
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '13%' }}>
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '20%' }}>
  {t('reports.columns.type')}
  </th>
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '22%' }}>
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '30%' }}>
  {t('reports.columns.status')}
  </th>
- <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '15%' }}>
+ <th className="text-left text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '25%' }}>
  {t('reports.columns.created')}
  </th>
- <th className="text-right text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '10%' }}>
+ <th className="text-right text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '15%' }}>
  {t('reports.columns.score')}
  </th>
- <th className="text-right text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '5%' }}>
+ <th className="text-right text-xs font-medium text-muted uppercase tracking-wider py-3 px-4" style={{ width: '10%' }}>
  Actions
  </th>
  </tr>
@@ -360,16 +357,13 @@ export default function DashboardPage({ onNavigate }) {
  'border-b border-border'
  )}
  >
- <td className="py-3 px-4 text-sm font-medium text-primary whitespace-nowrap overflow-hidden text-ellipsis">
- {report.name}
- </td>
  <td className="py-3 px-4 whitespace-nowrap">
  <span className={typeBadgeStyles[report.type] || 'badge-custom'}>
  {report.type}
  </span>
  </td>
  <td className="py-3 px-4 whitespace-nowrap">
- <span className={statusBadgeStyles[report.status] || 'badge-draft'}>
+ <span className={cn(statusBadgeStyles[report._raw.status] || statusBadgeStyles.DRAFT, "block truncate max-w-full")}>
  {report.status}
  </span>
  </td>
@@ -535,9 +529,9 @@ export default function DashboardPage({ onNavigate }) {
  {item.unit}
  </span>
  </div>
- <div className="h-1.5 bg-[#e3e8ef] rounded-full mt-2">
+ <div className="h-1.5 bg-[var(--border-color)] rounded-full mt-2">
  <div
- className="bg-[#0570de] rounded-full h-full"
+ className="bg-[var(--brand-blue)] rounded-full h-full"
  style={{ width: `${percentage}%` }}
  />
  </div>
@@ -584,7 +578,22 @@ export default function DashboardPage({ onNavigate }) {
 
 function ScoreEvolutionCard({ history, onGenerateReport }) {
   const { t } = useTranslation();
-  if (!history || history.length === 0) return null;
+  
+  if (!history || history.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-xl p-6 mb-6">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h2 className="text-base font-semibold text-primary m-0 mb-1">{t('score.evolution')}</h2>
+            <p className="text-sm text-muted m-0">Financial solvency evolution</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center h-[200px] border border-dashed border-border rounded-lg bg-page/50">
+          <p className="text-sm text-muted mb-0">{t('score.trackEvolution')}</p>
+        </div>
+      </div>
+    );
+  }
   
   const current = history[history.length - 1];
   const previous = history.length >= 2 ? history[history.length - 2] : null;
@@ -666,29 +675,23 @@ function ScoreEvolutionCard({ history, onGenerateReport }) {
         </div>
       </div>
       
-      {history.length >= 2 ? (
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={scoreColor} stopOpacity={0.2}/>
-                <stop offset="95%" stopColor={scoreColor} stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-            <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={70} stroke="#10b981" strokeDasharray="4 4" strokeOpacity={0.6} />
-            <ReferenceLine y={50} stroke="#f59e0b" strokeDasharray="4 4" strokeOpacity={0.6} />
-            <Area type="monotone" dataKey="score" stroke={scoreColor} strokeWidth={2.5} fill="url(#scoreGradient)" dot={{ fill: scoreColor, r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
-          </AreaChart>
-        </ResponsiveContainer>
-      ) : (
-        <p className="text-sm text-muted mt-4 mb-0">
-          {t('score.trackEvolution')}
-        </p>
-      )}
+      <ResponsiveContainer width="100%" height={200}>
+        <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={scoreColor} stopOpacity={0.2}/>
+              <stop offset="95%" stopColor={scoreColor} stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
+          <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+          <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+          <Tooltip content={<CustomTooltip />} />
+          <ReferenceLine y={70} stroke="#10b981" strokeDasharray="4 4" strokeOpacity={0.6} />
+          <ReferenceLine y={50} stroke="#f59e0b" strokeDasharray="4 4" strokeOpacity={0.6} />
+          <Area type="monotone" dataKey="score" stroke={scoreColor} strokeWidth={2.5} fill="url(#scoreGradient)" dot={{ fill: scoreColor, r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }

@@ -46,24 +46,41 @@ export default function VerifyAuthorize() {
 
   if (loading) {
     return (
+      <div 
+        className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans py-12"
+        data-force-light="true"
+        style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+      >
       <div className="min-h-[50vh] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
+    </div>
     );
   }
 
   if (!requestDetails && !loading) {
     return (
+      <div 
+        className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans py-12"
+        data-force-light="true"
+        style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+      >
       <div className="max-w-xl mx-auto mt-12 p-8 bg-card border border-border rounded-xl text-center">
         <Shield size={48} className="text-red-500 mx-auto mb-4" />
         <h2 className="text-xl font-bold text-primary mb-2">Invalid Link</h2>
         <p className="text-secondary">This verification link is invalid or has expired.</p>
       </div>
+    </div>
     );
   }
 
   if (status === 'success') {
     return (
+      <div 
+        className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans py-12"
+        data-force-light="true"
+        style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+      >
       <div className="max-w-xl mx-auto mt-12 p-8 bg-card border border-border rounded-xl text-center shadow-sm">
         <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 size={32} />
@@ -76,10 +93,16 @@ export default function VerifyAuthorize() {
           You can close this window.
         </div>
       </div>
+    </div>
     );
   }
 
   return (
+    <div 
+      className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans py-12"
+      data-force-light="true"
+      style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+    >
     <div className="max-w-2xl mx-auto mt-8 mb-24">
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
@@ -140,6 +163,7 @@ export default function VerifyAuthorize() {
           </form>
         </div>
       </div>
+    </div>
     </div>
   );
 }

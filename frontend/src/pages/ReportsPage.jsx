@@ -37,11 +37,11 @@ const TYPE_STYLES = {
 };
 
 const STATUS_STYLES = {
- Complete: 'badge-complete',
- Processing: 'badge-processing',
- Failed: 'badge-failed',
- 'Generation Failed': 'badge-failed',
- Draft: 'badge-draft',
+ COMPLETED: 'badge-complete',
+ GENERATING: 'badge-processing',
+ FAILED: 'badge-failed',
+ PENDING: 'badge-draft',
+ DRAFT: 'badge-draft',
 };
 
 const getAccuracyColor = (val) => {
@@ -360,7 +360,7 @@ const getAccuracyColor = (val) => {
  if (loading) {
  return (
  <div className="flex items-center justify-center" style={{minHeight: '60vh'}}>
- <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+ <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-blue)]" />
  </div>
  );
  }
@@ -382,7 +382,7 @@ const getAccuracyColor = (val) => {
           setIsModalOpen(true);
         }}
         disabled={isGeneratingFull}
-        className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors disabled:opacity-50"
+        className="bg-[var(--brand-blue)] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[var(--brand-blue-hover)] flex items-center gap-2 transition-colors disabled:opacity-50"
       >
         {isGeneratingFull ? (
           <><Loader2 className="w-4 h-4 animate-spin" /> {t('dashboard.generating')}</>
@@ -431,13 +431,13 @@ const getAccuracyColor = (val) => {
       border: '1px solid var(--border-blue-soft, #bfdbfe)',
       borderRadius: '8px',
       marginTop: '16px'
-    }} className="dark:bg-[#0570de]/10 dark:border-[#0570de]/30">
+    }} className="dark:bg-[var(--brand-blue)]/10 dark:border-[var(--brand-blue)]/30">
       <Loader2 size={18} color="#0570de" className="animate-spin" />
       <div>
         <div style={{
           fontSize: '14px', 
           fontWeight: 500, 
-        }} className="text-[#0a2540] dark:text-[#60a5fa]">
+        }} className="text-[var(--text-primary)] dark:text-[#60a5fa]">
           Generating your report
         </div>
         <div style={{
@@ -459,7 +459,7 @@ const getAccuracyColor = (val) => {
  placeholder={t('reports.search')}
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className="w-full h-9 border border-border rounded-md pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0570de] bg-card text-primary placeholder:text-muted dark:placeholder-[#666666]"
+ className="w-full h-9 border border-border rounded-md pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] bg-card text-primary placeholder:text-muted dark:placeholder-[#666666]"
  />
  </div>
 
@@ -467,7 +467,7 @@ const getAccuracyColor = (val) => {
  <select
  value={statusFilter}
  onChange={(e) => setStatusFilter(e.target.value)}
- className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card appearance-none text-secondary cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0570de]"
+ className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card appearance-none text-secondary cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
  >
  <option value="all">All Statuses</option>
  <option value="Complete">Complete</option>
@@ -480,7 +480,7 @@ const getAccuracyColor = (val) => {
  <select
  value={typeFilter}
  onChange={(e) => setTypeFilter(e.target.value)}
- className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card appearance-none text-secondary cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0570de]"
+ className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card appearance-none text-secondary cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
  >
  <option value="all">All Types</option>
  <option value="Financial">Financial</option>
@@ -493,7 +493,7 @@ const getAccuracyColor = (val) => {
  <select
  value={dateFilter}
  onChange={(e) => setDateFilter(e.target.value)}
- className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card appearance-none text-secondary cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0570de]"
+ className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card appearance-none text-secondary cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
  >
  <option value="all">All Dates</option>
  <option value="7d">Last 7 days</option>
@@ -511,7 +511,7 @@ const getAccuracyColor = (val) => {
  : 'max-h-0 opacity-0'
  )}
  >
- <div className="bg-[#0a2540] text-white rounded-lg px-4 py-3 flex items-center justify-between border ">
+ <div className="bg-[var(--text-primary)] text-white rounded-lg px-4 py-3 flex items-center justify-between border ">
  <span className="text-sm font-medium">
  {selectedRows.size} selected
  </span>
@@ -551,7 +551,7 @@ const getAccuracyColor = (val) => {
        </button>
        <button 
          onClick={handleDownloadPL}
-         className="px-4 py-2 bg-[#0570de] text-white rounded-lg text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2"
+         className="px-4 py-2 bg-[var(--brand-blue)] text-white rounded-lg text-sm font-medium hover:bg-[var(--brand-blue-hover)] flex items-center gap-2"
        >
          <Download className="w-4 h-4" /> Download PDF
        </button>
@@ -652,7 +652,7 @@ const getAccuracyColor = (val) => {
 
  {/* Status badge */}
   <td className="py-3 px-4 whitespace-nowrap overflow-hidden text-ellipsis">
-    <span className={cn(STATUS_STYLES[report.status] || STATUS_STYLES.Draft, "block truncate max-w-full")}>
+    <span className={cn(STATUS_STYLES[report._raw.status] || STATUS_STYLES.DRAFT, "block truncate max-w-full")}>
       {report.status}
     </span>
   </td>
@@ -792,7 +792,7 @@ const getAccuracyColor = (val) => {
  className={cn(
  "px-3 py-1.5 text-sm rounded-md transition-colors",
  currentPage === p
- ? "bg-[#0570de] text-white border border-[#0570de]"
+ ? "bg-[var(--brand-blue)] text-white border border-[var(--brand-blue)]"
  : "border border-border text-secondary hover:bg-page "
  )}
  >
@@ -937,7 +937,7 @@ const getAccuracyColor = (val) => {
  type="button"
  onClick={handleAddReport}
  disabled={isProcessing}
- className="bg-[#0570de] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors disabled:opacity-50 flex items-center gap-2"
+ className="bg-[var(--brand-blue)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors disabled:opacity-50 flex items-center gap-2"
  >
  {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
  {generatingType === 'FULL' ? 'Generate Report' : generatingType === 'RENTAL' ? 'Generate Certificate' : 'Generate Assessment'}
@@ -983,7 +983,7 @@ const getAccuracyColor = (val) => {
        <div className="p-6 overflow-y-auto flex-1">
          {isLoadingPL ? (
            <div className="flex justify-center items-center py-20">
-             <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+             <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-blue)]" />
            </div>
          ) : plData ? (
            <div>
@@ -1054,7 +1054,7 @@ const getAccuracyColor = (val) => {
          <button
            type="button"
            onClick={handleDownloadPL}
-           className="bg-[#0570de] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors flex items-center gap-2"
+           className="bg-[var(--brand-blue)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors flex items-center gap-2"
          >
            <Download className="w-4 h-4" /> Download PDF
          </button>
@@ -1066,7 +1066,7 @@ const getAccuracyColor = (val) => {
  {/* ── PROCESSING OVERLAY ─────────────────────────────────────────────── */}
  {isProcessing && (
  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/10 dark:bg-black/40">
- <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+ <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-blue)]" />
  </div>
  )}
  </div>

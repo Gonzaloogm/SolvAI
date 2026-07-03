@@ -36,8 +36,14 @@ export default function VerifyTrack() {
 
   if (loading) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div 
+        className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans py-12"
+        data-force-light="true"
+        style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+      >
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        </div>
       </div>
     );
   }
@@ -73,6 +79,11 @@ export default function VerifyTrack() {
   };
 
   return (
+    <div 
+      className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans py-12"
+      data-force-light="true"
+      style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+    >
     <div className="max-w-xl mx-auto mt-16 p-8 bg-card border border-border rounded-xl text-center shadow-sm">
       <div className="flex flex-col items-center justify-center">
         {getStatusIcon()}
@@ -106,6 +117,7 @@ export default function VerifyTrack() {
           </Link>
         </div>
       </div>
+    </div>
     </div>
   );
 }

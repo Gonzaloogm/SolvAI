@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, CreditCard, AlertTriangle, Zap, ArrowUpRight, X, Loader2 } from 'lucide-react';
-import { users, billing } from '../api/client.js';
+import { users, billing, auth } from '../api/client.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import ConfirmModal from '../components/ConfirmModal.jsx';
@@ -49,6 +49,61 @@ export default function AccountPage() {
  const [showContactModal, setShowContactModal] = useState(false);
  const [showDeleteModal, setShowDeleteModal] = useState(false);
  const [showRemoveCardModal, setShowRemoveCardModal] = useState(false);
+ const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
+ // Password State
+ const [currentPassword, setCurrentPassword] = useState('');
+ const [newPassword, setNewPassword] = useState('');
+ const [confirmPassword, setConfirmPassword] = useState('');
+ const [changingPassword, setChangingPassword] = useState(false);
+
+ const [promoCode, setPromoCode] = useState('');
+ const [applyingPromo, setApplyingPromo] = useState(false);
+
+ const handleApplyPromo = async (e) => {
+   e.preventDefault();
+   if (!promoCode.trim()) return;
+   setApplyingPromo(true);
+   try {
+     const res = await billing.applyPromo(promoCode.trim());
+     addToast(res.data.message || "Promo code applied successfully", "success");
+     setPromoCode('');
+     // Refresh subscription
+     const subRes = await billing.getSubscription().catch(() => ({ data: { plan: 'free' } }));
+     const plan = subRes.data?.plan || 'free';
+     setCurrentPlan(plan.charAt(0).toUpperCase() + plan.slice(1));
+     setRealPlan(subRes.data);
+   } catch (error) {
+     addToast(error.response?.data?.detail || "Invalid or expired promo code", "error");
+   } finally {
+     setApplyingPromo(false);
+   }
+ };
+
+ const handleChangePassword = async (e) => {
+   e.preventDefault();
+   if (newPassword !== confirmPassword) {
+     addToast("New passwords do not match", "error");
+     return;
+   }
+   if (newPassword.length < 8) {
+     addToast("Password must be at least 8 characters long", "error");
+     return;
+   }
+   setChangingPassword(true);
+   try {
+     await auth.changePassword(currentPassword, newPassword);
+     addToast("Password changed successfully", "success");
+     setShowChangePasswordModal(false);
+     setCurrentPassword('');
+     setNewPassword('');
+     setConfirmPassword('');
+   } catch (error) {
+     addToast(error.response?.data?.detail || "Failed to change password", "error");
+   } finally {
+     setChangingPassword(false);
+   }
+ };
 
  // Billing State
  const [paymentMethod, setPaymentMethod] = useState(null);
@@ -71,7 +126,7 @@ export default function AccountPage() {
  const [showApiTooltip, setShowApiTooltip] = useState(false);
 
  const getUsageColor = (percentage) => {
- if (percentage < 70) return 'bg-[#0570de]';
+ if (percentage < 70) return 'bg-[var(--brand-blue)]';
  if (percentage <= 90) return 'bg-[#f59e0b]';
  return 'bg-[#ef4444]';
  };
@@ -81,7 +136,7 @@ export default function AccountPage() {
  const textSecondary = "text-muted";
  const textMuted = "text-secondary";
 
- const inputClasses = "w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary placeholder-[#697386] dark:placeholder-[#666666] focus:outline-none focus:border-[#0570de] disabled:opacity-50";
+ const inputClasses = "w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary placeholder-[#697386] dark:placeholder-[#666666] focus:outline-none focus:border-[var(--brand-blue)] disabled:opacity-50";
 
  const handleUpgrade = async (plan) => {
  setUpgrading(plan);
@@ -134,7 +189,7 @@ export default function AccountPage() {
  <button 
  onClick={() => handleUpgrade('pro')}
  disabled={upgrading === 'pro'}
- className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] transition-colors flex items-center justify-center gap-2"
+ className="bg-[var(--brand-blue)] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors flex items-center justify-center gap-2"
  >
  {upgrading === 'pro' && <Loader2 className="w-4 h-4 animate-spin" />}
  {t('account.upgrade')}
@@ -150,14 +205,14 @@ export default function AccountPage() {
  <span className={textSecondary}>23/100</span>
  </div>
  <div 
- className="h-1.5 bg-[#e3e8ef] rounded-full relative cursor-pointer"
+ className="h-1.5 bg-[var(--border-color)] rounded-full relative cursor-pointer"
  onMouseEnter={() => setShowReportsTooltip(true)}
  onMouseLeave={() => setShowReportsTooltip(false)}
  onClick={() => setShowReportsTooltip(!showReportsTooltip)}
  >
  <div className={`w-[23%] ${getUsageColor(23)} rounded-full h-full transition-colors`} />
  {showReportsTooltip && (
- <div className="absolute -top-8 left-[23%] -translate-x-1/2 bg-[#0a2540] dark:bg-card text-white dark:text-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+ <div className="absolute -top-8 left-[23%] -translate-x-1/2 bg-[var(--text-primary)] dark:bg-card text-white dark:text-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
  Exact numbers: 23 / 100
  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0a2540] dark:border-t-white" />
  </div>
@@ -171,14 +226,14 @@ export default function AccountPage() {
  <span className={textSecondary}>1,240/10,000</span>
  </div>
  <div 
- className="h-1.5 bg-[#e3e8ef] rounded-full relative cursor-pointer"
+ className="h-1.5 bg-[var(--border-color)] rounded-full relative cursor-pointer"
  onMouseEnter={() => setShowApiTooltip(true)}
  onMouseLeave={() => setShowApiTooltip(false)}
  onClick={() => setShowApiTooltip(!showApiTooltip)}
  >
  <div className={`w-[12.4%] ${getUsageColor(12.4)} rounded-full h-full transition-colors`} />
  {showApiTooltip && (
- <div className="absolute -top-8 left-[12.4%] -translate-x-1/2 bg-[#0a2540] dark:bg-card text-white dark:text-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+ <div className="absolute -top-8 left-[12.4%] -translate-x-1/2 bg-[var(--text-primary)] dark:bg-card text-white dark:text-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
  Exact numbers: 1,240 / 10,000
  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0a2540] dark:border-t-white" />
  </div>
@@ -226,10 +281,10 @@ export default function AccountPage() {
  </div>
 
  <div className="relative flex flex-col">
- <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0570de] text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap z-10">
+ <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--brand-blue)] text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap z-10">
  Most popular
  </span>
- <div className="bg-card border-2 border-[#0570de] rounded-lg p-6 relative h-full flex flex-col">
+ <div className="bg-card border-2 border-[var(--brand-blue)] rounded-lg p-6 relative h-full flex flex-col">
  <p className={`text-lg font-semibold ${textPrimary}`}>{t('account.pro')}</p>
  <div className="mt-2">
  <span className={`text-3xl font-bold ${textPrimary}`}>€29</span>
@@ -268,7 +323,7 @@ export default function AccountPage() {
  <button 
  onClick={() => handleUpgrade('pro')}
  disabled={upgrading === 'pro'}
- className="mt-6 w-full bg-[#0570de] text-white hover:bg-[#0462c7] rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors flex items-center justify-center gap-2"
+ className="mt-6 w-full bg-[var(--brand-blue)] text-white hover:bg-[var(--brand-blue-hover)] rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors flex items-center justify-center gap-2"
  >
  {upgrading === 'pro' && <Loader2 className="w-4 h-4 animate-spin" />}
  Upgrade to Pro
@@ -355,7 +410,7 @@ export default function AccountPage() {
  <p className={`text-xs ${textSecondary} mt-1`}>Add a card to enable automatic billing</p>
  <button 
  onClick={handleAddCard}
- className="mt-3 text-sm font-medium text-[#0570de] border border-border dark:hover:border-[#0570de] rounded-lg px-4 py-2 hover:bg-page /10 transition-colors"
+ className="mt-3 text-sm font-medium text-[var(--brand-blue)] border border-border dark:hover:border-[var(--brand-blue)] rounded-lg px-4 py-2 hover:bg-page /10 transition-colors"
  >
  {t('account.addCard')}
  </button>
@@ -376,7 +431,7 @@ export default function AccountPage() {
  <span className={`text-sm font-medium ${textPrimary}`}>€29.00</span>
  <button 
  onClick={() => addToast("Downloading invoice...", "info")}
- className="text-sm font-medium text-[#0570de] hover:text-[#0462c7]"
+ className="text-sm font-medium text-[var(--brand-blue)] hover:text-[#0462c7]"
  >
  Download PDF
  </button>
@@ -405,7 +460,7 @@ export default function AccountPage() {
  <select 
  value={prefLang}
  onChange={(e) => setPrefLang(e.target.value)}
- className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-[#0570de]"
+ className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-[var(--brand-blue)]"
  >
  <option value="English">English</option>
  <option value="Spanish">Spanish</option>
@@ -425,14 +480,14 @@ export default function AccountPage() {
  checked={prefEmail} 
  onChange={(e) => setPrefEmail(e.target.checked)} 
  />
- <div className="w-11 h-6 bg-[#e3e8ef] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0570de]"></div>
+ <div className="w-11 h-6 bg-[var(--border-color)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--brand-blue)]"></div>
  </label>
  </div>
  
  <div className="pt-4 border-t border-border">
  <button 
  onClick={() => addToast("Preferences saved", "success")}
- className="bg-[#0a2540] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#0a2540]/90 /90 transition-colors"
+ className="bg-[var(--text-primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--text-primary)]/90 /90 transition-colors"
  >
  Save preferences
  </button>
@@ -440,7 +495,24 @@ export default function AccountPage() {
  </div>
  </div>
 
- {/* ── 6. DANGER ZONE ── */}
+ {/* ── 6. SECURITY ── */}
+ <div className="bg-card border border-border rounded-lg p-6 mt-8">
+   <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>Security</h2>
+   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+     <div>
+       <p className={`text-sm font-medium ${textPrimary}`}>Change Password</p>
+       <p className={`text-xs ${textSecondary} mt-1 max-w-md`}>Ensure your account is using a long, random password to stay secure.</p>
+     </div>
+     <button 
+       onClick={() => setShowChangePasswordModal(true)}
+       className="bg-card border border-border text-primary hover:bg-page rounded-lg px-4 py-2 text-sm font-medium transition-colors w-full sm:w-auto"
+     >
+       Change Password
+     </button>
+   </div>
+ </div>
+
+ {/* ── 7. DANGER ZONE ── */}
  <div className="bg-card border border-border border-l-[3px] border-l-[#df1b41] dark:border-l-[#df1b41] rounded-lg p-6 mt-8">
  <h2 className="text-base font-semibold text-[#df1b41]">Danger zone</h2>
 
@@ -468,7 +540,7 @@ export default function AccountPage() {
 
  {/* Contact Sales Modal */}
  {showContactModal && (
- <div className="fixed inset-0 bg-[#0a2540]/20 dark:bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+ <div className="fixed inset-0 bg-[var(--text-primary)]/20 dark:bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
  <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 relative">
  <button 
  onClick={() => setShowContactModal(false)} 
@@ -540,7 +612,7 @@ export default function AccountPage() {
  </button>
  <button 
  type="submit"
- className="px-4 py-2 text-sm font-medium text-white bg-[#0570de] hover:bg-[#0462c7] rounded-lg transition-colors"
+ className="px-4 py-2 text-sm font-medium text-white bg-[var(--brand-blue)] hover:bg-[var(--brand-blue-hover)] rounded-lg transition-colors"
  >
  Send message
  </button>
@@ -552,7 +624,7 @@ export default function AccountPage() {
 
  {/* Delete Account Modal */}
  {showDeleteModal && (
- <div className="fixed inset-0 bg-[#0a2540]/20 dark:bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+ <div className="fixed inset-0 bg-[var(--text-primary)]/20 dark:bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
  <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 relative">
  <button 
  onClick={() => setShowDeleteModal(false)} 
@@ -610,6 +682,75 @@ export default function AccountPage() {
  </form>
  </div>
  </div>
+ )}
+
+ {/* Change Password Modal */}
+ {showChangePasswordModal && (
+   <div className="fixed inset-0 bg-[var(--text-primary)]/20 dark:bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+     <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 relative">
+       <button 
+         onClick={() => setShowChangePasswordModal(false)} 
+         className="absolute top-4 right-4 text-muted hover:text-primary"
+       >
+         <X className="w-5 h-5"/>
+       </button>
+       <h2 className={`text-xl font-semibold ${textPrimary} mb-2`}>Change Password</h2>
+       <p className={`text-sm ${textSecondary} mb-6`}>Update your password to keep your account secure.</p>
+       
+       <form onSubmit={handleChangePassword}>
+         <div className="space-y-4">
+           <div>
+             <label className={`block text-sm font-medium ${textPrimary} mb-1`}>Current Password</label>
+             <input 
+               type="password"
+               required
+               className={inputClasses}
+               value={currentPassword}
+               onChange={(e) => setCurrentPassword(e.target.value)}
+             />
+           </div>
+           <div>
+             <label className={`block text-sm font-medium ${textPrimary} mb-1`}>New Password</label>
+             <input 
+               type="password"
+               required
+               className={inputClasses}
+               value={newPassword}
+               onChange={(e) => setNewPassword(e.target.value)}
+             />
+           </div>
+           <div>
+             <label className={`block text-sm font-medium ${textPrimary} mb-1`}>Confirm New Password</label>
+             <input 
+               type="password"
+               required
+               className={inputClasses}
+               value={confirmPassword}
+               onChange={(e) => setConfirmPassword(e.target.value)}
+             />
+           </div>
+         </div>
+         
+         <div className="mt-6 flex items-center justify-end gap-3">
+           <button 
+             type="button" 
+             onClick={() => setShowChangePasswordModal(false)}
+             className={`px-4 py-2 text-sm font-medium ${textPrimary} hover:bg-[#f0f2f5] rounded-lg transition-colors`}
+           >
+             Cancel
+           </button>
+           <button 
+             type="submit"
+             disabled={changingPassword}
+             className="px-4 py-2 text-sm font-medium text-white bg-[var(--brand-blue)] hover:bg-[var(--brand-blue-hover)] disabled:opacity-50 flex items-center gap-2 rounded-lg transition-colors"
+           >
+             {changingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+             Save Password
+           </button>
+         </div>
+       </form>
+     </div>
+   </div>
  )}
 
  {/* Remove Card Confirm Modal */}

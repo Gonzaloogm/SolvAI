@@ -55,6 +55,13 @@ export const auth = {
     apiClient.post('/auth/login', { email, password }),
 
   /**
+   * Change Password
+   * POST /auth/change-password
+   */
+  changePassword: (current_password, new_password) =>
+    apiClient.post('/auth/change-password', { current_password, new_password }),
+
+  /**
    * Refresh JWT.
    * POST /auth/refresh-token
    */
@@ -72,10 +79,13 @@ export const organizations = {
 export const users = {
   me: () => apiClient.get('/users/me'),
   updateMe: (data) => apiClient.patch('/users/me', data),
+  deleteAccount: () => apiClient.delete('/users/me'),
 };
 
 // ─── Data Sources ─────────────────────────────────────────────────────────────
 export const dataSources = {
+  getAvailableIntegrations: () => apiClient.get('/data-sources/available-integrations'),
+
   /**
    * Connect a new data source.
    * POST /data-sources/connect/{type}
@@ -190,6 +200,8 @@ export const billing = {
   getSubscription: () => apiClient.get('/billing/subscription'),
   
   createCheckoutSession: (plan) => apiClient.post('/billing/create-checkout-session', {plan}),
+
+  applyPromo: (code) => apiClient.post('/billing/apply-promo', { code }),
 };
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────

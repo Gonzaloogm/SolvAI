@@ -16,7 +16,7 @@ const MODEL_OPTIONS = [
 // Replaced INPUT_DATA with state below
 
 const Highlight = ({ children }) => (
- <span className="bg-nav-active text-[#0570de] px-1 py-0.5 rounded text-xs font-medium">
+ <span className="bg-nav-active text-[var(--brand-blue)] px-1 py-0.5 rounded text-xs font-medium">
  {children}
  </span>
 );
@@ -220,7 +220,7 @@ const getDifferences = (a, b) => {
  setModelA(e.target.value);
  setCompared(false);
  }}
- className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de] min-w-[200px]"
+ className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] min-w-[200px]"
  >
  {MODEL_OPTIONS.map((model) => (
  <option key={model} value={model}>
@@ -248,7 +248,7 @@ const getDifferences = (a, b) => {
  setModelB(e.target.value);
  setCompared(false);
  }}
- className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de] min-w-[200px]"
+ className="h-9 border border-border rounded-md px-3 pr-8 text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] min-w-[200px]"
  >
  {MODEL_OPTIONS.map((model) => (
  <option key={model} value={model}>
@@ -277,7 +277,7 @@ const getDifferences = (a, b) => {
  <button
  onClick={handleCompare}
  disabled={isLoading}
- className="bg-[#0570de] text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-[#0462c7] disabled:opacity-50 flex items-center gap-2 transition-colors"
+ className="bg-[var(--brand-blue)] text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] disabled:opacity-50 flex items-center gap-2 transition-colors"
  >
  <Play className="w-4 h-4" />
  Compare
@@ -308,7 +308,7 @@ const getDifferences = (a, b) => {
  {/* Header */}
  <div className="px-6 py-4 border-b border-border flex items-center justify-between">
  <span className="font-semibold text-primary">{modelA}</span>
- <span className="bg-nav-active text-[#0570de] rounded-full px-2.5 py-0.5 text-xs font-medium">
+ <span className="bg-nav-active text-[var(--brand-blue)] rounded-full px-2.5 py-0.5 text-xs font-medium">
  {modelDataA.version}
  </span>
  </div>
@@ -392,7 +392,7 @@ const getDifferences = (a, b) => {
  {/* Header */}
  <div className="px-6 py-4 border-b border-border flex items-center justify-between">
  <span className="font-semibold text-primary">{modelB}</span>
- <span className="bg-nav-active text-[#0570de] rounded-full px-2.5 py-0.5 text-xs font-medium">
+ <span className="bg-nav-active text-[var(--brand-blue)] rounded-full px-2.5 py-0.5 text-xs font-medium">
  {modelDataB.version}
  </span>
  </div>
@@ -488,7 +488,7 @@ const getDifferences = (a, b) => {
  )}>
  <div className={cn(
  "w-2 h-2 rounded-full mt-1.5 flex-shrink-0",
- diff.type === 'A' ? "bg-[#1a9e6e]" : "bg-[#0570de]"
+ diff.type === 'A' ? "bg-[#1a9e6e]" : "bg-[var(--brand-blue)]"
  )} />
  <p className="text-sm text-secondary">
  {diff.text}
@@ -504,7 +504,7 @@ const getDifferences = (a, b) => {
  <span className="text-xs text-muted">Model A insights</span>
  </div>
  <div className="flex items-center gap-2">
- <div className="w-2 h-2 rounded-full bg-[#0570de]" />
+ <div className="w-2 h-2 rounded-full bg-[var(--brand-blue)]" />
  <span className="text-xs text-muted">Model B insights</span>
  </div>
  </div>

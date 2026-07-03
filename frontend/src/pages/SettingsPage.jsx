@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import apiClient, { apiKeys } from '../api/client.js';
+import apiClient, { apiKeys, users } from '../api/client.js';
 import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 
@@ -53,7 +53,7 @@ const Toggle = ({ checked, onChange }) => (
  onClick={() => onChange(!checked)}
  className={cn(
  "relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
- checked ? "bg-[#0570de]" : "bg-[#e3e8ef] "
+ checked ? "bg-[var(--brand-blue)]" : "bg-[var(--border-color)] "
  )}
  >
  <span
@@ -113,11 +113,6 @@ export default function SettingsPage() {
  // State: Security
  const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
- const [twoFactor, setTwoFactor] = useState(false);
- const [sessions, setSessions] = useState([
- { id: 1, name: 'MacBook Pro · Madrid, Spain', current: true },
- { id: 2, name: 'iPhone 15 · Madrid, Spain', time: '2 hours ago' },
- ]);
 
  // State: API
  const [apiKeysList, setApiKeysList] = useState([]);
@@ -191,10 +186,6 @@ export default function SettingsPage() {
  }
  };
 
- const handleRevokeSession = (id) => {
- setSessions(prev => prev.filter(s => s.id !== id));
- };
-
  const handleCreateApiKey = async (e) => {
    e.preventDefault();
    setIsCreatingKey(true);
@@ -245,13 +236,18 @@ export default function SettingsPage() {
  addToast("All reports deleted", "success");
  };
 
- const handleDeleteAccount = () => {
- setDeleteAccountModalOpen(false);
- setDeleteConfirmText('');
- localStorage.removeItem('solvai_token');
- localStorage.removeItem('solvai_user');
- window.location.href = '/login';
- };
+  const handleDeleteAccount = async () => {
+    try {
+      await users.deleteAccount();
+      setDeleteAccountModalOpen(false);
+      setDeleteConfirmText('');
+      localStorage.removeItem('solvai_token');
+      localStorage.removeItem('solvai_user');
+      window.location.href = '/login';
+    } catch (error) {
+      addToast(error?.response?.data?.detail || "Failed to delete account", "error");
+    }
+  };
 
  return (
  <div className="page-enter max-w-3xl mx-auto pb-12">
@@ -284,7 +280,7 @@ export default function SettingsPage() {
  className={cn(
  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
  isActive 
- ? "bg-[#0570de] text-white shadow-sm" 
+ ? "bg-[var(--brand-blue)] text-white shadow-sm" 
  : "text-muted hover:text-primary "
  )}
  >
@@ -302,7 +298,7 @@ export default function SettingsPage() {
    i18n.changeLanguage(e.target.value);
    localStorage.setItem('solvai-language', e.target.value);
  }}
- className="bg-card border border-border text-primary rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#0570de]"
+ className="bg-card border border-border text-primary rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[var(--brand-blue)]"
  >
  <option value="en">English</option>
  <option value="es">Español</option>
@@ -316,7 +312,7 @@ export default function SettingsPage() {
  <select 
  value={density}
  onChange={e => setDensity(e.target.value)}
- className="bg-card border border-border text-primary rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#0570de]"
+ className="bg-card border border-border text-primary rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[var(--brand-blue)]"
  >
  <option>{t('settings.densityComfortable')}</option>
  <option>{t('settings.densityCompact')}</option>
@@ -347,7 +343,7 @@ export default function SettingsPage() {
  <div className="pb-4 pt-2">
  <button 
  onClick={handleSaveNotifications}
- className="bg-[#0570de] hover:bg-[#0462c7] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+ className="bg-[var(--brand-blue)] hover:bg-[var(--brand-blue-hover)] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
  >
  {t('settings.saveNotifications')}
  </button>
@@ -359,7 +355,7 @@ export default function SettingsPage() {
  <section>
  <SectionHeader title={t('settings.security')} description={t('settings.securityDesc')} />
  <Card className="px-5">
- <Row label={t('settings.password')} subtext={t('settings.passwordDesc')}>
+ <Row label={t('settings.password')} subtext="Manage your account password.">
  <button 
  onClick={() => setPasswordModalOpen(true)}
  className="bg-card border border-border hover:bg-page text-primary px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
@@ -367,35 +363,18 @@ export default function SettingsPage() {
  {t('settings.changePassword')}
  </button>
  </Row>
- <Row label={t('settings.twoFactor')} subtext={t('settings.twoFactorDesc')}>
- <Toggle checked={twoFactor} onChange={setTwoFactor} />
- </Row>
- {twoFactor && (
- <div className="bg-nav-active text-nav-active text-sm p-3 rounded-lg mb-4 flex gap-2 items-center">
- <AlertCircle className="w-4 h-4" />
- 2FA setup would be configured here in production
- </div>
- )}
  <Row label={t('settings.activeSessions')} subtext={t('settings.activeSessionsDesc')} noBorder>
  {/* Empty container just to keep flex layout clean */}
  </Row>
  <div className="pb-5 pl-2 border-t border-border pt-4 -mt-4">
  <div className="flex flex-col gap-3">
- {sessions.map(s => (
- <div key={s.id} className="flex items-center justify-between">
+ <div className="flex items-center justify-between">
  <div className="flex items-center gap-2">
- <div className={cn("w-2 h-2 rounded-full", s.current ? "bg-[#1a9e6e]" : "bg-[#697386] ")} />
- <span className="text-sm text-primary">{s.name}</span>
- {s.current && <span className="text-xs text-muted ml-1">· {t('settings.currentSession')}</span>}
- {s.time && <span className="text-xs text-muted ml-1">· {s.time}</span>}
+ <div className="w-2 h-2 rounded-full bg-[#1a9e6e]" />
+ <span className="text-sm text-primary">Current device</span>
+ <span className="text-xs text-muted ml-1">· {t('settings.currentSession')}</span>
  </div>
- {!s.current && (
- <button onClick={() => handleRevokeSession(s.id)} className="text-xs font-medium text-[#df1b41] hover:underline">
- {t('settings.revoke')}
- </button>
- )}
  </div>
- ))}
  </div>
  </div>
  </Card>
@@ -435,7 +414,7 @@ export default function SettingsPage() {
  <p className="text-sm text-muted">No API keys generated yet.</p>
  )}
  <div className="mt-4 pt-4 border-t border-border">
- <a href="/api-docs" className="text-sm font-medium text-[#0570de] hover:underline">
+ <a href="/api-docs" className="text-sm font-medium text-[var(--brand-blue)] hover:underline">
  View API Documentation &rarr;
  </a>
  </div>
@@ -447,7 +426,7 @@ export default function SettingsPage() {
  value={webhook}
  onChange={(e) => setWebhook(e.target.value)}
  placeholder="https://your-app.com/webhook"
- className="bg-card border border-border text-primary rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#0570de] w-64 placeholder:text-gray-400"
+ className="bg-card border border-border text-primary rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[var(--brand-blue)] w-64 placeholder:text-gray-400"
  />
  <button 
  onClick={handleSaveWebhook}
@@ -515,19 +494,19 @@ export default function SettingsPage() {
  <form onSubmit={handlePasswordUpdate} className="flex flex-col gap-4">
  <div>
  <label className="block text-sm font-medium text-primary mb-1">Current password</label>
- <input type="password" name="current" required className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[#0570de]" />
+ <input type="password" name="current" required className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[var(--brand-blue)]" />
  </div>
  <div>
  <label className="block text-sm font-medium text-primary mb-1">New password</label>
- <input type="password" name="newPass" required minLength={8} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[#0570de]" />
+ <input type="password" name="newPass" required minLength={8} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[var(--brand-blue)]" />
  </div>
  <div>
  <label className="block text-sm font-medium text-primary mb-1">Confirm new password</label>
- <input type="password" name="confirm" required minLength={8} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[#0570de]" />
+ <input type="password" name="confirm" required minLength={8} className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[var(--brand-blue)]" />
  </div>
  <div className="flex justify-end gap-3 mt-2">
  <button type="button" onClick={() => setPasswordModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-primary ">Cancel</button>
- <button type="submit" disabled={isUpdatingPassword} className="bg-[#0570de] hover:bg-[#0462c7] disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium">
+ <button type="submit" disabled={isUpdatingPassword} className="bg-[var(--brand-blue)] hover:bg-[var(--brand-blue-hover)] disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium">
  {isUpdatingPassword ? 'Updating...' : 'Update password'}
  </button>
  </div>
@@ -539,11 +518,11 @@ export default function SettingsPage() {
  <form onSubmit={handleCreateApiKey} className="flex flex-col gap-4">
  <div>
  <label className="block text-sm font-medium text-primary mb-1">Key Name</label>
- <input type="text" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} required placeholder="e.g. Production Key" className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[#0570de]" />
+ <input type="text" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} required placeholder="e.g. Production Key" className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary outline-none focus:border-[var(--brand-blue)]" />
  </div>
  <div className="flex justify-end gap-3 mt-2">
  <button type="button" onClick={() => setIsCreateApiModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-primary ">Cancel</button>
- <button type="submit" disabled={isCreatingKey} className="bg-[#0570de] hover:bg-[#0462c7] disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium">
+ <button type="submit" disabled={isCreatingKey} className="bg-[var(--brand-blue)] hover:bg-[var(--brand-blue-hover)] disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium">
  {isCreatingKey ? 'Creating...' : 'Create key'}
  </button>
  </div>
@@ -563,7 +542,7 @@ export default function SettingsPage() {
  </button>
  </div>
  <div className="flex justify-end mt-2">
- <button onClick={() => setNewApiKey(null)} className="bg-[#0570de] hover:bg-[#0462c7] text-white px-4 py-2 rounded-lg text-sm font-medium">
+ <button onClick={() => setNewApiKey(null)} className="bg-[var(--brand-blue)] hover:bg-[var(--brand-blue-hover)] text-white px-4 py-2 rounded-lg text-sm font-medium">
  I&apos;ve saved it
  </button>
  </div>

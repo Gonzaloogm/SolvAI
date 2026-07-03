@@ -182,3 +182,48 @@ async def stripe_webhook(
             await db.rollback()
 
     return {'received': True}
+
+class PromoApplyRequest(BaseModel):
+    code: str
+
+@router.post('/apply-promo')
+async def apply_promo(
+    body: PromoApplyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.models.promo_code import PromoCode
+    from datetime import datetime, timezone
+
+    result = await db.execute(
+        select(PromoCode).where(PromoCode.code == body.code)
+    )
+    promo = result.scalar_one_or_none()
+
+    if not promo:
+        raise HTTPException(400, "Invalid promo code")
+    if not promo.is_active:
+        raise HTTPException(400, "Promo code is inactive")
+    if promo.uses_count >= promo.max_uses:
+        raise HTTPException(400, "Promo code usage limit reached")
+    if promo.expires_at and promo.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(400, "Promo code has expired")
+
+    org_result = await db.execute(
+        select(Organization).where(Organization.id == current_user.organization_id)
+    )
+    org = org_result.scalar_one_or_none()
+    
+    if not org:
+        raise HTTPException(404, "Organization not found")
+
+    if org.plan == promo.plan:
+        raise HTTPException(400, f"You are already on the {promo.plan} plan.")
+
+    # Apply promo
+    org.plan = promo.plan
+    promo.uses_count += 1
+    
+    await db.commit()
+    
+    return {"message": f"Successfully upgraded to {promo.plan} plan."}

@@ -18,11 +18,11 @@ const TYPE_STYLES = {
 };
 
 const STATUS_STYLES = {
-  Complete: 'badge-complete',
-  Processing: 'badge-processing',
-  Failed: 'badge-failed',
-  'Generation Failed': 'badge-failed',
-  Draft: 'badge-draft',
+  COMPLETED: 'badge-complete',
+  GENERATING: 'badge-processing',
+  FAILED: 'badge-failed',
+  PENDING: 'badge-draft',
+  DRAFT: 'badge-draft',
 };
 
 const getAccuracyColor = (val) => {
@@ -464,7 +464,7 @@ export default function ReportDetailModal({ report, onClose }) {
           <div>
             <h1 className="text-2xl font-bold text-primary mb-3">{title}</h1>
             <div className="flex items-center gap-2">
-              <span className={cn(STATUS_STYLES[report.status] || STATUS_STYLES.Draft)}>{report.status}</span>
+              <span className={cn(STATUS_STYLES[report._raw?.status] || STATUS_STYLES.DRAFT)}>{report.status}</span>
               <span className={cn(TYPE_STYLES[report.type] || TYPE_STYLES.Custom)}>{reportTypeLabel}</span>
               {reportData.rating && (
                 <span className={cn(
@@ -481,7 +481,7 @@ export default function ReportDetailModal({ report, onClose }) {
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <button onClick={handleCopyMD} className="px-2 py-1 text-xs font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Copy MD</button>
             <button onClick={handleDownloadMD} className="px-2 py-1 text-xs font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Download MD</button>
-            {(report.status === 'Complete' || report.status === 'COMPLETED') && (
+            {(report._raw?.status === 'COMPLETED' || report.status === 'Complete' || report.status === 'COMPLETED') && (
               <>
                 <button 
                   onClick={() => setShareModalOpen(true)} 
@@ -493,7 +493,7 @@ export default function ReportDetailModal({ report, onClose }) {
               <button 
                 onClick={handleDownloadPDF} 
                 disabled={downloadingPDF}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-[#0570de] text-white rounded-md hover:bg-[#0462c7] transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-[var(--brand-blue)] text-white rounded-md hover:bg-[var(--brand-blue-hover)] transition-colors disabled:opacity-50"
               >
                 {downloadingPDF ? (
                   <>

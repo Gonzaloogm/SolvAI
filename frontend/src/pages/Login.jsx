@@ -59,7 +59,11 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fa] dark:bg-[#0f0f0f] flex flex-col items-center justify-center p-6 transition-colors duration-200 relative">
+    <div 
+      className="min-h-screen bg-[var(--bg-page)] dark:bg-[#0f0f0f] flex flex-col items-center justify-center p-6 transition-colors duration-200 relative py-12"
+      data-force-light="true"
+      style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+    >
       <div className="w-full max-w-[420px] flex flex-col items-center gap-6 relative z-10 animate-slideUp">
         {/* Header */}
         <div className="flex flex-col items-center text-center">
@@ -68,7 +72,7 @@ export default function Login() {
               S
             </div>
             <div className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
-              SolvAI<span className="text-[#0570de]">.</span>
+              SolvAI<span className="text-[var(--brand-blue)]">.</span>
             </div>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
@@ -92,7 +96,7 @@ export default function Login() {
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="login-email">Email</label>
               <input
                 id="login-email"
-                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors placeholder:text-gray-400"
+                className="h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-colors placeholder:text-gray-400"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
@@ -106,12 +110,12 @@ export default function Login() {
             <div className="flex flex-col gap-1.5 relative">
               <div className="flex justify-between items-center">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="login-password">Password</label>
-                <a href="#" className="text-sm text-[#0570de] hover:underline font-medium">Forgot password?</a>
+                <a href="#" className="text-sm text-[var(--brand-blue)] hover:underline font-medium">Forgot password?</a>
               </div>
               <div className="relative">
                 <input
                   id="login-password"
-                  className="w-full h-10 pl-3 pr-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[#0570de] focus:ring-1 focus:ring-[#0570de] transition-colors placeholder:text-gray-400"
+                  className="w-full h-10 pl-3 pr-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-colors placeholder:text-gray-400"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
@@ -132,7 +136,7 @@ export default function Login() {
             <button
               id="login-submit"
               type="submit"
-              className="mt-2 w-full bg-[#0570de] hover:bg-[#0462c7] text-white font-medium h-10 rounded-md flex items-center justify-center transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              className="mt-2 w-full bg-[var(--brand-blue)] hover:bg-[var(--brand-blue-hover)] text-white font-medium h-10 rounded-md flex items-center justify-center transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? (
@@ -154,7 +158,7 @@ export default function Login() {
 
           <div className="text-center text-[14px]">
             <span className="text-gray-600 dark:text-gray-400">Don&apos;t have an account? </span>
-            <Link to="/register" className="font-medium text-[#0570de] hover:underline">Create account</Link>
+            <Link to="/register" className="font-medium text-[var(--brand-blue)] hover:underline">Create account</Link>
           </div>
         </div>
 

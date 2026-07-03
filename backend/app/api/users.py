@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,3 +52,15 @@ async def update_me(
 
     await db.flush()
     return UserResponse.model_validate(current_user)
+
+@router.delete(
+    "/me",
+    summary="Delete the currently authenticated user",
+)
+async def delete_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    current_user.is_deleted = True
+    await db.flush()
+    return {"status": "deleted"}

@@ -17,12 +17,12 @@ export default function ApiDocs() {
 
       <div className="bg-card border border-border rounded-lg p-6 mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <Shield className="w-6 h-6 text-[#0570de]" />
+          <Shield className="w-6 h-6 text-[var(--brand-blue)]" />
           <h2 className="text-lg font-semibold text-primary">Authentication</h2>
         </div>
         <p className="text-sm text-secondary mb-4">
           Authenticate your API requests by including your secret API key in the request headers. 
-          You can manage your API keys in the <a href="/settings" className="text-[#0570de] hover:underline">Settings</a> page.
+          You can manage your API keys in the <a href="/settings" className="text-[var(--brand-blue)] hover:underline">Settings</a> page.
         </p>
         <div className="bg-[#1e1e1e] rounded-md p-4 overflow-x-auto">
           <code className="text-sm text-[#d4d4d4]">

@@ -30,7 +30,7 @@ const cn = (...classes) => classes.filter(Boolean).join(' ');
 const initialConnectedSources = [
  {
  name: 'Salesforce',
- iconBg: 'bg-[#0570de]',
+ iconBg: 'bg-[var(--brand-blue)]',
  Icon: Cloud,
  statusColor: 'bg-[#1a9e6e]',
  statusText: 'Connected',
@@ -84,13 +84,13 @@ const initialConnectedSources = [
   { name: 'Stripe', iconBg: 'bg-[#635bff]', Icon: CreditCard, available: true, badge: 'Payments' },
   { name: 'Xero', iconBg: 'bg-[#00b0e0]', Icon: Database, available: true, badge: 'Accounting' },
   { name: 'PayPal', iconBg: 'bg-[#003087]', Icon: CreditCard, available: true, badge: 'Payments' },
-  { name: 'Bank Account (Open Banking)', iconBg: 'bg-[#0570de]', Icon: Globe, available: true, badge: 'Bank' },
-  { name: 'Notion', iconBg: 'bg-[#0a2540]', Icon: FileText, available: false, badge: 'Docs' },
+  { name: 'Bank Account (Open Banking)', iconBg: 'bg-[var(--brand-blue)]', Icon: Globe, available: true, badge: 'Bank' },
+  { name: 'Notion', iconBg: 'bg-[var(--text-primary)]', Icon: FileText, available: false, badge: 'Docs' },
   { name: 'CSV Upload', iconBg: 'bg-[#697386]', Icon: FileUp, available: true, badge: 'File' },
   { name: 'Amazon S3', iconBg: 'bg-[#ff9900]', Icon: HardDrive, available: false, badge: 'Storage' },
   { name: 'Airtable', iconBg: 'bg-[#18bfff]', Icon: LayoutGrid, available: false, badge: 'Spreadsheet' },
   { name: 'Tableau', iconBg: 'bg-[#e97627]', Icon: BarChart2, available: false, badge: 'BI' },
-  { name: 'Kafka', iconBg: 'bg-[#0a2540]', Icon: Server, available: false, badge: 'Event Stream' },
+  { name: 'Kafka', iconBg: 'bg-[var(--text-primary)]', Icon: Server, available: false, badge: 'Event Stream' },
 ];
 
 export default function DataSourcesPage() {
@@ -138,7 +138,7 @@ export default function DataSourcesPage() {
          
          if (isStripe) { iconBg = 'bg-[#635bff]'; Icon = CreditCard; badge = 'Payments'; mappedName = 'Stripe'; }
          else if (isXero) { iconBg = 'bg-[#00b0e0]'; Icon = Database; badge = 'Accounting'; mappedName = 'Xero'; }
-         else if (isBelvo) { iconBg = 'bg-[#0570de]'; Icon = Globe; badge = 'Bank'; mappedName = 'Bank Account (Open Banking)'; }
+         else if (isBelvo) { iconBg = 'bg-[var(--brand-blue)]'; Icon = Globe; badge = 'Bank'; mappedName = 'Bank Account (Open Banking)'; }
          else if (isPayPal) { iconBg = 'bg-[#003087]'; Icon = CreditCard; badge = 'Payments'; mappedName = 'PayPal'; }
          else if (typeLower === 'manual_upload' || typeLower === 'csv') { iconBg = 'bg-[#697386]'; Icon = FileUp; badge = 'File'; mappedName = 'CSV Upload'; }
          
@@ -157,8 +157,22 @@ export default function DataSourcesPage() {
        });
        setConnected(mapped);
        
+       let dynamicAvailability = {};
+       try {
+         const availRes = await dataSourcesApi.getAvailableIntegrations();
+         dynamicAvailability = availRes.data || {};
+       } catch (e) {
+         console.error("Failed to fetch available integrations", e);
+       }
+       
        const connectedNames = mapped.map(c => c.name.toLowerCase());
-       setAvailable(initialAvailableIntegrations.filter(a => !connectedNames.includes(a.name.toLowerCase())));
+       setAvailable(initialAvailableIntegrations.map(a => {
+         let isAvail = a.available;
+         if (a.name === 'Xero' && dynamicAvailability.xero === false) isAvail = false;
+         if (a.name === 'PayPal' && dynamicAvailability.paypal === false) isAvail = false;
+         if (a.name === 'Bank Account (Open Banking)' && dynamicAvailability.bank_account === false) isAvail = false;
+         return { ...a, available: isAvail };
+       }).filter(a => !connectedNames.includes(a.name.toLowerCase())));
      } catch (e) {
        console.error(e);
      } finally {
@@ -291,7 +305,7 @@ export default function DataSourcesPage() {
  if (loading) {
  return (
  <div className="page-enter flex items-center justify-center" style={{minHeight: '60vh'}}>
- <Loader2 className="w-8 h-8 animate-spin text-[#0570de]" />
+ <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-blue)]" />
  </div>
  );
  }
@@ -307,8 +321,8 @@ export default function DataSourcesPage() {
  </p>
  </div>
  <button 
- onClick={() => setConnectModal({ name: 'Custom Source', iconBg: 'bg-[#0570de]', Icon: Plus, available: true })}
- className="bg-[#0570de] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#0462c7] flex items-center gap-2 transition-colors"
+ onClick={() => setConnectModal({ name: 'Custom Source', iconBg: 'bg-[var(--brand-blue)]', Icon: Plus, available: true })}
+ className="bg-[var(--brand-blue)] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[var(--brand-blue-hover)] flex items-center gap-2 transition-colors"
  >
  <Plus className="w-4 h-4" />
  {t('dataSources.connect')}
@@ -372,7 +386,7 @@ export default function DataSourcesPage() {
  <button 
  onClick={() => handleSync(source.name)}
  disabled={isSyncing}
- className="text-sm font-medium text-[#0570de] border border-border rounded-md px-3 py-1.5 hover:bg-page flex items-center gap-1.5 transition-colors disabled:opacity-50"
+ className="text-sm font-medium text-[var(--brand-blue)] border border-border rounded-md px-3 py-1.5 hover:bg-page flex items-center gap-1.5 transition-colors disabled:opacity-50"
  >
  {isSyncing ? (
  <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -404,7 +418,7 @@ export default function DataSourcesPage() {
  <label className="block text-sm font-medium text-primary mb-1">
  Sync frequency
  </label>
- <select className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]">
+ <select className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]">
  <option>Every 5 minutes</option>
  <option>Every 15 minutes</option>
  <option>Hourly</option>
@@ -418,13 +432,13 @@ export default function DataSourcesPage() {
  </label>
  <label className="relative inline-flex items-center cursor-pointer">
  <input type="checkbox" className="sr-only peer" defaultChecked />
- <div className="w-9 h-5 bg-[#e3e8ef] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[16px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1a9e6e]"></div>
+ <div className="w-9 h-5 bg-[var(--border-color)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[16px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1a9e6e]"></div>
  </label>
  </div>
  <div className="pt-2">
  <button 
  onClick={() => setExpandedSettings(null)}
- className="bg-[#0570de] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors"
+ className="bg-[var(--brand-blue)] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors"
  >
  Save settings
  </button>
@@ -493,7 +507,7 @@ export default function DataSourcesPage() {
  {integration.name}
  </span>
  {integration.available ? (
- <span className="text-xs text-[#0570de] font-medium hover:underline mt-2">
+ <span className="text-xs text-[var(--brand-blue)] font-medium hover:underline mt-2">
  {t('dataSources.connect')}
  </span>
  ) : (
@@ -501,7 +515,7 @@ export default function DataSourcesPage() {
  <span className="bg-[#f0f2f5] text-muted text-xs rounded-full px-2 py-0.5 mt-2">
  Coming soon
  </span>
- <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#0a2540] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+ <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[var(--text-primary)] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
  {integration.tooltip || `Support for ${integration.name} coming soon`}
  </div>
  </>
@@ -560,7 +574,7 @@ export default function DataSourcesPage() {
                       setIsConnecting(false);
                     }
                   }}
-                  className="mt-4 bg-[#0570de] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[#0462c7] disabled:opacity-50">
+                  className="mt-4 bg-[var(--brand-blue)] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] disabled:opacity-50">
             {isConnecting ? "Uploading..." : "Preview Upload"}
           </button>
         </div>
@@ -635,7 +649,7 @@ export default function DataSourcesPage() {
           <div>
             <label className="block text-sm font-medium text-primary mb-1">Country</label>
             <select 
-              className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+              className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
               value={belvoCountry}
               onChange={(e) => setBelvoCountry(e.target.value)}
             >
@@ -648,7 +662,7 @@ export default function DataSourcesPage() {
             <label className="block text-sm font-medium text-primary mb-1">Bank</label>
             <select 
               name="institution"
-              className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+              className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
               required
             >
               {belvoInstitutions[belvoCountry]?.map(inst => (
@@ -658,16 +672,16 @@ export default function DataSourcesPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-primary mb-1">Username</label>
-            <input type="text" name="username" required className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]" placeholder="Online banking username" />
+            <input type="text" name="username" required className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]" placeholder="Online banking username" />
           </div>
           <div>
             <label className="block text-sm font-medium text-primary mb-1">Password</label>
-            <input type="password" name="password" required className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]" placeholder="Online banking password" />
+            <input type="password" name="password" required className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]" placeholder="Online banking password" />
           </div>
           
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
             <button type="button" onClick={() => setConnectModal(null)} className="px-4 py-2 text-sm font-medium text-muted hover:text-primary transition-colors">Cancel</button>
-            <button type="submit" disabled={isConnecting} className="bg-[#0570de] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors flex items-center gap-2 disabled:opacity-50">
+            <button type="submit" disabled={isConnecting} className="bg-[var(--brand-blue)] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors flex items-center gap-2 disabled:opacity-50">
               {isConnecting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isConnecting ? "Connecting..." : "Connect Bank"}
             </button>
@@ -695,7 +709,7 @@ export default function DataSourcesPage() {
          name="api_key"
          type="password" 
          placeholder="sk_live_... or sk_test_..."
-         className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+         className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
          required
        />
        <p className="text-xs text-muted mt-2">
@@ -716,7 +730,7 @@ export default function DataSourcesPage() {
      <input 
      type="text" 
      defaultValue={`${connectModal.name} Production`}
-     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
      required
      />
      </div>
@@ -729,7 +743,7 @@ export default function DataSourcesPage() {
      <input 
      type="password" 
      placeholder="sk_live_..."
-     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
      required
      />
      </div>
@@ -742,7 +756,7 @@ export default function DataSourcesPage() {
      <input 
      type="text" 
      placeholder="e.g. db.example.com"
-     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
      required
      />
      </div>
@@ -754,7 +768,7 @@ export default function DataSourcesPage() {
      <input 
      type="text" 
      placeholder="5432"
-     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
      />
      </div>
      <div>
@@ -764,7 +778,7 @@ export default function DataSourcesPage() {
      <input 
      type="text" 
      placeholder="admin"
-     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0570de]/20 focus:border-[#0570de]"
+     className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
      />
      </div>
      </div>
@@ -784,7 +798,7 @@ export default function DataSourcesPage() {
  <button 
  type="submit"
  disabled={isConnecting}
- className="bg-[#0570de] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[#0462c7] transition-colors flex items-center gap-2 disabled:opacity-50"
+ className="bg-[var(--brand-blue)] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors flex items-center gap-2 disabled:opacity-50"
   >
   {isConnecting && <Loader2 className="w-4 h-4 animate-spin" />}
   {isConnecting ? "Connecting..." : "Connect"}

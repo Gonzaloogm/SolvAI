@@ -41,6 +41,11 @@ export default function VerifyPortal() {
   if (status === 'success') {
     const trackUrl = `${window.location.origin}/verify/track/${requestResult.request_id}`;
     return (
+      <div 
+        className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans py-12"
+        data-force-light="true"
+        style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+      >
       <div className="max-w-2xl mx-auto mt-12 p-8 bg-card border border-border rounded-xl text-center">
         <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 size={32} />
@@ -85,10 +90,16 @@ export default function VerifyPortal() {
           Send another request
         </button>
       </div>
+    </div>
     );
   }
 
   return (
+    <div 
+      className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans py-12"
+      data-force-light="true"
+      style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+    >
     <div className="max-w-3xl mx-auto mt-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-primary">SolvAI B2B Verification Portal</h1>
@@ -207,6 +218,7 @@ export default function VerifyPortal() {
           
         </form>
       </div>
+    </div>
     </div>
   );
 }

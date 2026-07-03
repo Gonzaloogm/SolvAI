@@ -3,21 +3,25 @@ import { Link } from 'react-router-dom';
 
 export default function Terms() {
   return (
-    <div className="min-h-screen bg-[#f6f8fa] text-primary flex flex-col font-sans">
+    <div 
+      className="min-h-screen bg-[var(--bg-page)] text-primary flex flex-col font-sans"
+      data-force-light="true"
+      style={{ background: '#ffffff', color: '#0a2540', minHeight: '100vh' }}
+    >
       {/* Navbar */}
       <header className="bg-card border-b border-border py-4 px-6 sticky top-0 z-10 shadow-sm">
         <div className="max-w-[760px] mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#f6f8fa] rounded-lg flex items-center justify-center text-[16px] font-extrabold text-primary shadow-sm border border-border">
+            <div className="w-8 h-8 bg-[var(--bg-page)] rounded-lg flex items-center justify-center text-[16px] font-extrabold text-primary shadow-sm border border-border">
               S
             </div>
             <div className="text-xl font-bold text-primary tracking-tight">
-              SolvAI<span className="text-[#0570de]">.</span>
+              SolvAI<span className="text-[var(--brand-blue)]">.</span>
             </div>
           </Link>
           <div className="flex items-center gap-4 text-sm font-medium">
             <Link to="/login" className="text-secondary hover:text-primary transition-colors">Sign In</Link>
-            <Link to="/register" className="bg-[#0570de] text-white px-4 py-1.5 rounded-md hover:bg-[#0462c7] transition-colors">Sign Up</Link>
+            <Link to="/register" className="bg-[var(--brand-blue)] text-white px-4 py-1.5 rounded-md hover:bg-[var(--brand-blue-hover)] transition-colors">Sign Up</Link>
           </div>
         </div>
       </header>
@@ -77,7 +81,7 @@ export default function Terms() {
             <section>
               <h2 className="text-xl font-semibold mb-3 text-primary">7. Contact</h2>
               <p className="text-secondary">
-                For any legal inquiries or questions regarding these terms, please contact us at <a href="mailto:legal@solvai.com" className="text-[#0570de] hover:underline">legal@solvai.com</a>.
+                For any legal inquiries or questions regarding these terms, please contact us at <a href="mailto:legal@solvai.com" className="text-[var(--brand-blue)] hover:underline">legal@solvai.com</a>.
               </p>
             </section>
           </div>

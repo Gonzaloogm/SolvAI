@@ -55,12 +55,16 @@ async def update_me(
 
 @router.delete(
     "/me",
-    summary="Delete the currently authenticated user",
+    summary="Delete the currently authenticated user (hard delete)",
+    status_code=200,
 )
 async def delete_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    current_user.is_deleted = True
-    await db.flush()
+    # Hard delete — all child rows are removed via ON DELETE CASCADE
+    # (solvency_reports, financial_data_sources, alerts, api_keys)
+    # SQLAlchemy cascade="all, delete-orphan" handles the ORM side.
+    await db.delete(current_user)
+    await db.commit()
     return {"status": "deleted"}

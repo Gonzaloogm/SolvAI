@@ -101,7 +101,17 @@ export default function Sidebar() {
   useEffect(() => {
     users.me().then(res => {
       setUserProfile(res.data);
-    }).catch(err => console.error("Failed to fetch user:", err));
+      // Keep localStorage in sync with real profile so fallbacks are fresh
+      try {
+        localStorage.setItem('solvai_user', JSON.stringify(res.data));
+      } catch { /* ignore */ }
+    }).catch(err => {
+      console.error("Failed to fetch user:", err);
+      // Stale/invalid session — clear storage and force re-login
+      localStorage.removeItem('solvai_token');
+      localStorage.removeItem('solvai_user');
+      navigate('/login', { replace: true });
+    });
 
     alerts.getAll().then(res => {
       const count = res.data.filter(a => !a.is_read).length;
@@ -115,8 +125,8 @@ export default function Sidebar() {
  navigate('/login', { replace: true });
  };
 
-  const userEmail = userProfile?.email ?? userInfo?.email ?? userInfo?.sub ?? 'Account';
-  const userPlan = userProfile?.organization?.plan ?? 'free';
+  const userEmail = userProfile?.email ?? 'Loading...';
+  const userPlan = userProfile?.organization?.plan ?? userProfile?.plan ?? 'free';
   const userInitial = userEmail.charAt(0).toUpperCase();
 
  return (

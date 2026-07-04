@@ -50,6 +50,7 @@ export default function AccountPage() {
  const [showDeleteModal, setShowDeleteModal] = useState(false);
  const [showRemoveCardModal, setShowRemoveCardModal] = useState(false);
  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+ const [deletingAccount, setDeletingAccount] = useState(false);
 
  // Password State
  const [currentPassword, setCurrentPassword] = useState('');
@@ -117,8 +118,7 @@ export default function AccountPage() {
  // Delete Modal Form State
  const [deleteConfirm, setDeleteConfirm] = useState('');
 
- // Preferences State
- const [prefLang, setPrefLang] = useState('English');
+
  const [prefEmail, setPrefEmail] = useState(true);
 
  // Tooltip State
@@ -430,7 +430,15 @@ export default function AccountPage() {
  <div className="flex items-center gap-4">
  <span className={`text-sm font-medium ${textPrimary}`}>€29.00</span>
  <button 
- onClick={() => addToast("Downloading invoice...", "info")}
+ onClick={async () => {
+ try {
+ const res = await billing.createPortalSession?.();
+ if (res?.data?.url) { window.location.href = res.data.url; }
+ else { addToast("Invoice download is available in your Stripe billing portal. Please contact support@solvai.com", "info"); }
+ } catch {
+ addToast("To download invoices, contact support@solvai.com with your registered email.", "info");
+ }
+ }}
  className="text-sm font-medium text-[var(--brand-blue)] hover:text-[#0462c7]"
  >
  Download PDF
@@ -450,23 +458,6 @@ export default function AccountPage() {
  <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>Preferences</h2>
  
  <div className="space-y-6">
-
-
- <div className="flex items-center justify-between">
- <div>
- <p className={`text-sm font-medium ${textPrimary}`}>Language</p>
- <p className={`text-xs ${textSecondary}`}>Select your preferred language</p>
- </div>
- <select 
- value={prefLang}
- onChange={(e) => setPrefLang(e.target.value)}
- className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-[var(--brand-blue)]"
- >
- <option value="English">English</option>
- <option value="Spanish">Spanish</option>
- <option value="French">French</option>
- </select>
- </div>
 
  <div className="flex items-center justify-between">
  <div>
@@ -646,12 +637,17 @@ export default function AccountPage() {
  Type <span className="font-bold text-[#df1b41]">DELETE</span> to confirm.
  </p>
 
- <form onSubmit={(e) => {
+ <form onSubmit={async (e) => {
  e.preventDefault();
- if (deleteConfirm === 'DELETE') {
- setShowDeleteModal(false);
- addToast("Account deleted", "success");
- setDeleteConfirm('');
+ if (deleteConfirm !== 'DELETE') return;
+ try {
+ setDeletingAccount(true);
+ await users.deleteAccount();
+ localStorage.clear();
+ window.location.href = '/login?deleted=true';
+ } catch (err) {
+ addToast('Failed to delete account. Please try again.', 'error');
+ setDeletingAccount(false);
  }
  }}>
  <input 
@@ -673,10 +669,10 @@ export default function AccountPage() {
  </button>
  <button 
  type="submit"
- disabled={deleteConfirm !== 'DELETE'}
+ disabled={deleteConfirm !== 'DELETE' || deletingAccount}
  className="px-4 py-2 text-sm font-medium text-white bg-[#df1b41] hover:bg-[#b91c1c] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
  >
- Delete account
+ {deletingAccount ? 'Deleting...' : 'Delete account'}
  </button>
  </div>
  </form>

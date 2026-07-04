@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../api/client.js';
@@ -25,6 +25,30 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletedBanner, setDeletedBanner] = useState(false);
+
+  useEffect(() => {
+    // Force light theme on public login page
+    const html = document.documentElement;
+    const prev = html.getAttribute('data-theme') || '';
+    const wasDark = html.classList.contains('dark');
+    html.classList.remove('dark');
+    html.setAttribute('data-theme', 'light');
+    return () => {
+      if (wasDark) {
+        html.classList.add('dark');
+        html.setAttribute('data-theme', 'dark');
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('deleted') === 'true') {
+      setDeletedBanner(true);
+      window.history.replaceState({}, document.title, '/login');
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,6 +106,12 @@ export default function Login() {
 
         {/* Card */}
         <div className="w-full bg-white dark:bg-[#1a1a1a] rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-800">
+          {deletedBanner && (
+            <div style={{ marginBottom: '16px', padding: '10px 14px', background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '8px', color: '#065f46', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Your account has been successfully deleted.
+            </div>
+          )}
           <h1 className="text-[20px] font-semibold text-gray-900 dark:text-white mb-6">Welcome back</h1>
           
           <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>

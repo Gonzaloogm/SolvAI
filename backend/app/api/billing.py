@@ -58,7 +58,9 @@ async def create_checkout_session(
                 'organization_id': str(current_user.organization_id),
                 'plan': body.plan,
             },
-            allow_promotion_codes=True,
+            # Stripe promotion codes disabled — we use app-level promo codes
+            # at registration instead (e.g. SOLVAI-FOUNDER → free Pro plan).
+            # allow_promotion_codes=True,
         )
         return {'checkout_url': session.url, 'session_id': session.id}
     except stripe.error.StripeError as e:

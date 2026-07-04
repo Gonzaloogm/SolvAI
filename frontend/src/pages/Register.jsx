@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../api/client.js';
@@ -35,6 +35,20 @@ export default function Register() {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Force light theme on public register page
+    const html = document.documentElement;
+    const wasDark = html.classList.contains('dark');
+    html.classList.remove('dark');
+    html.setAttribute('data-theme', 'light');
+    return () => {
+      if (wasDark) {
+        html.classList.add('dark');
+        html.setAttribute('data-theme', 'dark');
+      }
+    };
+  }, []);
 
   const handleValidatePromo = async () => {
     if (!promoCode.trim()) return;

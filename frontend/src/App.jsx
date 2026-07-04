@@ -12,6 +12,7 @@ import {
  Sun,
  Moon,
 } from 'lucide-react';
+import { users as usersApi } from './api/client.js';
 
 /* ── Contexts ──────────────────────────────────────────────────────────────── */
 import { ThemeProvider, useTheme } from './context/ThemeContext.jsx';
@@ -67,7 +68,8 @@ const PAGES = {
 function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  const { actualTheme, toggleTheme } = useTheme();
  const navigate = useNavigate();
- const { t, i18n } = useTranslation();
+ const { t } = useTranslation();
+ const [userProfile, setUserProfile] = useState(null);
 
  useEffect(() => {
    const density = localStorage.getItem('solvai_density');
@@ -76,24 +78,16 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
    }
  }, []);
 
- const LANGUAGES = [
-   { code: 'en', label: 'EN' },
-   { code: 'es', label: 'ES' },
-   { code: 'fr', label: 'FR' },
-   { code: 'de', label: 'DE' },
-   { code: 'it', label: 'IT' },
-   { code: 'pt', label: 'PT' }
- ];
-
- const cycleLanguage = () => {
-   const currentIndex = LANGUAGES.findIndex(l => l.code === i18n.language);
-   const nextIndex = (currentIndex + 1) % LANGUAGES.length;
-   const nextLang = LANGUAGES[nextIndex].code;
-   i18n.changeLanguage(nextLang);
-   localStorage.setItem('solvai-language', nextLang);
- };
-
- const currentLangLabel = LANGUAGES.find(l => l.code === i18n.language)?.label || 'EN';
+ useEffect(() => {
+   usersApi.me().then(res => {
+     setUserProfile(res.data);
+     try { localStorage.setItem('solvai_user', JSON.stringify(res.data)); } catch (e) { /* ignore */ }
+   }).catch(() => {
+     localStorage.removeItem('solvai_token');
+     localStorage.removeItem('solvai_user');
+     navigate('/login', { replace: true });
+   });
+ }, []);
 
  const handleLogout = () => {
    localStorage.removeItem('solvai_token');
@@ -101,9 +95,8 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
    navigate('/login');
  };
  
- const userStr = localStorage.getItem('solvai_user');
- const user = userStr ? JSON.parse(userStr) : null;
- const email = user?.email || 'demo@solvai.com';
+ const email = userProfile?.email ?? 'Loading...';
+ const plan = userProfile?.organization?.plan ?? userProfile?.plan ?? 'free';
  const initial = email.charAt(0).toUpperCase();
 
  return (
@@ -183,7 +176,7 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
  <p className="text-sm font-medium text-primary truncate">
  {email}
  </p>
- <p className="text-xs text-muted truncate">{user?.subscription_plan || 'free'} plan</p>
+ <p className="text-xs text-muted truncate">{plan} plan</p>
  </div>
  </div>
  
@@ -192,9 +185,7 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
    <span className="flex-1 text-left">{t('nav.logout')}</span>
  </button>
 
- <button onClick={cycleLanguage} className="w-full flex items-center justify-center gap-2 px-3 h-8 rounded-lg text-xs transition-colors duration-150 font-medium text-muted hover:bg-page hover:text-primary mt-2">
-   {currentLangLabel}
- </button>
+
  </div>
  </aside>
  </>

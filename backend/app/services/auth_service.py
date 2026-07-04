@@ -69,7 +69,9 @@ async def register_user(
     if promo_record:
         org.plan = promo_record.plan
         org.status = "active"
-        org.current_period_end = datetime.now(timezone.utc) + timedelta(days=365)
+        # current_period_end column is timezone-naive — use utcnow() to avoid
+        # asyncpg "can't subtract offset-naive and offset-aware datetimes" error
+        org.current_period_end = datetime.utcnow() + timedelta(days=365)
         promo_record.uses_count += 1
         db.add(promo_record)
 

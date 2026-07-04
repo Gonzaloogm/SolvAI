@@ -1,9 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X, ArrowRight, CheckCircle2, Shield, Zap, Database, BarChart, Users, Star, ArrowUpRight, Search } from 'lucide-react';
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    // Landing page always uses light theme regardless of user's dark mode preference
+    const html = document.documentElement;
+    const wasDark = html.classList.contains('dark');
+    html.classList.remove('dark');
+    html.setAttribute('data-theme', 'light');
+    return () => {
+      // Restore user's theme when leaving landing page
+      if (wasDark) {
+        html.classList.add('dark');
+        html.setAttribute('data-theme', 'dark');
+      }
+    };
+  }, []);
 
   const navigation = [
     { name: 'Features', href: '#features' },

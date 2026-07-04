@@ -234,9 +234,10 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                 except Exception as upload_err:
                     logger.error(f"Failed to upload PDF to GCS: {upload_err}")
                     report.document_uri = None
-                    report.status = "FAILED"
-                    db.commit()
-                    return {"status": "failed", "report_id": report_id, "error": "GCS Upload Failed"}
+                    # GCS failure is non-fatal — the AI analysis is complete.
+                    # Mark COMPLETED so users can read the report; PDF download
+                    # will be unavailable but the core report is accessible.
+                    report.status = "COMPLETED"
                     
             except Exception as e:
                 logger.error(f"Failed to generate/upload PDF: {e}")

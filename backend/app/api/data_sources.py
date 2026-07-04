@@ -5,11 +5,12 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status, UploadFile, File
 from fastapi.responses import RedirectResponse
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user, encrypt_dict
+from app.core.security import get_current_user, encrypt_dict, decrypt_dict
 from app.models.financial_data_source import FinancialDataSource
 from app.models.user import User
 from app.schemas.data_source import DataSourceConnectRequest, DataSourceResponse
@@ -47,42 +48,6 @@ async def delete_data_source(
 _VALID_TYPES = {"STRIPE", "XERO", "PAYPAL", "MANUAL_UPLOAD", "BELVO"}
 
 
-@router.post(
-    "/connect/{type}",
-    response_model=DataSourceResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Connect a new financial data source",
-)
-async def connect_data_source(
-    type: str = Path(
-        ...,
-        description="Provider type: STRIPE | XERO | PAYPAL | MANUAL_UPLOAD",
-    ),
-    body: DataSourceConnectRequest = DataSourceConnectRequest(),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> DataSourceResponse:
-    provider = type.upper()
-    if provider not in _VALID_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Unknown data source type '{type}'. "
-                   f"Valid types: {', '.join(sorted(_VALID_TYPES))}",
-        )
-
-    source = FinancialDataSource(
-        id=uuid.uuid4(),
-        user_id=current_user.id,
-        organization_id=current_user.organization_id,
-        type=provider,
-        status="CONNECTED",
-        connection_details={"encrypted_data": encrypt_dict(body.connection_details)},
-    )
-    db.add(source)
-    await db.flush()
-    await db.refresh(source)
-
-    return DataSourceResponse.model_validate(source)
 
 
 @router.get(
@@ -168,6 +133,126 @@ async def connect_belvo(
         return DataSourceResponse.model_validate(source)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/connect/stripe", response_model=DataSourceResponse, status_code=status.HTTP_201_CREATED, summary="Connect Stripe and immediately fetch metrics")
+async def connect_stripe(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DataSourceResponse:
+    import asyncio
+    from app.services.stripe_service import fetch_stripe_metrics
+    api_key = body.get("api_key") or body.get("connection_details", {}).get("api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="api_key is required")
+
+    try:
+        loop = asyncio.get_event_loop()
+        metrics = await loop.run_in_executor(
+            None, lambda: fetch_stripe_metrics(api_key=api_key)
+        )
+        logger.info(
+            f"Stripe connect: data_points={metrics.get('data_points')}, "
+            f"monthly_months={len(metrics.get('monthly_revenue', []))}, "
+            f"avg_monthly={metrics.get('avg_monthly')}"
+        )
+    except Exception as e:
+        logger.error(f"Stripe connect error: {e}")
+        raise HTTPException(status_code=502, detail=f"Stripe API error: {e}")
+
+    monthly_series = [
+        {"month": m["month"], "revenue": m["total"], "transactions": m["transaction_count"]}
+        for m in metrics.get("monthly_revenue", [])
+    ]
+
+    # Delete any previous STRIPE source for this user to avoid duplicates
+    from sqlalchemy import delete as sa_delete
+    await db.execute(
+        sa_delete(FinancialDataSource).where(
+            FinancialDataSource.user_id == current_user.id,
+            FinancialDataSource.type == "STRIPE",
+        )
+    )
+
+    source = FinancialDataSource(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        organization_id=current_user.organization_id,
+        type="STRIPE",
+        status="CONNECTED",
+        connection_details={
+            "encrypted_data": encrypt_dict({"api_key": api_key}),
+            "records_count": metrics.get("data_points", 0),
+            "monthly_revenue_series": monthly_series,
+        },
+    )
+    db.add(source)
+    await db.commit()
+    await db.refresh(source)
+    return DataSourceResponse.model_validate(source)
+
+
+@router.post("/{source_id}/sync", response_model=DataSourceResponse, summary="Re-sync a Stripe data source")
+async def sync_data_source(
+    source_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DataSourceResponse:
+    """Trigger a fresh data pull for a connected Stripe source."""
+    from app.services.stripe_service import fetch_stripe_metrics
+
+    result = await db.execute(
+        select(FinancialDataSource).where(
+            FinancialDataSource.id == source_id,
+            FinancialDataSource.user_id == current_user.id,
+            FinancialDataSource.is_deleted.is_(False),
+        )
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Data source not found")
+    if source.type != "STRIPE":
+        raise HTTPException(status_code=400, detail="Sync is only supported for STRIPE sources")
+
+    encrypted = (source.connection_details or {}).get("encrypted_data")
+    if not encrypted:
+        raise HTTPException(status_code=400, detail="No API key stored for this source")
+
+    try:
+        import asyncio
+        logger.info(f"SYNC: encrypted value is {encrypted}")
+        creds = decrypt_dict(encrypted)
+        logger.info(f"SYNC: creds from decrypt is {creds}")
+        api_key = creds.get("api_key")
+        logger.info(f"SYNC: api_key is {api_key}")
+        if not api_key:
+            raise ValueError("api_key missing from stored credentials")
+        loop = asyncio.get_event_loop()
+        metrics = await loop.run_in_executor(
+            None, lambda: fetch_stripe_metrics(api_key=api_key)
+        )
+        logger.info(
+            f"Stripe sync {source_id}: data_points={metrics.get('data_points')}, "
+            f"months={len(metrics.get('monthly_revenue', []))}"
+        )
+    except Exception as e:
+        logger.error(f"Stripe sync error for source {source_id}: {e}")
+        raise HTTPException(status_code=502, detail=f"Stripe sync failed: {e}")
+
+    monthly_series = [
+        {"month": m["month"], "revenue": m["total"], "transactions": m["transaction_count"]}
+        for m in metrics.get("monthly_revenue", [])
+    ]
+
+    source.connection_details = {
+        **source.connection_details,
+        "records_count": metrics.get("data_points", 0),
+        "monthly_revenue_series": monthly_series,
+    }
+    await db.commit()
+    await db.refresh(source)
+    return DataSourceResponse.model_validate(source)
+
 
 @router.post("/connect/paypal", summary="Connect PayPal using Client Credentials")
 async def connect_paypal(
@@ -372,3 +457,41 @@ async def xero_callback(
     except Exception as e:
         logger.error(f"Xero callback error: {e}")
         return RedirectResponse(f"{frontend_url}/data-sources?error=xero_failed")
+
+
+@router.post(
+    "/connect/{type}",
+    response_model=DataSourceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Connect a new financial data source",
+)
+async def connect_data_source(
+    type: str = Path(
+        ...,
+        description="Provider type: STRIPE | XERO | PAYPAL | MANUAL_UPLOAD",
+    ),
+    body: DataSourceConnectRequest = DataSourceConnectRequest(),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DataSourceResponse:
+    provider = type.upper()
+    if provider not in _VALID_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unknown data source type '{type}'. "
+                   f"Valid types: {', '.join(sorted(_VALID_TYPES))}",
+        )
+
+    source = FinancialDataSource(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        organization_id=current_user.organization_id,
+        type=provider,
+        status="CONNECTED",
+        connection_details={"encrypted_data": encrypt_dict(body.connection_details)},
+    )
+    db.add(source)
+    await db.flush()
+    await db.refresh(source)
+
+    return DataSourceResponse.model_validate(source)

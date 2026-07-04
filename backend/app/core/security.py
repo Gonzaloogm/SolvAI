@@ -38,7 +38,9 @@ def decrypt_dict(token: str) -> dict:
     """Decrypt a string back into a dictionary."""
     try:
         return json.loads(fernet.decrypt(token.encode()).decode())
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"decrypt_dict error: {e}")
         return {}
 
 # ── OAuth2 bearer scheme ─────────────────────────────────────────────────────

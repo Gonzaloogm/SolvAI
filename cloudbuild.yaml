@@ -39,6 +39,10 @@ steps:
     - 'solvai-connector'
     - '--allow-unauthenticated'
     - '--set-secrets=DATABASE_URL=solvai-database-url:latest,REDIS_URL=solvai-redis-url:latest,JWT_SECRET=solvai-jwt-secret:latest,ENCRYPTION_KEY=solvai-encryption-key:latest,STRIPE_SECRET_KEY=solvai-stripe-secret-key:latest,GEMINI_API_KEY=solvai-gemini-api-key:latest,ADMIN_KEY=solvai-admin-key:latest'
+    - '--memory'
+    - '1Gi'
+    - '--cpu'
+    - '2'
 
 # 4. Update Alembic Migrations Job
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -91,6 +95,10 @@ steps:
     - '--command=bash'
     - '--args=-c,python -m http.server $$PORT & celery -A app.celery_app worker --loglevel=info --concurrency=2'
     - '--set-secrets=DATABASE_URL=solvai-database-url:latest,REDIS_URL=solvai-redis-url:latest,JWT_SECRET=solvai-jwt-secret:latest,ENCRYPTION_KEY=solvai-encryption-key:latest,STRIPE_SECRET_KEY=solvai-stripe-secret-key:latest,GEMINI_API_KEY=solvai-gemini-api-key:latest,ADMIN_KEY=solvai-admin-key:latest'
+    - '--memory'
+    - '2Gi'
+    - '--cpu'
+    - '2'
 
 # 6. Retrieve API URL to build frontend
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'

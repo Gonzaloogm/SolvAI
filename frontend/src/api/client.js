@@ -153,6 +153,12 @@ export const solvencyReports = {
   list: () => apiClient.get('/solvency-reports/'),
 
   /**
+   * Soft-delete a report.
+   * DELETE /solvency-reports/{id}
+   */
+  delete: (id) => apiClient.delete(`/solvency-reports/${id}`),
+
+  /**
    * Get raw transactions for demo.
    * GET /solvency-reports/demo-transactions
    */

@@ -235,13 +235,18 @@ const getAccuracyColor = (val) => {
  const handleBulkDelete = () => {
  setConfirmConfig({
  title: 'Delete Reports',
- description: `Are you sure you want to remove ${selectedRows.size} reports from this view?`,
- confirmLabel: 'Remove',
+ description: `Are you sure you want to delete ${selectedRows.size} reports?`,
+ confirmLabel: 'Delete',
  confirmVariant: 'danger',
  action: async () => {
- setReports((prev) => prev.filter((r) => !selectedRows.has(r.id)));
- setSelectedRows(new Set());
- addToast(`Removed ${selectedRows.size} reports`, 'success');
+   try {
+     await Promise.all(Array.from(selectedRows).map(id => solvencyReports.delete(id)));
+     setReports((prev) => prev.filter((r) => !selectedRows.has(r.id)));
+     setSelectedRows(new Set());
+     addToast(`Deleted ${selectedRows.size} reports`, 'success');
+   } catch (e) {
+     addToast('Failed to delete some reports', 'error');
+   }
  }
  });
  setIsConfirmModalOpen(true);
@@ -258,13 +263,27 @@ const getAccuracyColor = (val) => {
   const reportId = report._raw?.id || report.id;
   const res = await solvencyReports.getPDF(reportId);
   if (res.data?.download_url) {
-    window.open(res.data.download_url, '_blank');
+    const response = await fetch(res.data.download_url);
+    if (!response.ok) throw new Error(response.status);
+    const blob = await response.blob();
+    if (blob.size === 0) throw new Error('Empty PDF');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.style.display = 'none';
+    link.href = url;
+    link.setAttribute('download', `solvai_${reportId.slice(0,8)}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
     addToast('PDF downloaded', 'success');
   } else {
     throw new Error('No download URL returned');
   }
   } catch (e) {
- addToast(e?.response?.data?.detail || 'Failed to download PDF', 'error');
+ addToast(e?.response?.data?.detail || e.message || 'Failed to download PDF', 'error');
  } finally {
  setDownloadingPdfId(null);
  }
@@ -275,13 +294,18 @@ const getAccuracyColor = (val) => {
  setOpenMenuId(null);
  setConfirmConfig({
  title: 'Delete Report',
- description: 'Remove this report from the list?',
- confirmLabel: 'Remove',
+ description: 'Are you sure you want to delete this report?',
+ confirmLabel: 'Delete',
  confirmVariant: 'danger',
  action: async () => {
- setReports(prev => prev.filter(r => r.id !== id));
- setSelectedRows(prev => { const next = new Set([...prev]); next.delete(id); return next; });
- addToast('Report removed', 'success');
+   try {
+     await solvencyReports.delete(id);
+     setReports(prev => prev.filter(r => r.id !== id));
+     setSelectedRows(prev => { const next = new Set([...prev]); next.delete(id); return next; });
+     addToast('Report deleted', 'success');
+   } catch (e) {
+     addToast('Failed to delete report', 'error');
+   }
  }
  });
  setIsConfirmModalOpen(true);

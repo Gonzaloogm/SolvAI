@@ -306,6 +306,41 @@ async def get_score_history(
     return history
 
 
+@router.delete(
+    "/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Soft-delete a solvency report",
+)
+async def delete_solvency_report(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(SolvencyReport).where(
+            SolvencyReport.id == id,
+            SolvencyReport.is_deleted.is_(False),
+        )
+    )
+    report = result.scalar_one_or_none()
+
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Solvency report not found",
+        )
+    if report.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this report",
+        )
+
+    report.is_deleted = True
+    report.deleted_at = datetime.now(timezone.utc)
+    await db.flush()
+    await db.commit()
+
+
 @router.get(
     "/{id}",
     response_model=SolvencyReportResponse,

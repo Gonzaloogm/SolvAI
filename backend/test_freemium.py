@@ -82,4 +82,5 @@ async def main():
         else:
             print(f"FAIL: Checkout session returned {r.status_code}: {r.text}")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

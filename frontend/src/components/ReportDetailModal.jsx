@@ -432,31 +432,30 @@ export default function ReportDetailModal({ report, onClose }) {
         addToast(err.detail || `Failed to download PDF (${response.status})`, 'error');
         return;
       }
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        // Server returned a redirect URL
-        const data = await response.json();
-        if (data.download_url) {
-          window.open(data.download_url, '_blank');
-          addToast('PDF ready — opened in new tab', 'success');
-          return;
-        }
+      const data = await response.json();
+      if (data.download_url) {
+        const gcsResponse = await fetch(data.download_url);
+        if (!gcsResponse.ok) throw new Error(gcsResponse.status);
+        const blob = await gcsResponse.blob();
+        if (blob.size === 0) throw new Error('Empty PDF');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `solvai_report_${report.id.slice(0, 8)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+        addToast('PDF downloaded successfully', 'success');
+      } else {
         throw new Error('No download URL returned from server');
       }
-      // Server streamed the PDF directly — download as blob
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `solvai_report_${report.id?.slice(0, 8) ?? 'report'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      addToast('PDF downloaded successfully', 'success');
     } catch (err) {
       console.error('PDF download error:', err);
-      addToast('Failed to download PDF. Please try again.', 'error');
+      addToast(err.message || 'Failed to download PDF. Please try again.', 'error');
     } finally {
       setDownloadingPDF(false);
     }

@@ -17,9 +17,19 @@ from app.schemas.data_source import DataSourceConnectRequest, DataSourceResponse
 
 from app.services.belvo_service import belvo_service
 from app.services.paypal_service import paypal_service
-from app.services.xero_service import xero_service
+from app.services.xero_service import XeroService
+import secrets
+import hashlib
+xero_service = XeroService()
 from app.services.invoice_upload_service import invoice_upload_service
 from app.core.config import settings
+from app.services.csv_service import CSVService
+from fastapi import UploadFile, File, Form
+import json
+import uuid
+
+csv_service = CSVService()
+_upload_sessions = {}
 
 router = APIRouter()
 
@@ -254,72 +264,119 @@ async def sync_data_source(
     return DataSourceResponse.model_validate(source)
 
 
-@router.post("/connect/paypal", summary="Connect PayPal using Client Credentials")
-async def connect_paypal(
-    current_user: User = Depends(get_current_user),
+@router.get("/paypal/connect", summary="Start PayPal OAuth2 flow")
+async def paypal_auth(current_user: User = Depends(get_current_user)):
+    api_base = getattr(settings, "API_BASE_URL", "http://localhost:8000")
+    redirect_uri = getattr(settings, "PAYPAL_REDIRECT_URI", f"{api_base.rstrip('/')}/api/v1/data-sources/paypal/callback")
+    state = str(current_user.id)
+    return {"url": paypal_service.get_auth_url(redirect_uri=redirect_uri, state=state)}
+
+@router.get("/paypal/callback", summary="PayPal OAuth2 callback")
+async def paypal_callback(
+    code: str,
+    state: str = "",
     db: AsyncSession = Depends(get_db),
 ):
     from loguru import logger
-    from app.services.paypal_service import paypal_service
+    frontend_url = settings.FRONTEND_URL
+    api_base = getattr(settings, "API_BASE_URL", "http://localhost:8000")
+    redirect_uri = getattr(settings, "PAYPAL_REDIRECT_URI", f"{api_base.rstrip('/')}/api/v1/data-sources/paypal/callback")
+    
     try:
-        transactions = await paypal_service.get_transactions()
-        
-        monthly_series = {}
-        for t in transactions:
-            d = t.get("date", "")
-            month = d[:7] if len(d) >= 7 else "Unknown"
-            if month not in monthly_series:
-                monthly_series[month] = {"month": month, "revenue": 0.0, "transactions": 0}
-            monthly_series[month]["revenue"] += t.get("amount", 0.0)
-            monthly_series[month]["transactions"] += 1
-            
-        series_list = sorted(list(monthly_series.values()), key=lambda x: x["month"])
+        try:
+            user_id = uuid.UUID(state)
+        except ValueError:
+            raise Exception("Invalid state parameter")
+
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalars().first()
+        if not user:
+            raise Exception("User not found from state")
+
+        token_data = await paypal_service.get_access_token(code, redirect_uri)
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise Exception("Failed to get PayPal access token")
+
+        transactions = await paypal_service.fetch_transactions(access_token)
+        aggregated = paypal_service.aggregate_monthly(transactions)
         
         source = FinancialDataSource(
             id=uuid.uuid4(),
-            user_id=current_user.id,
-            organization_id=current_user.organization_id,
+            user_id=user.id,
+            organization_id=user.organization_id,
             type="PAYPAL",
             status="CONNECTED",
             connection_details={
-                "encrypted_data": encrypt_dict({"paypal_client_credentials": True}),
+                "encrypted_data": encrypt_dict({"access_token": access_token}),
                 "records_count": len(transactions),
-                "monthly_revenue_series": series_list
+                "monthly_revenue_series": aggregated.get("monthly_revenue_series", []),
+                "currency": aggregated.get("currency"),
+                "total_revenue": aggregated.get("total_revenue"),
+                "client_concentration": aggregated.get("client_concentration", [])
             },
         )
         db.add(source)
         await db.commit()
-        await db.refresh(source)
-        return DataSourceResponse.model_validate(source)
+        return RedirectResponse(f"{frontend_url}/data-sources?connected=paypal")
     except Exception as e:
-        logger.error(f"PayPal connect error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"PayPal callback error: {e}")
+        return RedirectResponse(f"{frontend_url}/data-sources?error=paypal_failed")
 
-@router.post("/upload", summary="Upload manual statements (CSV/PDF) for preview")
+@router.post("/upload", summary="Upload manual statements (CSV) for preview")
 async def upload_statements(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
     content = await file.read()
     filename = file.filename.lower() if file.filename else ""
     
-    if filename.endswith(".csv"):
-        transactions = invoice_upload_service.parse_csv(content)
-    elif filename.endswith(".pdf"):
-        transactions = invoice_upload_service.parse_pdf(content)
-    else:
-        raise HTTPException(status_code=400, detail="Only CSV and PDF files are supported")
+    if not filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are supported")
+    
+    try:
+        transactions = csv_service.parse_file(content)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     total_rows = len(transactions)
     preview_rows = transactions[:10]
-    total_income = sum(t["amount"] for t in transactions)
+    total_income = sum(t["amount"] for t in transactions if t.get("amount", 0) > 0)
     
     date_range = []
     dates = [t["date"] for t in transactions if t.get("date")]
     if dates:
         date_range = [min(dates), max(dates)]
         
+    upload_token = str(uuid.uuid4())
+    _upload_sessions[upload_token] = {
+        "filename": filename,
+        "transactions": transactions,
+        "total_rows": total_rows,
+        "total_income": total_income,
+    }
+    
+    return {
+        "preview_rows": preview_rows,
+        "detected_columns": {"date": "Date", "amount": "Amount", "client": "Client"},
+        "total_rows": total_rows,
+        "date_range": date_range,
+        "total_income_detected": total_income,
+        "upload_token": upload_token
+    }
+
+@router.post("/upload/confirm", summary="Confirm invoice upload")
+async def confirm_upload(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    upload_token = body.get("upload_token")
+    if not upload_token or upload_token not in _upload_sessions:
+        raise HTTPException(status_code=400, detail="Upload token is missing or invalid")
+        
+    session_data = _upload_sessions.pop(upload_token)
+    transactions = session_data["transactions"]
+
     import re
     monthly_series = {}
     for t in transactions:
@@ -334,7 +391,10 @@ async def upload_statements(
         
         if month not in monthly_series:
             monthly_series[month] = {"month": month, "revenue": 0.0, "transactions": 0}
-        monthly_series[month]["revenue"] += t.get("amount", 0.0)
+        
+        amt = float(t.get("amount", 0.0))
+        if amt > 0:
+            monthly_series[month]["revenue"] += amt
         monthly_series[month]["transactions"] += 1
         
     series_list = sorted(list(monthly_series.values()), key=lambda x: x["month"])
@@ -344,62 +404,26 @@ async def upload_statements(
         user_id=current_user.id,
         organization_id=current_user.organization_id,
         type="MANUAL_UPLOAD",
-        status="PENDING",
+        status="CONNECTED",
         connection_details={
-            "filename": filename,
-            "records_count": total_rows,
+            "filename": session_data["filename"],
+            "records_count": session_data["total_rows"],
             "monthly_revenue_series": series_list
         },
     )
     db.add(source)
     await db.commit()
-    
-    return {
-        "preview_rows": preview_rows,
-        "detected_columns": {"date": "Date", "amount": "Amount", "currency": "Currency", "client": "Client"},
-        "total_rows": total_rows,
-        "date_range": date_range,
-        "total_income_detected": total_income,
-        "upload_token": str(source.id)
-    }
-
-@router.post("/upload/confirm", summary="Confirm invoice upload")
-async def confirm_upload(
-    body: dict,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    upload_token = body.get("upload_token")
-    if not upload_token:
-        raise HTTPException(status_code=400, detail="upload_token is required")
-        
-    try:
-        source_uuid = uuid.UUID(upload_token)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid token")
-
-    result = await db.execute(
-        select(FinancialDataSource).where(
-            FinancialDataSource.id == source_uuid,
-            FinancialDataSource.user_id == current_user.id
-        )
-    )
-    source = result.scalars().first()
-    if not source:
-        raise HTTPException(status_code=404, detail="Upload not found")
-        
-    source.status = "CONNECTED"
-    await db.commit()
     await db.refresh(source)
     
     return DataSourceResponse.model_validate(source)
 
-@router.get("/xero/auth", summary="Start Xero OAuth2 flow")
-async def xero_auth(current_user: User = Depends(get_current_user)):
+@router.get("/xero/connect", summary="Start Xero OAuth2 flow")
+async def xero_connect(current_user: User = Depends(get_current_user)):
     api_base = getattr(settings, "API_BASE_URL", "http://localhost:8000")
-    redirect_uri = f"{api_base.rstrip('/')}/api/v1/data-sources/xero/callback"
+    redirect_uri = getattr(settings, "XERO_REDIRECT_URI", f"{api_base.rstrip('/')}/api/v1/data-sources/xero/callback")
     state = str(current_user.id)
-    return {"url": xero_service.get_auth_url(redirect_uri=redirect_uri, state=state)}
+    url = xero_service.get_auth_url(redirect_uri=redirect_uri, state=state)
+    return {"url": url}
 
 @router.get("/xero/callback", summary="Xero OAuth2 callback")
 async def xero_callback(
@@ -410,7 +434,7 @@ async def xero_callback(
     from loguru import logger
     frontend_url = settings.FRONTEND_URL
     api_base = getattr(settings, "API_BASE_URL", "http://localhost:8000")
-    redirect_uri = f"{api_base.rstrip('/')}/api/v1/data-sources/xero/callback"
+    redirect_uri = getattr(settings, "XERO_REDIRECT_URI", f"{api_base.rstrip('/')}/api/v1/data-sources/xero/callback")
     
     try:
         try:
@@ -425,19 +449,11 @@ async def xero_callback(
 
         token_data = await xero_service.exchange_code(code, redirect_uri)
         access_token = token_data["access_token"]
+        refresh_token = token_data.get("refresh_token", "")
         tenant_id = await xero_service.get_tenant_id(access_token)
-        invoices = await xero_service.get_paid_invoices(access_token, tenant_id)
+        invoices = await xero_service.fetch_invoices(access_token, tenant_id)
         
-        monthly_series = {}
-        for inv in invoices:
-            d = inv.get("date", "")
-            month = d[:7] if len(d) >= 7 else "Unknown"
-            if month not in monthly_series:
-                monthly_series[month] = {"month": month, "revenue": 0.0, "transactions": 0}
-            monthly_series[month]["revenue"] += inv.get("amount", 0.0)
-            monthly_series[month]["transactions"] += 1
-            
-        series_list = sorted(list(monthly_series.values()), key=lambda x: x["month"])
+        series_list, currency, platform, total_revenue, client_concentration = xero_service.aggregate_monthly(invoices)
         
         source = FinancialDataSource(
             id=uuid.uuid4(),
@@ -445,18 +461,24 @@ async def xero_callback(
             organization_id=user.organization_id,
             type="XERO",
             status="CONNECTED",
+            has_refresh_token=True,
             connection_details={
-                "encrypted_data": encrypt_dict({"access_token": access_token, "tenant_id": tenant_id}),
+                "encrypted_data": encrypt_dict({"access_token": access_token, "refresh_token": refresh_token, "tenant_id": tenant_id}),
                 "records_count": len(invoices),
-                "monthly_revenue_series": series_list
+                "monthly_revenue_series": series_list,
+                "currency": currency,
+                "platform": platform,
+                "total_revenue": total_revenue,
+                "client_concentration": client_concentration
             },
         )
         db.add(source)
         await db.commit()
-        return RedirectResponse(f"{frontend_url}/data-sources?connected=xero")
+        monthly_count = len(series_list)
+        return RedirectResponse(f"{frontend_url}/data-sources?xero=connected&months={monthly_count}")
     except Exception as e:
         logger.error(f"Xero callback error: {e}")
-        return RedirectResponse(f"{frontend_url}/data-sources?error=xero_failed")
+        return RedirectResponse(f"{frontend_url}/data-sources?xero=error")
 
 
 @router.post(

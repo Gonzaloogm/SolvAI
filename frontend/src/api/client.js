@@ -112,9 +112,9 @@ export const dataSources = {
   confirmUpload: (uploadToken) =>
     apiClient.post('/data-sources/upload/confirm', { upload_token: uploadToken }),
     
-  authXero: () => apiClient.get('/data-sources/xero/auth'),
+  getXeroAuthUrl: () => apiClient.get('/data-sources/xero/connect'),
   
-  connectPayPal: () => apiClient.post('/data-sources/connect/paypal'),
+  getPayPalAuthUrl: () => apiClient.get('/data-sources/paypal/connect'),
 
   getBelvoInstitutions: () => apiClient.get('/data-sources/belvo/institutions'),
   connectBelvo: (data) => apiClient.post('/data-sources/connect/belvo', data),

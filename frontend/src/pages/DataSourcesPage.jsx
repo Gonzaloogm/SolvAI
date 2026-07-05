@@ -178,9 +178,31 @@ export default function DataSourcesPage() {
      } finally {
        setLoading(false);
      }
-   };
-   fetchData();
- }, [t]);
+    };
+    fetchData();
+  }, [t]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const xeroStatus = params.get('xero');
+    if (xeroStatus === 'connected') {
+      const months = params.get('months') || 0;
+      addToast(`Xero connected successfully! Imported ${months} months of data.`, 'success');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (xeroStatus === 'error') {
+      addToast('Failed to connect Xero.', 'error');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const paypalStatus = params.get('paypal') || params.get('connected');
+    if (paypalStatus === 'connected' || paypalStatus === 'paypal') {
+      addToast('PayPal connected successfully!', 'success');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (paypalStatus === 'error' || params.get('error') === 'paypal_failed') {
+      addToast('Failed to connect PayPal.', 'error');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [addToast]);
 
  const handleSync = async (name) => {
  setConnected((prev) =>
@@ -300,6 +322,37 @@ export default function DataSourcesPage() {
  setIsConnecting(false);
  setConnectModal(null);
  }
+ };
+
+ const handleCSVUpload = async (e) => {
+   if (e) e.stopPropagation();
+   setIsConnecting(true);
+   try {
+     const res = await dataSourcesApi.uploadCSV(csvFile);
+     setUploadPreview(res.data);
+   } catch (error) {
+     console.error(error);
+     addToast("Failed to upload file", "error");
+   } finally {
+     setIsConnecting(false);
+   }
+ };
+
+ const handleCSVConfirm = async () => {
+   setIsConnecting(true);
+   try {
+     await dataSourcesApi.confirmUpload(uploadPreview.upload_token);
+     addToast("CSV Data connected!", "success"); // Step 4
+     setConnectModal(null);
+     setUploadPreview(null);
+     setCsvFile(null);
+     window.location.reload();
+   } catch (error) {
+     console.error(error);
+     addToast("Confirmation failed", "error");
+   } finally {
+     setIsConnecting(false);
+   }
  };
 
  if (loading) {
@@ -474,18 +527,17 @@ export default function DataSourcesPage() {
  if (integration.available) {
   if (integration.name === 'Xero') {
    try {
-    const res = await dataSourcesApi.authXero();
+    const res = await dataSourcesApi.getXeroAuthUrl();
     window.location.href = res.data.url;
    } catch (e) {
     addToast("Failed to initiate Xero connection", "error");
    }
   } else if (integration.name === 'PayPal') {
    try {
-    await dataSourcesApi.connectPayPal();
-    addToast("PayPal connected!", "success");
-    window.location.reload();
+    const res = await dataSourcesApi.getPayPalAuthUrl();
+    window.location.href = res.data.url;
    } catch (e) {
-    addToast("Failed to connect PayPal", "error");
+    addToast("Failed to initiate PayPal connection", "error");
    }
   } else {
    setConnectModal(integration);
@@ -549,37 +601,32 @@ export default function DataSourcesPage() {
   {connectModal.name === 'CSV Upload' ? (
     <div className="p-5">
       {!uploadPreview ? (
-        <div 
-          className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-page transition-colors cursor-pointer"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); setCsvFile(e.dataTransfer.files[0]); }}
-          onClick={() => document.getElementById('csv-upload').click()}
-        >
-          <input type="file" id="csv-upload" className="hidden" accept=".csv,.pdf" onChange={(e) => setCsvFile(e.target.files[0])} />
-          <FileUp className="w-8 h-8 text-muted mx-auto mb-3" />
-          <p className="text-sm font-medium text-primary mb-1">{csvFile ? csvFile.name : "Click to upload or drag and drop"}</p>
-          <p className="text-xs text-muted">CSV or PDF invoices</p>
-          
-          <button type="button" 
-                  disabled={!csvFile || isConnecting}
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    setIsConnecting(true);
-                    try {
-                      const res = await dataSourcesApi.uploadCSV(csvFile);
-                      setUploadPreview(res.data);
-                    } catch (e) {
-                      addToast("Failed to upload file", "error");
-                    } finally {
-                      setIsConnecting(false);
-                    }
-                  }}
-                  className="mt-4 bg-[var(--brand-blue)] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] disabled:opacity-50">
-            {isConnecting ? "Uploading..." : "Preview Upload"}
-          </button>
+        <div className="space-y-4">
+          <div className="text-sm font-semibold text-primary">STEP 1: File Upload Zone</div>
+          <div 
+            className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-page transition-colors cursor-pointer"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); setCsvFile(e.dataTransfer.files[0]); }}
+            onClick={() => document.getElementById('csv-upload').click()}
+          >
+            <input type="file" id="csv-upload" className="hidden" accept=".csv" onChange={(e) => setCsvFile(e.target.files[0])} />
+            <FileUp className="w-8 h-8 text-muted mx-auto mb-3" />
+            <p className="text-sm font-medium text-primary mb-1">{csvFile ? csvFile.name : "Click to upload or drag and drop"}</p>
+            <p className="text-xs text-muted">CSV invoices or bank statements</p>
+          </div>
+          <div className="pt-2 border-t border-border flex justify-end gap-3">
+            <button type="button" onClick={() => setConnectModal(null)} className="px-4 py-2 text-sm text-muted">Cancel</button>
+            <button type="button" 
+                    disabled={!csvFile || isConnecting}
+                    onClick={handleCSVUpload}
+                    className="bg-[var(--brand-blue)] text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] disabled:opacity-50">
+              {isConnecting ? "Uploading..." : "STEP 2: Preview Upload"}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
+          <div className="text-sm font-semibold text-primary">STEP 3: Detection Results</div>
           <p className="text-sm text-primary font-medium">Found {uploadPreview.total_rows} transactions totaling €{uploadPreview.total_income_detected?.toLocaleString()}</p>
           <div className="overflow-auto border border-border rounded-md max-h-48">
             <table className="w-full text-xs text-left">
@@ -602,21 +649,8 @@ export default function DataSourcesPage() {
             </table>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <button type="button" onClick={() => setUploadPreview(null)} className="px-4 py-2 text-sm text-muted">Cancel</button>
-            <button type="button" disabled={isConnecting} onClick={async () => {
-              setIsConnecting(true);
-              try {
-                await dataSourcesApi.confirmUpload(uploadPreview.upload_token);
-                addToast("CSV Data connected!", "success");
-                setConnectModal(null);
-                setUploadPreview(null);
-                window.location.reload();
-              } catch (e) {
-                addToast("Confirmation failed", "error");
-              } finally {
-                setIsConnecting(false);
-              }
-            }} className="bg-[#1a9e6e] text-white rounded-md px-4 py-2 text-sm hover:bg-[#148259] disabled:opacity-50">
+            <button type="button" onClick={() => setUploadPreview(null)} className="px-4 py-2 text-sm text-muted">Back</button>
+            <button type="button" disabled={isConnecting} onClick={handleCSVConfirm} className="bg-[#1a9e6e] text-white rounded-md px-4 py-2 text-sm hover:bg-[#148259] disabled:opacity-50">
               {isConnecting ? "Confirming..." : "Confirm & Connect"}
             </button>
           </div>

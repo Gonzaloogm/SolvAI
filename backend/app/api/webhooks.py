@@ -122,6 +122,7 @@ async def stripe_billing_webhook(
                 if org:
                     org.stripe_customer_id = obj.get("customer")
                     org.stripe_subscription_id = obj.get("subscription")
+                    org.plan = "pro"
                     await db.commit()
                     
         elif event_type in ["customer.subscription.updated", "customer.subscription.deleted"]:

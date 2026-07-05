@@ -34,3 +34,5 @@ paypalrestsdk>=1.13.3
 pytest
 greenlet
 qrcode[pil]
+requests
+requests-oauthlib

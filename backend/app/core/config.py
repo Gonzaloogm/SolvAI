@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     # ── Xero ─────────────────────────────────────────────────────────────────
     XERO_CLIENT_ID: str = ""
     XERO_CLIENT_SECRET: str = ""
+    XERO_REDIRECT_URI: str = ""
 
     # ── Email (Resend) ────────────────────────────────────────────────────────
     RESEND_API_KEY: str = ""
@@ -71,6 +72,7 @@ class Settings(BaseSettings):
     PAYPAL_CLIENT_ID: str = ""
     PAYPAL_SECRET: str = ""
     PAYPAL_ENV: str = "sandbox"  # sandbox or live
+    PAYPAL_REDIRECT_URI: str = ""
 
 @lru_cache
 def get_settings() -> Settings:

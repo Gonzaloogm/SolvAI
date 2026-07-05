@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { X, AlertTriangle, TrendingUp, Download, Loader2 } from 'lucide-react';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
@@ -365,7 +366,7 @@ export default function ReportDetailModal({ report, onClose }) {
     md += `**Type:** ${reportTypeLabel} | **Status:** ${report.status} | **Created:** ${formattedDate}\n\n`;
     md += `## Metadata\n| Field | Value |\n|-------|-------|\n`;
     const avgRev = reportData.financial_summary?.avg_monthly_revenue;
-    md += `| Data Source | ${dataSourceName} |\n| Model | ${modelName} |\n| Overall Score | ${overallScore} |\n| Avg Monthly Revenue | ${avgRev ? '$' + avgRev.toLocaleString() : '—'} |\n| Rating | ${reportData.rating || '—'} |\n\n`;
+    md += `| Data Source | ${dataSourceName} |\n| Model | ${modelName} |\n| Overall Score | ${overallScore} |\n| Avg Monthly Revenue | ${avgRev ? '€' + Math.round(avgRev).toLocaleString('de-DE') : '—'} |\n| Rating | ${reportData.rating || '—'} |\n\n`;
     
     md += `## Explanation Output\n${explanationText}\n\n`;
     
@@ -411,10 +412,8 @@ export default function ReportDetailModal({ report, onClose }) {
 
   const handleDownloadPDF = async () => {
     if (!report?.id) return;
-    
     try {
       setDownloadingPDF(true);
-      
       const response = await fetch(
         `${API_BASE_URL}/solvency-reports/${report.id}/pdf`,
         {
@@ -424,22 +423,36 @@ export default function ReportDetailModal({ report, onClose }) {
           }
         }
       );
-      
       if (!response.ok) {
         if (response.status === 402) {
           addToast('Upgrade to Pro to download PDFs', 'error');
           return;
         }
-        throw new Error(`HTTP ${response.status}`);
+        const err = await response.json().catch(() => ({}));
+        addToast(err.detail || `Failed to download PDF (${response.status})`, 'error');
+        return;
       }
-      
-      const data = await response.json();
-      if (data.download_url) {
-        window.open(data.download_url, '_blank');
-      } else {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        // Server returned a redirect URL
+        const data = await response.json();
+        if (data.download_url) {
+          window.open(data.download_url, '_blank');
+          addToast('PDF ready — opened in new tab', 'success');
+          return;
+        }
         throw new Error('No download URL returned from server');
       }
-      
+      // Server streamed the PDF directly — download as blob
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `solvai_report_${report.id?.slice(0, 8) ?? 'report'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       addToast('PDF downloaded successfully', 'success');
     } catch (err) {
       console.error('PDF download error:', err);
@@ -489,25 +502,30 @@ export default function ReportDetailModal({ report, onClose }) {
                 >
                   {t('reports.actions.share')}
                 </button>
-                {report.hasDownload && (
-              <button 
-                onClick={handleDownloadPDF} 
-                disabled={downloadingPDF}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-[var(--brand-blue)] text-white rounded-md hover:bg-[var(--brand-blue-hover)] transition-colors disabled:opacity-50"
-              >
-                {downloadingPDF ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Downloading...
-                  </>
-                ) : (
-                  <>
-                    <Download size={14} />
-                    Download PDF
-                  </>
-                )}
-              </button>
-            )}
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloadingPDF}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    background: '#0570de',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    cursor: downloadingPDF ? 'not-allowed' : 'pointer',
+                    opacity: downloadingPDF ? 0.7 : 1,
+                  }}
+                >
+                  {downloadingPDF ? (
+                    <><Loader2 size={13} className="animate-spin" /> Generating...</>
+                  ) : (
+                    <><Download size={13} /> Download PDF</>
+                  )}
+                </button>
               </>
             )}
             <button onClick={onClose} className="ml-2 text-muted hover:text-primary transition-colors"><X className="w-5 h-5" /></button>
@@ -536,14 +554,38 @@ export default function ReportDetailModal({ report, onClose }) {
             </div>
             <div>
               <div className="text-sm text-muted mb-1">Avg Rev</div>
-              <div className="text-sm font-medium text-primary">{reportData.financial_summary?.avg_monthly_revenue ? '$' + reportData.financial_summary.avg_monthly_revenue.toLocaleString() : '—'}</div>
+              <div className="text-sm font-medium text-primary">
+                {reportData.financial_summary?.avg_monthly_revenue
+                  ? '€' + Math.round(reportData.financial_summary.avg_monthly_revenue).toLocaleString('de-DE')
+                  : '—'}
+              </div>
             </div>
           </div>
 
           <div>
             <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.narrative')}</h3>
-            <div className="bg-page rounded-md p-4 text-[14px] leading-[1.7] text-secondary">
-              {explanationText}
+            <div className="bg-page rounded-md p-4" style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-secondary)' }}>
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => (
+                    <p style={{ marginBottom: '12px', margin: '0 0 12px 0' }}>{children}</p>
+                  ),
+                  strong: ({ children }) => (
+                    <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{children}</strong>
+                  ),
+                  em: ({ children }) => (
+                    <em style={{ fontStyle: 'italic' }}>{children}</em>
+                  ),
+                  ul: ({ children }) => (
+                    <ul style={{ paddingLeft: '20px', marginBottom: '12px' }}>{children}</ul>
+                  ),
+                  li: ({ children }) => (
+                    <li style={{ marginBottom: '4px' }}>{children}</li>
+                  ),
+                }}
+              >
+                {explanationText}
+              </ReactMarkdown>
             </div>
           </div>
           

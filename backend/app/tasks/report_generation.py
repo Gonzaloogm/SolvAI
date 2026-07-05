@@ -350,12 +350,8 @@ def _build_financial_summary(sources) -> dict:
         f"source_ids={[str(s.id) for s in sources]}"
     )
 
-    # Per-source-type revenue contributions
-    avg_monthly_map = {
-        "XERO": 5_800,
-        "PAYPAL": 3_400,
-        "MANUAL_UPLOAD": 4_000,
-    }
+    # Per-source-type revenue contributions (populated from real data only)
+    avg_monthly_map = {}
 
     platform_breakdown = {}
     

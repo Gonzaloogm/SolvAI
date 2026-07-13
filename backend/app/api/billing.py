@@ -11,6 +11,7 @@ from app.core.database import get_db
 from app.api.auth import get_current_user
 from app.models.user import User
 from app.models.organization import Organization
+from app.models.solvency_report import SolvencyReport
 from loguru import logger
 
 router = APIRouter()
@@ -123,6 +124,25 @@ async def stripe_webhook(
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         metadata = session.get('metadata', {})
+        
+        report_id = metadata.get('report_id')
+        if report_id:
+            try:
+                result = await db.execute(
+                    select(SolvencyReport).where(SolvencyReport.id == uuid.UUID(report_id))
+                )
+                report = result.scalar_one_or_none()
+                if report:
+                    report.pdf_unlocked = True
+                    report.pdf_unlocked_at = datetime.utcnow()
+                    report.stripe_payment_intent_id = session.get('payment_intent')
+                    await db.commit()
+                    logger.info(f"Report {report_id} unlocked via Stripe webhook")
+            except Exception as db_err:
+                logger.error(f"Database error during report unlock: {db_err}")
+                await db.rollback()
+            return {'received': True}
+
         org_id = metadata.get('organization_id')
         plan = metadata.get('plan', 'pro')
         
@@ -229,3 +249,65 @@ async def apply_promo(
     await db.commit()
     
     return {"message": f"Successfully upgraded to {promo.plan} plan."}
+
+class ReportCheckoutRequest(BaseModel):
+    report_id: uuid.UUID
+
+@router.post('/create-report-checkout')
+async def create_report_checkout(
+    body: ReportCheckoutRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """One-time €9 payment to unlock a report PDF."""
+    # Verify report belongs to user's org and is completed
+    result = await db.execute(
+        select(SolvencyReport).where(
+            SolvencyReport.id == body.report_id,
+            SolvencyReport.organization_id == current_user.organization_id,
+            SolvencyReport.status == 'COMPLETED',
+        )
+    )
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(404, "Report not found")
+
+    if report.pdf_unlocked:
+        raise HTTPException(400, "PDF already unlocked")
+
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            mode='payment',
+            line_items=[{
+                'price_data': {
+                    'currency': 'eur',
+                    'unit_amount': 900,  # €9.00
+                    'product_data': {
+                        'name': 'SolvAI Report PDF',
+                        'description': (
+                            f'Certified solvency report PDF '
+                            f'with QR verification. '
+                            f'ID: {str(body.report_id)[:8].upper()}'
+                        ),
+                    },
+                },
+                'quantity': 1,
+            }],
+            success_url=(
+                f"{FRONTEND_URL}/reports"
+                f"?pdf_unlocked={body.report_id}"
+            ),
+            cancel_url=f"{FRONTEND_URL}/reports",
+            customer_email=current_user.email,
+            metadata={
+                'report_id': str(body.report_id),
+                'user_id': str(current_user.id),
+                'org_id': str(current_user.organization_id),
+                'type': 'report_pdf_unlock',
+            },
+        )
+        return {'checkout_url': session.url, 'session_id': session.id}
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe Error in create_report_checkout: {e}")
+        raise HTTPException(400, str(e))

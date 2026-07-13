@@ -115,6 +115,19 @@ const getAccuracyColor = (val) => {
   }, [fetchReports]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const unlockedId = params.get('pdf_unlocked');
+    if (params.get('payment') === 'success' || unlockedId) {
+      addToast('PDF unlocked! Click Download PDF to get it.', 'success');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      fetchReports();
+    } else if (params.get('payment') === 'cancelled') {
+      addToast('Payment cancelled', 'info');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [addToast, fetchReports]);
+
+  useEffect(() => {
     const handler = () => fetchReports();
     window.addEventListener('solvai:report-completed', handler);
     return () => window.removeEventListener('solvai:report-completed', handler);

@@ -22,5 +22,6 @@ class SolvencyReportResponse(BaseModel):
     report_type: str = "FULL"
     report_data: dict[str, Any] | None = None
     generated_at: datetime | None = None
+    pdf_unlocked: bool = False
     created_at: datetime
     updated_at: datetime

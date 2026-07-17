@@ -154,8 +154,8 @@ async def download_solvency_report_pdf(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from fastapi.responses import StreamingResponse
-    from app.services.pdf_service import generate_solvency_pdf
+    from app.models.organization import Organization
+    from app.core.config import settings
 
     result = await db.execute(
         select(SolvencyReport).where(
@@ -175,22 +175,57 @@ async def download_solvency_report_pdf(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this report",
         )
-    if report.status != "COMPLETED" or not report.document_uri:
+    if report.status != "COMPLETED":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document generation failed or is incomplete.",
-        )
-        
-    from app.services.storage_service import storage_service
-    presigned_url = storage_service.generate_presigned_download_url(report.document_uri)
-    
-    if not presigned_url:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate secure download link.",
+            detail="Document generation is incomplete.",
         )
 
-    return {"download_url": presigned_url}
+    # ── Freemium Paywall ──────────────────────────────────────────────────────
+    # PDF download is gated. Access is granted if EITHER:
+    #   (a) The organisation has an active Pro subscription, OR
+    #   (b) This specific report has been unlocked.
+    org_result = await db.execute(
+        select(Organization).where(Organization.id == current_user.organization_id)
+    )
+    org = org_result.scalar_one_or_none()
+
+    is_pro_subscriber = org is not None and org.plan in ("pro", "business")
+    report_id_str = str(id)
+    pdf_allowed = is_pro_subscriber or report.pdf_unlocked
+
+    if not pdf_allowed:
+        checkout_endpoint = f"{settings.FRONTEND_URL}/api/billing/create-report-checkout?report_id={report_id_str}"
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "error": "pdf_locked",
+                "message": "Upgrade to Pro or pay 9€ to unlock this PDF",
+                "checkout_url": checkout_endpoint,
+            },
+        )
+    # ── End Paywall ───────────────────────────────────────────────────────────
+
+    from app.services.pdf_service import generate_solvency_pdf
+    from fastapi.responses import Response
+
+    try:
+        pdf_buffer = generate_solvency_pdf(report)
+        pdf_bytes = pdf_buffer.getvalue()
+    except Exception as e:
+        logger.error(f"Failed to generate PDF on the fly: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate PDF.",
+        )
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="solvai_report_{report.id}.pdf"'
+        }
+    )
 
 
 @router.post("/{report_id}/share", summary="Enable public share link for a report")
@@ -309,7 +344,7 @@ async def get_score_history(
 @router.delete(
     "/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Soft-delete a solvency report",
+    summary="Hard-delete a solvency report",
 )
 async def delete_solvency_report(
     id: uuid.UUID,
@@ -335,9 +370,7 @@ async def delete_solvency_report(
             detail="You do not have access to this report",
         )
 
-    report.is_deleted = True
-    report.deleted_at = datetime.now(timezone.utc)
-    await db.flush()
+    await db.delete(report)
     await db.commit()
 
 

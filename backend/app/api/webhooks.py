@@ -109,33 +109,98 @@ async def stripe_billing_webhook(
     event_type = getattr(event, "type", "")
     event_data = getattr(event, "data", None)
     obj = getattr(event_data, "object", None) if event_data else None
-    
+
     if not obj:
         return {"status": "success"}
 
     try:
         if event_type == "checkout.session.completed":
             org_id = obj.get("client_reference_id")
-            if org_id:
-                result = await db.execute(select(Organization).where(Organization.id == org_id))
-                org = result.scalar_one_or_none()
-                if org:
+            if not org_id:
+                logger.warning(
+                    "checkout.session.completed received with no client_reference_id — skipping"
+                )
+                return {"status": "success"}
+
+            result = await db.execute(select(Organization).where(Organization.id == org_id))
+            org = result.scalar_one_or_none()
+            if not org:
+                logger.warning(
+                    f"checkout.session.completed: org {org_id} not found — skipping"
+                )
+                return {"status": "success"}
+
+            session_mode = obj.get("mode")  # "payment" | "subscription"
+
+            if session_mode == "subscription":
+                # ── 29€/mo Pro subscription upgrade ──────────────────────────
+                org.stripe_customer_id = obj.get("customer")
+                org.stripe_subscription_id = obj.get("subscription")
+                org.plan = "pro"
+                logger.info(
+                    f"Org {org_id} upgraded to Pro via subscription {obj.get('subscription')}"
+                )
+
+            elif session_mode == "payment":
+                # ── 9€ one-time PDF unlock ────────────────────────────────────
+                metadata = obj.get("metadata") or {}
+                report_id = metadata.get("report_id")
+
+                if not report_id:
+                    logger.error(
+                        f"checkout.session.completed (payment) for org {org_id} "
+                        f"is missing metadata.report_id — cannot unlock PDF. "
+                        f"Ensure the Stripe checkout session is created with "
+                        f"metadata={{'report_id': '<uuid>'}}"
+                    )
+                    # Return 200 so Stripe does not retry; the fault is in
+                    # checkout session creation, not in this handler.
+                    return {"status": "success"}
+
+                # Safe JSONB mutation: copy-append pattern ensures SQLAlchemy
+                # detects the change (in-place list.append() is NOT tracked).
+                current_ids: list = list(org.unlocked_report_ids or [])
+                if report_id not in current_ids:
+                    current_ids.append(report_id)
+                    org.unlocked_report_ids = current_ids
+                    logger.info(
+                        f"Org {org_id}: PDF unlocked for report {report_id} "
+                        f"via one-time payment"
+                    )
+                else:
+                    logger.info(
+                        f"Org {org_id}: report {report_id} already unlocked — "
+                        f"idempotent skip"
+                    )
+
+                # Record Stripe customer ID for future CRM lookups
+                if obj.get("customer"):
                     org.stripe_customer_id = obj.get("customer")
-                    org.stripe_subscription_id = obj.get("subscription")
-                    org.plan = "pro"
-                    await db.commit()
-                    
+
+            else:
+                logger.warning(
+                    f"checkout.session.completed with unknown mode='{session_mode}' — skipping"
+                )
+
+            # Single atomic commit for the entire checkout.session.completed handler
+            await db.commit()
+
         elif event_type in ["customer.subscription.updated", "customer.subscription.deleted"]:
             sub_id = obj.get("id")
-            result = await db.execute(select(Organization).where(Organization.stripe_subscription_id == sub_id))
+            result = await db.execute(
+                select(Organization).where(Organization.stripe_subscription_id == sub_id)
+            )
             org = result.scalar_one_or_none()
             if org:
                 if event_type == "customer.subscription.deleted":
                     org.status = "canceled"
                     org.plan = "free"
+                    logger.info(
+                        f"Subscription {sub_id} deleted — org plan reset to free"
+                    )
                 else:
                     org.status = obj.get("status")
-                    
+
                     # Update plan based on price ID
                     items = obj.get("items", {}).get("data", [])
                     if items:
@@ -144,23 +209,38 @@ async def stripe_billing_webhook(
                             org.plan = "pro"
                         elif price_id == settings.STRIPE_BUSINESS_PRICE_ID:
                             org.plan = "business"
-                            
-                # Update period end
+
+                # Update billing period end
                 period_end = obj.get("current_period_end")
                 if period_end:
-                    org.current_period_end = datetime.datetime.fromtimestamp(period_end, tz=datetime.timezone.utc)
+                    org.current_period_end = datetime.datetime.fromtimestamp(
+                        period_end, tz=datetime.timezone.utc
+                    )
                 await db.commit()
-                
+
         elif event_type == "invoice.payment_failed":
             sub_id = obj.get("subscription")
             if sub_id:
-                result = await db.execute(select(Organization).where(Organization.stripe_subscription_id == sub_id))
+                result = await db.execute(
+                    select(Organization).where(Organization.stripe_subscription_id == sub_id)
+                )
                 org = result.scalar_one_or_none()
                 if org:
                     org.status = "past_due"
                     await db.commit()
+                    logger.warning(
+                        f"Invoice payment failed for subscription {sub_id} — "
+                        f"org marked past_due"
+                    )
+
     except Exception as e:
-        logger.error(f"Error processing webhook: {e}")
+        logger.error(
+            f"Unhandled error processing webhook event '{event_type}': {e}",
+            exc_info=True,
+        )
         await db.rollback()
+        # Return 200 to prevent Stripe from retrying on transient DB errors.
+        # Monitor application logs for these failures.
+        return {"status": "error", "detail": "internal processing error"}
 
     return {"status": "success"}

@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, DebugUndefined
 from weasyprint import HTML
 from app.models.solvency_report import SolvencyReport
 
@@ -394,7 +394,13 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
     # ==========================================
     
     template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
-    env = Environment(loader=FileSystemLoader(template_dir))
+    env = Environment(
+        loader=FileSystemLoader(template_dir),
+        # DebugUndefined prints {{var}} for missing vars instead of silently rendering
+        # empty strings, making template bugs immediately visible in the PDF output.
+        # Switch to StrictUndefined in staging once all templates are validated.
+        undefined=DebugUndefined,
+    )
     
     report_type = getattr(report, "report_type", "FULL")
     if report_type == "RENTAL":
@@ -412,10 +418,4 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
     pdf_buffer.seek(0)
     
     return pdf_buffer
-    
-    # 3. Generate PDF
-    pdf_buffer = io.BytesIO()
-    HTML(string=html_out).write_pdf(pdf_buffer)
-    pdf_buffer.seek(0)
-    
-    return pdf_buffer
+

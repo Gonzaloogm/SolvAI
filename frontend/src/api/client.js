@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://solvai-api-879357866699.europe-west1.run.app',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -206,6 +206,8 @@ export const billing = {
   getSubscription: () => apiClient.get('/billing/subscription'),
   
   createCheckoutSession: (plan) => apiClient.post('/billing/create-checkout-session', {plan}),
+
+  createReportCheckout: (reportId) => apiClient.post('/billing/create-report-checkout', { report_id: reportId }),
 
   applyPromo: (code) => apiClient.post('/billing/apply-promo', { code }),
 };

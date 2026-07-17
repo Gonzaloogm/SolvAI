@@ -28,7 +28,7 @@ export default function IntelligenceTerminal({ reportId }) {
  return;
  }
 
- const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://solvai-api-879357866699.europe-west1.run.app';
  const defaultWsUrl = apiBaseUrl.replace(/^http/, 'ws');
  let wsUrl = `${import.meta.env.VITE_WS_BASE_URL || defaultWsUrl}/ws/terminal/${orgId}`;
  if (reportId) {

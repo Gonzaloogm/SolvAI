@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { X, AlertTriangle, TrendingUp, Download, Loader2 } from 'lucide-react';
+import { X, AlertTriangle, TrendingUp, Download, Loader2, Lock } from 'lucide-react';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../context/ToastContext.jsx';
-import { solvencyReports } from '../api/client.js';
+import { solvencyReports, billing } from '../api/client.js';
+
+const renderMarkdown = (text) => {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br />');
+};
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -320,9 +327,21 @@ export default function ReportDetailModal({ report, onClose }) {
   const { t } = useTranslation();
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://solvai-api-879357866699.europe-west1.run.app';
   const token = localStorage.getItem('solvai_token');
+
+  let plan = 'free';
+  try {
+    const userStr = localStorage.getItem('solvai_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      plan = user?.organization?.plan ?? user?.plan ?? 'free';
+    }
+  } catch (e) {}
+  
+  const isLocked = plan !== 'pro' && plan !== 'business' && !report._raw?.pdf_unlocked;
 
   const modelName = report.subtitle?.split('·')[0]?.trim() || report.model || 'Gemini 2.5 Flash';
   const reportData = report._raw?.report_data || report.report_data || {};
@@ -423,39 +442,67 @@ export default function ReportDetailModal({ report, onClose }) {
           }
         }
       );
+      
       if (!response.ok) {
         if (response.status === 402) {
-          addToast('Upgrade to Pro to download PDFs', 'error');
+          const err = await response.json().catch(() => ({}));
+          const checkoutUrl = err.detail?.checkout_url || err.checkout_url;
+          if (checkoutUrl) {
+            window.location.href = checkoutUrl;
+          } else {
+            addToast('Upgrade to Pro to download PDFs', 'error');
+          }
           return;
         }
+        
         const err = await response.json().catch(() => ({}));
-        addToast(err.detail || `Failed to download PDF (${response.status})`, 'error');
+        
+        // If 403 and pdf_locked, handle it gracefully
+        const isPdfLocked = err.error === 'pdf_locked' 
+          || err.detail === 'pdf_locked' 
+          || err.detail?.error === 'pdf_locked';
+        
+        if (response.status === 403 && isPdfLocked) {
+          addToast('Report is locked', 'error');
+          return;
+        }
+        
+        // Extract string safely to avoid React WSOD
+        let safeMessage = `Failed to download PDF (${response.status})`;
+        if (typeof err.detail === 'string') {
+          safeMessage = err.detail;
+        } else if (typeof err.message === 'string') {
+          safeMessage = err.message;
+        } else if (err.detail && typeof err.detail.message === 'string') {
+          safeMessage = err.detail.message;
+        }
+        
+        addToast(safeMessage, 'error');
         return;
       }
-      const data = await response.json();
-      if (data.download_url) {
-        const gcsResponse = await fetch(data.download_url);
-        if (!gcsResponse.ok) throw new Error(gcsResponse.status);
-        const blob = await gcsResponse.blob();
-        if (blob.size === 0) throw new Error('Empty PDF');
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `solvai_report_${report.id.slice(0, 8)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 100);
-        addToast('PDF downloaded successfully', 'success');
-      } else {
-        throw new Error('No download URL returned from server');
-      }
+      const blob = await response.blob();
+      if (blob.size === 0) throw new Error('Empty PDF');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `solvai_report_${report.id.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      addToast('PDF downloaded successfully', 'success');
     } catch (err) {
       console.error('PDF download error:', err);
-      addToast(err.message || 'Failed to download PDF. Please try again.', 'error');
+      let message = 'Failed to download PDF. Please try again.';
+      if (typeof err === 'string') {
+        message = err;
+      } else if (typeof err.message === 'string') {
+        message = err.message;
+      }
+      addToast(message, 'error');
     } finally {
       setDownloadingPDF(false);
     }
@@ -468,6 +515,20 @@ export default function ReportDetailModal({ report, onClose }) {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
+
+  const handleUnlock = async () => {
+    setUnlocking(true);
+    try {
+      const res = await billing.createReportCheckout(report._raw?.id || report.id);
+      if (res.data?.checkout_url) {
+        window.location.href = res.data.checkout_url;
+      }
+    } catch (err) {
+      addToast(err?.response?.data?.detail || 'Failed to start checkout', 'error');
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -563,28 +624,36 @@ export default function ReportDetailModal({ report, onClose }) {
 
           <div>
             <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.narrative')}</h3>
-            <div className="bg-page rounded-md p-4" style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-secondary)' }}>
-              <ReactMarkdown
-                components={{
-                  p: ({ children }) => (
-                    <p style={{ marginBottom: '12px', margin: '0 0 12px 0' }}>{children}</p>
-                  ),
-                  strong: ({ children }) => (
-                    <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{children}</strong>
-                  ),
-                  em: ({ children }) => (
-                    <em style={{ fontStyle: 'italic' }}>{children}</em>
-                  ),
-                  ul: ({ children }) => (
-                    <ul style={{ paddingLeft: '20px', marginBottom: '12px' }}>{children}</ul>
-                  ),
-                  li: ({ children }) => (
-                    <li style={{ marginBottom: '4px' }}>{children}</li>
-                  ),
-                }}
-              >
-                {explanationText}
-              </ReactMarkdown>
+            <div className="bg-page rounded-md p-4 relative" style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-secondary)' }}>
+              <div style={{ filter: isLocked ? 'blur(4px)' : 'none', transition: 'filter 0.3s ease' }}>
+                <div 
+                  className="narrative-text"
+                  dangerouslySetInnerHTML={{ 
+                    __html: renderMarkdown(
+                      isLocked && explanationText.length > 200 
+                        ? explanationText.substring(0, 200) + '...' 
+                        : explanationText
+                    ) 
+                  }}
+                />
+              </div>
+              
+              {isLocked && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 dark:bg-black/40 rounded-md z-10 p-6 text-center backdrop-blur-[1px]">
+                  <div className="bg-card border border-border p-5 rounded-xl shadow-lg max-w-sm">
+                    <Lock className="w-8 h-8 text-[var(--brand-blue)] mb-3 mx-auto" />
+                    <h4 className="text-base font-semibold text-primary mb-2">Premium Feature</h4>
+                    <p className="text-sm text-secondary mb-4">Unlock the full AI narrative, risk flags, and PDF report.</p>
+                    <button
+                      onClick={handleUnlock}
+                      disabled={unlocking}
+                      className="w-full py-2 bg-[var(--brand-blue)] text-white rounded-lg text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors flex items-center justify-center gap-2"
+                    >
+                      {unlocking ? <Loader2 size={16} className="animate-spin" /> : 'Unlock for 9€'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           

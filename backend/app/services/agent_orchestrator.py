@@ -33,12 +33,12 @@ async def underwriter_node(state: AgentState) -> AgentState:
     if not settings.GEMINI_API_KEY:
         logger.warning("GEMINI_API_KEY not set. Mocking Underwriter.")
         return {"draft_report": '{"overall_score": 80, "recommendation": "Approve"}'}
-        
+
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
-    
+
     report_type = state.get("report_type", "FULL")
-    
+
     rental_context = ""
     if report_type == "RENTAL":
         rental_context = """
@@ -129,65 +129,135 @@ CRITICAL REQUIREMENTS:
 3. RISK FLAG LOGIC: You MUST populate the "risk_flags" array with specific, explicitly quoted numbers if ANY component score is < 60, or if top client concentration > 40%. You must not generate generic risk flags; tie them directly to the metrics.
 4. Make the report extremely dense, detailed, and professional.
 """
-    try:
-        tasks = [
-            model.generate_content_async(prompt, generation_config={"temperature": 0.4})
-            for _ in range(3)
-        ]
-        responses = await asyncio.gather(*tasks)
-        
-        parsed_reports = []
-        for r in responses:
-            clean_resp = r.text.replace('```json', '').replace('```', '').strip()
-            try:
-                parsed_reports.append(json.loads(clean_resp))
-            except json.JSONDecodeError:
-                pass
-                
-        if not parsed_reports:
-             return {"draft_report": '{"error": "Underwriter parsing failed"}'}
-             
-        recommendations = [r.get("recommendation", "Unknown") for r in parsed_reports]
-        scores = [r.get("overall_score", 0) for r in parsed_reports]
-        
-        req_human_review = False
-        
-        if len(set(recommendations)) > 1:
-            req_human_review = True
-            
-        if scores:
-            max_score = max(scores)
-            min_score = min(scores)
-            if max_score > 0 and ((max_score - min_score) / max_score) > 0.05:
+
+    # ── Retry loop: up to MAX_UNDERWRITER_ATTEMPTS total (1 initial + 2 retries) ──
+    MAX_UNDERWRITER_ATTEMPTS = 3
+    last_exception: Exception | None = None
+
+    for attempt in range(1, MAX_UNDERWRITER_ATTEMPTS + 1):
+        try:
+            tasks = [
+                model.generate_content_async(prompt, generation_config={"temperature": 0.4})
+                for _ in range(3)
+            ]
+            responses = await asyncio.gather(*tasks)
+
+            parsed_reports = []
+            parse_errors = []
+            for r in responses:
+                clean_resp = r.text.replace('```json', '').replace('```', '').strip()
+                try:
+                    doc = json.loads(clean_resp)
+                    # Validate the minimum required field exists and is numeric
+                    if not isinstance(doc.get("overall_score"), (int, float)):
+                        raise ValueError(
+                            f"overall_score missing or non-numeric: {doc.get('overall_score')!r}"
+                        )
+                    parsed_reports.append(doc)
+                except (json.JSONDecodeError, ValueError) as parse_err:
+                    parse_errors.append(str(parse_err))
+                    logger.warning(
+                        f"[Underwriter attempt {attempt}] Self-consistency parse failure: {parse_err}"
+                    )
+
+            if not parsed_reports:
+                # All 3 parallel calls failed to produce valid JSON — retry
+                last_exception = ValueError(
+                    f"All self-consistency drafts failed JSON validation on attempt {attempt}. "
+                    f"Errors: {parse_errors}"
+                )
+                logger.warning(
+                    f"[Underwriter attempt {attempt}/{MAX_UNDERWRITER_ATTEMPTS}] "
+                    f"No valid drafts. Will retry if attempts remain."
+                )
+                continue  # next retry iteration
+
+            # ── Success: choose best draft by self-consistency ────────────────
+            recommendations = [r.get("recommendation", "Unknown") for r in parsed_reports]
+            scores = [r.get("overall_score", 0) for r in parsed_reports]
+
+            req_human_review = False
+            if len(set(recommendations)) > 1:
                 req_human_review = True
-                
-        chosen_draft = parsed_reports[0]
-        
-        return {
-            "draft_report": json.dumps(chosen_draft),
-            "requires_human_review": req_human_review
-        }
-    except Exception as e:
-        import traceback
-        error_msg = f"Underwriter error: {str(e)}\n{traceback.format_exc()}"
-        logger.error(error_msg)
-        raise RuntimeError(error_msg)
+            if scores:
+                max_score = max(scores)
+                min_score = min(scores)
+                if max_score > 0 and ((max_score - min_score) / max_score) > 0.05:
+                    req_human_review = True
+
+            chosen_draft = parsed_reports[0]
+            logger.info(
+                f"[Underwriter attempt {attempt}] Success — "
+                f"{len(parsed_reports)}/3 valid drafts. "
+                f"score={chosen_draft.get('overall_score')} "
+                f"human_review={req_human_review}"
+            )
+            return {
+                "draft_report": json.dumps(chosen_draft),
+                "requires_human_review": req_human_review,
+            }
+
+        except Exception as e:
+            import traceback
+            last_exception = e
+            logger.error(
+                f"[Underwriter attempt {attempt}/{MAX_UNDERWRITER_ATTEMPTS}] "
+                f"Exception: {e}\n{traceback.format_exc()}"
+            )
+
+    # ── All attempts exhausted ──────────────────────────────────────────────
+    raise RuntimeError(
+        f"Underwriter failed after {MAX_UNDERWRITER_ATTEMPTS} attempts. "
+        f"Last error: {last_exception}"
+    )
+
 
 def auditor_node(state: AgentState) -> AgentState:
-    logger.info(f"Executing Auditor Agent... Input state: {state}")
+    logger.info(f"Executing Auditor Agent... iterations so far: {state.get('iterations', 0)}")
     iterations = state.get("iterations", 0) + 1
-    
+
+    # ── Safe fallback skeleton: guarantees the template never receives None ────
+    # Every key consumed by report_template.html / pdf_service.py is present.
+    SAFE_REPORT_SKELETON: dict = {
+        "overall_score": 50,
+        "recommendation": "Review",
+        "rating": "Developing",
+        "narrative": "Report generated with limited data. Manual review recommended.",
+        "income_stability": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
+        "growth_trend": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
+        "seasonality": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
+        "client_concentration": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
+        "reputation_signals": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
+        "risk_flags": [],
+        "recommendations": ["Manual review required due to incomplete AI output."],
+        "data_references": [],
+        "strengths": [],
+        "_fallback": True,
+    }
+
+    def _parse_draft(raw: str) -> dict:
+        """Parse and structurally validate the underwriter draft. Raises on failure."""
+        cleaned = raw.replace('```json', '').replace('```', '').strip()
+        doc = json.loads(cleaned)   # raises json.JSONDecodeError if malformed
+        score = doc.get("overall_score")
+        if not isinstance(score, (int, float)) or not (0 <= float(score) <= 100):
+            raise ValueError(
+                f"overall_score must be a number 0-100, got {score!r}"
+            )
+        return doc
+
     if not settings.GEMINI_API_KEY:
-         logger.warning("GEMINI_API_KEY not set. Mocking Auditor.")
-         try:
-             final_report = json.loads(state.get("draft_report", "{}").replace('```json', '').replace('```', '').strip())
-         except:
-             final_report = {"overall_score": 85, "recommendation": "Approve", "mock": True}
-         return {"is_approved": True, "iterations": iterations, "final_report": final_report}
-         
+        logger.warning("GEMINI_API_KEY not set. Mocking Auditor.")
+        try:
+            final_report = _parse_draft(state.get("draft_report", "{}"))
+        except (json.JSONDecodeError, ValueError) as parse_err:
+            logger.error(f"[Auditor mock] Draft parse failed: {parse_err}. Using safe skeleton.")
+            final_report = SAFE_REPORT_SKELETON.copy()
+        return {"is_approved": True, "iterations": iterations, "final_report": final_report}
+
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
-    
+
     prompt = f"""You are SolvAI's Auditor Agent (Red Team).
 Review the following Draft Report against the raw Financial Summary.
 Financial Summary: {json.dumps(state.get("financial_summary", {}))}
@@ -200,42 +270,52 @@ Respond ONLY with a JSON object: {{"is_approved": true/false, "critique": "your 
     try:
         # Use temp=0.0 for deterministic auditing
         response = model.generate_content(prompt, generation_config={"temperature": 0.0})
-        # Basic JSON extraction
         clean_resp = response.text.replace('```json', '').replace('```', '').strip()
         result = json.loads(clean_resp)
-        
+
         is_approved = result.get("is_approved", False)
-        
-        updates = {
-            "is_approved": is_approved, 
+
+        updates: dict = {
+            "is_approved": is_approved,
             "auditor_feedback": result.get("critique", ""),
-            "iterations": iterations
+            "iterations": iterations,
         }
-        
+
         if is_approved or iterations >= 3 or state.get("requires_human_review"):
-             # Finalize if approved or max retries reached or human review required
-             try:
-                 final_report = json.loads(state.get("draft_report", "{}").replace('```json', '').replace('```', '').strip())
-                 
-                 # Regex fallback
-                 if "overall_score" not in final_report or final_report.get("overall_score") in ["N/A", None, ""]:
-                     import re
-                     match = re.search(r'"overall_score"\s*:\s*(\d+(\.\d+)?)', state.get("draft_report", ""))
-                     if match:
-                         final_report["overall_score"] = float(match.group(1))
-                 
-                 updates["final_report"] = final_report
-             except:
-                 updates["final_report"] = {"raw_draft": state.get("draft_report")}
-                 
-        logger.info(f"Auditor final report: {updates.get('final_report')}")
-        logger.info(f"Auditor output state updates: {updates}")
+            # Finalize: parse and validate the draft before committing to state
+            try:
+                final_report = _parse_draft(state.get("draft_report", "{}"))
+
+                # Regex score rescue: score present but formatted unexpectedly
+                if "overall_score" not in final_report or final_report.get("overall_score") in ["N/A", None, ""]:
+                    import re
+                    match = re.search(r'"overall_score"\s*:\s*(\d+(\.\d+)?)', state.get("draft_report", ""))
+                    if match:
+                        final_report["overall_score"] = float(match.group(1))
+
+                updates["final_report"] = final_report
+                logger.info(f"[Auditor] Draft accepted. score={final_report.get('overall_score')}")
+
+            except (json.JSONDecodeError, ValueError) as parse_err:
+                # The draft is structurally broken — never pass garbage to the template.
+                logger.error(
+                    f"[Auditor] Final draft failed structural validation: {parse_err}. "
+                    f"Activating safe report skeleton."
+                )
+                skeleton = SAFE_REPORT_SKELETON.copy()
+                skeleton["auditor_critique"] = result.get("critique", "")
+                updates["final_report"] = skeleton
+                updates["requires_human_review"] = True
+
+        logger.info(f"[Auditor] iteration={iterations} approved={is_approved}")
         return updates
+
     except Exception as e:
         import traceback
         error_msg = f"Auditor error: {str(e)}\n{traceback.format_exc()}"
         logger.error(error_msg)
         raise RuntimeError(error_msg)
+
 
 def should_continue(state: AgentState) -> str:
     if state.get("requires_human_review"):

@@ -4,7 +4,7 @@ import axios from 'axios';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { AlertTriangle } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://solvai-api-879357866699.europe-west1.run.app';
 
 export default function PublicReport() {
   const { token } = useParams();

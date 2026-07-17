@@ -79,6 +79,22 @@ class SolvencyReport(Base, TimestampMixin, SoftDeleteMixin):
         DateTime(timezone=True),
         nullable=True,
     )
+    pdf_unlocked: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=sa.sql.false(),
+    )
+    pdf_unlocked_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
+    )
+    stripe_payment_intent_id: Mapped[str | None] = mapped_column(
+        sa.String(255),
+        nullable=True,
+        default=None,
+    )
 
     # ── Score history columns ─────────────────────────────────────────────────
     overall_score: Mapped[int | None] = mapped_column(

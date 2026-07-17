@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     STRIPE_BILLING_WEBHOOK_SECRET: str = ""
     STRIPE_PRO_PRICE_ID: str = ""
     STRIPE_BUSINESS_PRICE_ID: str = ""
+    # One-time 9€ price ID used for per-report PDF unlocks
+    STRIPE_REPORT_UNLOCK_PRICE_ID: str = ""
 
     # ── Xero ─────────────────────────────────────────────────────────────────
     XERO_CLIENT_ID: str = ""

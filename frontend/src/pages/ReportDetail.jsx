@@ -211,6 +211,8 @@ export default function ReportDetail() {
  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
  const [pdfError, setPdfError] = useState(null);
  const [subscription, setSubscription] = useState(null);
+ const [showPaywall, setShowPaywall] = useState(false);
+ const [toast, setToast] = useState(null);
 
  const fetchReport = useCallback(async () => {
  try {
@@ -244,6 +246,69 @@ export default function ReportDetail() {
 
  return () => clearInterval(pollRef.current);
  }, [fetchReport]);
+
+ useEffect(() => {
+ const params = new URLSearchParams(window.location.search);
+ const payment = params.get('payment');
+ if (payment) {
+ if (payment === 'success') {
+ setToast({ type: 'success', message: 'Report unlocked successfully!' });
+ } else if (payment === 'cancelled') {
+ setToast({ type: 'info', message: 'Payment cancelled' });
+ }
+ const newUrl = window.location.pathname;
+ window.history.replaceState({}, document.title, newUrl);
+ setTimeout(() => setToast(null), 5000);
+ }
+ }, []);
+
+ const handleUnlock = async () => {
+ try {
+ const res = await billing.createReportCheckout(report.id);
+ window.location.href = res.data.checkout_url;
+ } catch (err) {
+ console.error("Checkout Error:", err);
+ const errorMessage = err?.response?.data?.message 
+ || err?.message 
+ || (typeof err === 'string' ? err : "Failed to initiate checkout");
+ setPdfError(errorMessage);
+ }
+ };
+
+ const handlePdfDownload = async (reportId) => {
+ try {
+ const token = localStorage.getItem('solvai_token');
+ const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://solvai-api-879357866699.europe-west1.run.app';
+ const res = await fetch(`${baseUrl}/solvency-reports/${reportId}/pdf`, {
+ headers: { 'Authorization': `Bearer ${token}` }
+ });
+
+ // If locked, trigger the modal and stop
+ if (res.status === 403) {
+ const data = await res.json().catch(() => ({}));
+ if (data.error === 'pdf_locked' || data.detail === 'pdf_locked') {
+ setShowPaywall(true);
+ return; 
+ }
+ }
+
+ if (!res.ok) throw new Error("Error en la descarga");
+
+ const blob = await res.blob();
+ const url = window.URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = `solvencia_${reportId}.pdf`;
+ document.body.appendChild(a);
+ a.click();
+ window.URL.revokeObjectURL(url);
+ a.remove();
+
+ } catch (err) {
+ console.error("Error:", err);
+ alert(typeof err === 'string' ? err : (err.message || "Error desconocido"));
+ }
+ };
 
  // ── Derived report data ──────────────────────────────────────────────────
  const status = report?.status?.toUpperCase() ?? '';
@@ -291,6 +356,43 @@ export default function ReportDetail() {
  // ── Render ───────────────────────────────────────────────────────────────
  return (
  <div className="page-layout">
+ {toast && (
+ <div className={`toast toast-${toast.type}`} style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000, padding: '16px', borderRadius: '8px', background: toast.type === 'success' ? 'var(--color-status-success)' : 'var(--color-surface-elevated)', color: '#fff', boxShadow: 'var(--glow-cyan-sm)' }}>
+ {toast.message}
+ </div>
+ )}
+
+ {showPaywall && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 relative">
+      {/* Close button */}
+      <button onClick={() => setShowPaywall(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+        ✕
+      </button>
+      
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">Unlock Full Solvency PDF</h2>
+      <p className="text-gray-600 mb-6">
+        Your AI Score is ready. Upgrade to Pro or unlock this specific report to download the official PDF with the cryptographic verification QR code.
+      </p>
+      
+      <div className="flex flex-col gap-3">
+        <button 
+          onClick={handleUnlock}
+          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Unlock for 9€
+        </button>
+        
+        <button 
+          onClick={() => window.location.href = '/pricing'}
+          className="w-full bg-gray-100 text-gray-800 font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          Upgrade to Pro (29€/mo)
+        </button>
+      </div>
+    </div>
+  </div>
+ )}
  <Sidebar />
 
  <main className="page-content">
@@ -329,56 +431,13 @@ export default function ReportDetail() {
  </div>
  {status === 'COMPLETED' && (
  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
- {subscription?.plan === 'free' ? (
- <Link 
- to="/pricing"
- className="btn-primary" 
- style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', background: 'var(--color-accent-primary)', color: 'black' }}
- >
- <IconSparkle size={16} /> Upgrade to Pro to Download PDF
- </Link>
- ) : (
  <button 
  className="btn-secondary" 
- disabled={isDownloadingPdf}
- onClick={async () => {
- setIsDownloadingPdf(true);
- setPdfError(null);
- try {
- const token = localStorage.getItem('solvai_token');
- const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
- const res = await fetch(`${baseUrl}/solvency-reports/${report.id}/pdf`, {
- headers: { 'Authorization': `Bearer ${token}` }
- });
- if (!res.ok) throw new Error(`HTTP ${res.status}`);
- const blob = await res.blob();
- const url = URL.createObjectURL(blob);
- const a = document.createElement('a');
- a.href = url;
- a.download = `solvency_report_${report.id}.pdf`;
- document.body.appendChild(a);
- a.click();
- a.remove();
- URL.revokeObjectURL(url);
- } catch (e) {
- console.error('PDF download failed:', e);
- setPdfError('Failed to generate or download PDF.');
- } finally {
- setIsDownloadingPdf(false);
- }
- }}
+ onClick={() => handlePdfDownload(report.id)}
  style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
  >
- {isDownloadingPdf ? (
- <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
- <div className="rd-generating__spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
- Generating...
- </span>
- ) : (
- <><IconClipboard size={16} /> Download PDF</>
- )}
+ <IconClipboard size={16} /> Download PDF
  </button>
- )}
  {pdfError && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-status-error)' }}>{pdfError}</div>}
  </div>
  )}

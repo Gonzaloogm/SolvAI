@@ -75,7 +75,7 @@ export default function Pricing() {
  
  setLoading(true);
  try {
- const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+ const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://solvai-api-879357866699.europe-west1.run.app';
  const res = await fetch(`${baseUrl}/billing/create-checkout-session?price_id=${priceId}`, {
  method: 'POST',
  headers: {

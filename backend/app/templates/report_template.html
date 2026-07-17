@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SolvAI Report - {{ report_id }}</title>
+    <title>SolvAI Report - {{ report_id | default('N/A') }}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
@@ -253,17 +253,17 @@
                     </tr>
                     <tr>
                         <td>Report ID:</td>
-                        <td class="text-mono">{{ report_id }}</td>
+                        <td class="text-mono">{{ report_id | default('N/A') }}</td>
                     </tr>
                     <tr>
                         <td>Generated On:</td>
-                        <td>{{ generated_at }}</td>
+                        <td>{{ generated_at | default('N/A') }}</td>
                     </tr>
                 </table>
             </div>
             
             <div class="score-gauge-container">
-                {% set sc = data.overall_score %}
+                {% set sc = data.overall_score | default(50) | int %}
                 {% set sc_class = 'score-success' if sc >= 70 else ('score-warning' if sc >= 40 else 'score-error') %}
                 <div class="score-gauge {{ sc_class }}">
                     <div class="score-value">{{ sc }}</div>
@@ -289,14 +289,14 @@
     <!-- Executive Summary -->
     <h2>1. Executive Summary</h2>
     <div class="bg-surface">
-        <p><strong>Rating:</strong> <span class="brand-accent" style="font-size: 14pt; font-weight: 700;">{{ data.rating }}</span></p>
-        <p style="margin-bottom: 0;">{{ data.narrative }}</p>
+        <p><strong>Rating:</strong> <span class="brand-accent" style="font-size: 14pt; font-weight: 700;">{{ data.rating | default('N/A') }}</span></p>
+        <p style="margin-bottom: 0;">{{ data.narrative | default('No narrative available.') }}</p>
     </div>
 
-    {% if data.industry_context %}
+    {% if data.industry_context | default('') %}
     <div class="bg-surface" style="background-color: #f8fafc; border-left: 4px solid #3b82f6;">
         <h3 style="margin-top: 0; font-size: 11pt; color: #1e3a8a;">Industry Context & Macro Comparison</h3>
-        <p style="margin-bottom: 0; font-size: 9.5pt;">{{ data.industry_context }}</p>
+        <p style="margin-bottom: 0; font-size: 9.5pt;">{{ data.industry_context | default('N/A') }}</p>
     </div>
     {% endif %}
 
@@ -327,16 +327,17 @@
     <div class="metric-row">
         <div class="metric-header">
             <span>{{ label }}</span>
-            <span>{{ data_obj.score }} / 100</span>
+            <span>{{ data_obj.score | default(50) | int }} / 100</span>
         </div>
         <div class="metric-bar-bg">
-            {% set c_class = 'background-color: #10b981;' if data_obj.score >= 70 else ('background-color: #f59e0b;' if data_obj.score >= 40 else 'background-color: #ef4444;') %}
-            <div class="metric-bar-fill" style="width: {{ data_obj.score }}%; {{ c_class }}"></div>
+            {% set _score = data_obj.score | default(50) | int %}
+            {% set c_class = 'background-color: #10b981;' if _score >= 70 else ('background-color: #f59e0b;' if _score >= 40 else 'background-color: #ef4444;') %}
+            <div class="metric-bar-fill" style="width: {{ _score }}%; {{ c_class }}"></div>
         </div>
-        <p class="text-sm" style="margin-top: 5px;">{{ data_obj.description }}</p>
-        {% if data_obj.lender_implications %}
+        <p class="text-sm" style="margin-top: 5px;">{{ data_obj.description | default('N/A') }}</p>
+        {% if data_obj.lender_implications | default('') %}
         <div style="background-color: #f8fafc; padding: 10px; border-left: 3px solid #6366f1; font-size: 8.5pt; color: #334155; margin-top: 8px;">
-            <strong>Lender Implications:</strong> {{ data_obj.lender_implications }}
+            <strong>Lender Implications:</strong> {{ data_obj.lender_implications | default('N/A') }}
         </div>
         {% endif %}
     </div>
@@ -381,11 +382,11 @@
 
     <!-- Financial Data Summary -->
     <h2>5. Financial Data & Evidence</h2>
-    <p>Analysis is based on aggregated financial data from {{ raw_data.data_source_count }} verified platforms ({{ raw_data.connected_platforms | join(', ') }}), spanning <strong>{{ raw_data.analysis_period_months }} months</strong>.</p>
+    <p>Analysis is based on aggregated financial data from {{ raw_data.data_source_count | default(0) }} verified platforms ({{ (raw_data.connected_platforms | default([])) | join(', ') }}), spanning <strong>{{ raw_data.analysis_period_months | default(0) }} months</strong>.</p>
     
     <div class="chart-container">
         <h3>Average Monthly Revenue</h3>
-        <p style="font-size: 18pt; font-weight: bold; color: #10b981;">&euro; {{ "{:,.2f}".format(raw_data.avg_monthly_revenue) }}</p>
+        <p style="font-size: 18pt; font-weight: bold; color: #10b981;">&euro; {{ "{:,.2f}".format(raw_data.avg_monthly_revenue | default(0) | float) }}</p>
     </div>
 
     {% if raw_data.charts and raw_data.charts.revenue_trend %}
@@ -406,9 +407,9 @@
         <tbody>
             {% for item in raw_data.monthly_revenue_series %}
             <tr>
-                <td class="text-mono">{{ item.month }}</td>
-                <td class="text-right">{{ item.transaction_count }}</td>
-                <td class="text-right">&euro; {{ "{:,.2f}".format(item.total) }}</td>
+                <td class="text-mono">{{ item.month | default('N/A') }}</td>
+                <td class="text-right">{{ item.transaction_count | default(0) }}</td>
+                <td class="text-right">&euro; {{ "{:,.2f}".format(item.total | default(0) | float) }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -416,7 +417,7 @@
 
     <div class="chart-container">
         <h3>Client Concentration Profile</h3>
-        <p>Total Distinct Clients: <strong>{{ raw_data.client_concentration.distinct_clients }}</strong></p>
+        <p>Total Distinct Clients: <strong>{{ raw_data.client_concentration.distinct_clients | default(0) }}</strong></p>
         
         {% if raw_data.charts and raw_data.charts.client_pie %}
         <div style="text-align: center; margin: 20px 0;">
@@ -427,11 +428,11 @@
         <div class="metric-row">
             <div class="metric-header">
                 <span>Top Client Contribution</span>
-                <span>{{ raw_data.client_concentration.top_client_percent }}%</span>
+                <span>{{ raw_data.client_concentration.top_client_percent | default(0) }}%</span>
             </div>
             <div class="metric-bar-bg">
                 <!-- Inverted color logic: high concentration is bad -->
-                {% set conc = raw_data.client_concentration.top_client_percent %}
+                {% set conc = raw_data.client_concentration.top_client_percent | default(0) | float %}
                 {% set c_class = 'background-color: #ef4444;' if conc >= 50 else ('background-color: #f59e0b;' if conc >= 25 else 'background-color: #10b981;') %}
                 <div class="metric-bar-fill" style="width: {{ conc }}%; {{ c_class }}"></div>
             </div>
@@ -440,10 +441,10 @@
         <div class="metric-row">
             <div class="metric-header">
                 <span>Top 3 Clients Contribution</span>
-                <span>{{ raw_data.client_concentration.top_3_clients_percent }}%</span>
+                <span>{{ raw_data.client_concentration.top_3_clients_percent | default(0) }}%</span>
             </div>
             <div class="metric-bar-bg">
-                {% set conc3 = raw_data.client_concentration.top_3_clients_percent %}
+                {% set conc3 = raw_data.client_concentration.top_3_clients_percent | default(0) | float %}
                 {% set c_class = 'background-color: #ef4444;' if conc3 >= 80 else ('background-color: #f59e0b;' if conc3 >= 50 else 'background-color: #10b981;') %}
                 <div class="metric-bar-fill" style="width: {{ conc3 }}%; {{ c_class }}"></div>
             </div>
@@ -459,19 +460,19 @@
         <table style="width: 100%; font-size: 10pt; border-collapse: collapse;">
             <tr>
                 <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7;"><strong>Average MoM Growth:</strong></td>
-                <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; text-align: right;" class="text-mono">{{ "{:,.1f}".format(raw_data.analytics.avg_mom_growth) }}%</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; text-align: right;" class="text-mono">{{ "{:,.1f}".format(raw_data.analytics.avg_mom_growth | default(0) | float) }}%</td>
             </tr>
             <tr>
                 <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7;"><strong>Revenue Volatility (StDev):</strong></td>
-                <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; text-align: right;" class="text-mono">&euro; {{ "{:,.2f}".format(raw_data.analytics.revenue_volatility) }}</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; text-align: right;" class="text-mono">&euro; {{ "{:,.2f}".format(raw_data.analytics.revenue_volatility | default(0) | float) }}</td>
             </tr>
             <tr>
                 <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7;"><strong>Coefficient of Variation (CoV):</strong></td>
-                <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; text-align: right;" class="text-mono">{{ "{:,.1f}".format(raw_data.analytics.cov) }}%</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; text-align: right;" class="text-mono">{{ "{:,.1f}".format(raw_data.analytics.cov | default(0) | float) }}%</td>
             </tr>
             <tr>
                 <td style="padding: 8px 0;"><strong>Estimated Client HHI (Risk Index):</strong></td>
-                <td style="padding: 8px 0; text-align: right;" class="text-mono">{{ "{:,.0f}".format(raw_data.analytics.hhi_index) }} / 10000</td>
+                <td style="padding: 8px 0; text-align: right;" class="text-mono">{{ "{:,.0f}".format(raw_data.analytics.hhi_index | default(0) | float) }} / 10000</td>
             </tr>
         </table>
     </div>
@@ -492,8 +493,8 @@
     <!-- Appendix / References -->
     <h2>Appendix: Data References</h2>
     <ul>
-        {% for ref in data.data_references %}
-        <li class="text-sm" style="margin-bottom: 5px;">{{ ref }}</li>
+        {% for ref in (data.data_references | default([], true)) %}
+        <li class="text-sm" style="margin-bottom: 5px;">{{ ref | default('N/A') }}</li>
         {% endfor %}
     </ul>
 

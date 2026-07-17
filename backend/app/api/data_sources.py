@@ -323,98 +323,139 @@ async def paypal_callback(
         logger.error(f"PayPal callback error: {e}")
         return RedirectResponse(f"{frontend_url}/data-sources?error=paypal_failed")
 
-@router.post("/upload", summary="Upload manual statements (CSV) for preview")
+@router.post("/upload", summary="Upload a bank statement CSV for preview")
 async def upload_statements(
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
 ):
+    """Upload and preview a bank statement CSV."""
+    if not file.filename:
+        raise HTTPException(400, "No file provided")
+
+    ext = file.filename.lower().rsplit(".", 1)[-1] if "." in file.filename else ""
+    if ext not in ("csv", "txt", "tsv"):
+        raise HTTPException(
+            400,
+            f"Unsupported file type .{ext}. Please upload a CSV file."
+        )
+
     content = await file.read()
-    filename = file.filename.lower() if file.filename else ""
-    
-    if not filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only CSV files are supported")
-    
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(400, "File too large (max 10MB)")
+    if len(content) == 0:
+        raise HTTPException(400, "File is empty")
+
     try:
-        transactions = csv_service.parse_file(content)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    
-    total_rows = len(transactions)
-    preview_rows = transactions[:10]
-    total_income = sum(t["amount"] for t in transactions if t.get("amount", 0) > 0)
-    
-    date_range = []
-    dates = [t["date"] for t in transactions if t.get("date")]
-    if dates:
-        date_range = [min(dates), max(dates)]
-        
-    upload_token = str(uuid.uuid4())
-    _upload_sessions[upload_token] = {
-        "filename": filename,
-        "transactions": transactions,
-        "total_rows": total_rows,
-        "total_income": total_income,
-    }
-    
-    return {
-        "preview_rows": preview_rows,
-        "detected_columns": {"date": "Date", "amount": "Amount", "client": "Client"},
-        "total_rows": total_rows,
-        "date_range": date_range,
-        "total_income_detected": total_income,
-        "upload_token": upload_token
+        result = csv_service.parse_file(content, file.filename)
+    except ValueError as e:
+        raise HTTPException(422, {
+            "error": str(e),
+            "suggestion": (
+                "Ensure your CSV has date and amount "
+                "columns. Export from your bank's "
+                "online portal as CSV."
+            )
+        })
+
+    if not result["monthly_revenue_series"]:
+        raise HTTPException(422, {
+            "error": "No income transactions found",
+            "suggestion": (
+                "Only positive amounts are counted as "
+                f"income. Detected columns: "
+                f"{result['detected_columns']}"
+            )
+        })
+
+    token = str(uuid.uuid4())
+    _upload_sessions[token] = {
+        "user_id": str(current_user.id),
+        "org_id": str(current_user.organization_id),
+        "data": result,
+        "filename": file.filename,
     }
 
-@router.post("/upload/confirm", summary="Confirm invoice upload")
+    return {
+        "upload_token": token,
+        "preview": result["preview"],
+        "preview_rows": result["preview"],
+        "detected_columns": result["detected_columns"],
+        "total_rows": result["total_rows"],
+        "income_rows": result["income_rows"],
+        "date_range": result["date_range"],
+        "total_income_detected": result["total_income"],
+        "months_detected": len(result["monthly_revenue_series"]),
+        "currency": result["currency"],
+    }
+
+@router.post("/upload/confirm", summary="Confirm and save a previewed CSV upload")
 async def confirm_upload(
     body: dict,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Save a previewed CSV as a data source."""
     upload_token = body.get("upload_token")
     if not upload_token or upload_token not in _upload_sessions:
-        raise HTTPException(status_code=400, detail="Upload token is missing or invalid")
-        
-    session_data = _upload_sessions.pop(upload_token)
-    transactions = session_data["transactions"]
+        raise HTTPException(
+            404,
+            "Upload session not found. Please upload the file again."
+        )
 
-    import re
-    monthly_series = {}
-    for t in transactions:
-        d = t.get("date", "")
-        month = "Unknown"
-        m_iso = re.search(r"(\d{4})[\-\.](\d{2})", d)
-        m_eu = re.search(r"(\d{2})[/\-\.](\d{2})[/\-\.](\d{4})", d)
-        if m_iso:
-            month = f"{m_iso.group(1)}-{m_iso.group(2)}"
-        elif m_eu:
-            month = f"{m_eu.group(3)}-{m_eu.group(2)}"
-        
-        if month not in monthly_series:
-            monthly_series[month] = {"month": month, "revenue": 0.0, "transactions": 0}
-        
-        amt = float(t.get("amount", 0.0))
-        if amt > 0:
-            monthly_series[month]["revenue"] += amt
-        monthly_series[month]["transactions"] += 1
-        
-    series_list = sorted(list(monthly_series.values()), key=lambda x: x["month"])
-    
-    source = FinancialDataSource(
-        id=uuid.uuid4(),
-        user_id=current_user.id,
-        organization_id=current_user.organization_id,
-        type="MANUAL_UPLOAD",
-        status="CONNECTED",
-        connection_details={
-            "filename": session_data["filename"],
-            "records_count": session_data["total_rows"],
-            "monthly_revenue_series": series_list
-        },
+    session_data = _upload_sessions[upload_token]
+    if session_data["user_id"] != str(current_user.id):
+        raise HTTPException(403, "Unauthorized")
+
+    data = session_data["data"]
+    name = body.get("name", "Bank Statement")
+    records = sum(
+        m["transactions"]
+        for m in data["monthly_revenue_series"]
     )
-    db.add(source)
+
+    # Check if a CSV/MANUAL_UPLOAD source already exists for this user
+    from sqlalchemy import delete as sa_delete
+    existing = await db.execute(
+        select(FinancialDataSource).where(
+            FinancialDataSource.user_id == current_user.id,
+            FinancialDataSource.type.in_(["CSV", "MANUAL_UPLOAD"]),
+        )
+    )
+    source = existing.scalar_one_or_none()
+
+    monthly_series = data["monthly_revenue_series"]
+
+    if source:
+        source.connection_details = {
+            "filename": session_data["filename"],
+            "records_count": records,
+            "monthly_revenue_series": monthly_series,
+            "currency": data.get("currency", "EUR"),
+            "total_revenue": data.get("total_income", 0),
+        }
+        source.status = "CONNECTED"
+        source.type = "MANUAL_UPLOAD"
+    else:
+        source = FinancialDataSource(
+            id=uuid.uuid4(),
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
+            type="MANUAL_UPLOAD",
+            status="CONNECTED",
+            connection_details={
+                "filename": session_data["filename"],
+                "records_count": records,
+                "monthly_revenue_series": monthly_series,
+                "currency": data.get("currency", "EUR"),
+                "total_revenue": data.get("total_income", 0),
+            },
+        )
+        db.add(source)
+
     await db.commit()
     await db.refresh(source)
-    
+    del _upload_sessions[upload_token]
+
     return DataSourceResponse.model_validate(source)
 
 @router.get("/xero/connect", summary="Start Xero OAuth2 flow")

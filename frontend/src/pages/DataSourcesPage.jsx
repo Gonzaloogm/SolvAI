@@ -627,22 +627,22 @@ export default function DataSourcesPage() {
       ) : (
         <div className="space-y-4">
           <div className="text-sm font-semibold text-primary">STEP 3: Detection Results</div>
-          <p className="text-sm text-primary font-medium">Found {uploadPreview.total_rows} transactions totaling €{uploadPreview.total_income_detected?.toLocaleString()}</p>
+          <p className="text-sm text-primary font-medium">Found {uploadPreview.income_rows || uploadPreview.total_rows} income transactions across {uploadPreview.months_detected || '—'} months, totaling €{uploadPreview.total_income_detected?.toLocaleString('de-DE', {minimumFractionDigits: 2})}</p>
           <div className="overflow-auto border border-border rounded-md max-h-48">
             <table className="w-full text-xs text-left">
               <thead className="bg-page border-b border-border text-muted sticky top-0">
                 <tr>
                   <th className="p-2">Date</th>
-                  <th className="p-2">Client</th>
+                  <th className="p-2">Description</th>
                   <th className="p-2">Amount</th>
                 </tr>
               </thead>
               <tbody>
-                {uploadPreview.preview_rows.map((row, i) => (
+                {(uploadPreview.preview_rows || uploadPreview.preview || []).map((row, i) => (
                   <tr key={i} className="border-b border-border">
                     <td className="p-2">{row.date}</td>
-                    <td className="p-2">{row.client}</td>
-                    <td className="p-2">€{row.amount}</td>
+                    <td className="p-2">{row.description || row.client || ''}</td>
+                    <td className="p-2">€{typeof row.amount === 'number' ? row.amount.toLocaleString('de-DE', {minimumFractionDigits: 2}) : row.amount}</td>
                   </tr>
                 ))}
               </tbody>

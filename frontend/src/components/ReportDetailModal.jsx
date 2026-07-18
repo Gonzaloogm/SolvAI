@@ -7,10 +7,13 @@ import { solvencyReports, billing } from '../api/client.js';
 
 const renderMarkdown = (text) => {
   if (!text) return '';
-  return text
+  const html = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\n/g, '<br />');
+    .replace(/`(.*?)`/g, '<code style="background:var(--bg-page);padding:1px 4px;border-radius:3px;font-size:0.9em">$1</code>')
+    .replace(/\n\n/g, '</p><p style="margin:0 0 12px">')
+    .replace(/\n/g, '<br/>');
+  return `<p style="margin:0 0 12px">${html}</p>`;
 };
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');

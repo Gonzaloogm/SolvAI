@@ -354,7 +354,6 @@ async def delete_solvency_report(
     result = await db.execute(
         select(SolvencyReport).where(
             SolvencyReport.id == id,
-            SolvencyReport.is_deleted.is_(False),
         )
     )
     report = result.scalar_one_or_none()

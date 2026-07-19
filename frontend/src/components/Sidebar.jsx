@@ -82,7 +82,7 @@ const NAV_ITEMS = [
  { label: 'Dashboard', to: '/', icon: <IconDashboard />, exact: true, tKey: 'nav.dashboard' },
  { label: 'Reports', to: '/reports', icon: <IconReports />, exact: false, tKey: 'nav.reports' },
  { label: 'Data Sources', to: '/data-sources', icon: <IconDataSources />, exact: false, tKey: 'nav.dataSources' },
- { label: 'Demo Comparison', to: '/demo', icon: <IconDashboard />, exact: false, tKey: 'nav.demo' },
+ { label: 'Score Simulator', to: '/demo', icon: <IconDashboard />, exact: false, tKey: 'nav.demo' },
  { label: 'Account', to: '/account', icon: <IconAccount />, exact: false, tKey: 'nav.account' },
  { label: 'Settings', to: '/settings', icon: <IconSettings />, exact: false, tKey: 'nav.settings' },
 ];

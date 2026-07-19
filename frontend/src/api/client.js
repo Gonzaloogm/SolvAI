@@ -227,4 +227,8 @@ export const apiKeys = {
   revoke: (id) => apiClient.delete(`/api-keys/${id}`),
 };
 
+export const simulate = {
+  score: (data) => apiClient.post('/simulate/score', data),
+};
+
 export default apiClient;

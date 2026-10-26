@@ -18,8 +18,8 @@ router = APIRouter()
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 PRICE_IDS = {
-    'pro': 'price_1TmX7KDkuwjSfJyUTIzQTc8g',
-    'business': 'price_1TmX8lDkuwjSfJyU1HExVfGF',
+    'pro': settings.STRIPE_PRO_PRICE_ID,
+    'business': settings.STRIPE_BUSINESS_PRICE_ID,
 }
 
 FRONTEND_URL = getattr(settings, 'FRONTEND_URL', None) or 'https://solvai-frontend-879357866699.europe-west1.run.app'
@@ -33,9 +33,12 @@ async def create_checkout_session(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    price_id = PRICE_IDS.get(body.plan)
-    if not price_id:
+    if body.plan not in PRICE_IDS:
         raise HTTPException(400, 'Invalid plan')
+    price_id = PRICE_IDS[body.plan]
+    if not price_id:
+        logger.error(f"STRIPE_{body.plan.upper()}_PRICE_ID is not configured")
+        raise HTTPException(503, 'Billing is not configured')
     
     try:
         session = stripe.checkout.Session.create(

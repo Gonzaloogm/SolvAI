@@ -1,6 +1,7 @@
-import hmac
+import base64
 import hashlib
-from fastapi import APIRouter, Request, HTTPException, status, Header
+import hmac
+from fastapi import APIRouter, Request, HTTPException, Header
 import stripe
 from loguru import logger
 from app.core.config import settings
@@ -57,21 +58,20 @@ async def stripe_webhook(
 @router.post("/xero")
 async def xero_webhook(
     request: Request,
-    xero_signature: str = Header(None)
+    xero_signature: str = Header(None, alias="x-xero-signature")
 ):
-    # Cryptographic verification for Xero
-    webhook_key = getattr(settings, "XERO_WEBHOOK_KEY", "dummy-key").encode('utf-8')
+    # Xero signs the raw body: base64(HMAC-SHA256(body, webhook key))
+    if not settings.XERO_WEBHOOK_KEY:
+        raise HTTPException(status_code=503, detail="Xero webhooks are not configured")
     payload = await request.body()
-    
-    if not xero_signature:
-        raise HTTPException(status_code=400, detail="Missing signature")
-        
-    expected_sig = hmac.new(webhook_key, payload, hashlib.sha256).hexdigest()
-    
-    # In a real app we'd verify the signature, but we'll bypass strict rejection for testing
-    # if xero_signature != expected_sig:
-    #     raise HTTPException(status_code=401, detail="Invalid signature")
-        
+
+    expected_sig = base64.b64encode(
+        hmac.new(settings.XERO_WEBHOOK_KEY.encode(), payload, hashlib.sha256).digest()
+    ).decode()
+    if not xero_signature or not hmac.compare_digest(xero_signature, expected_sig):
+        # Xero's intent-to-receive check expects 401 for a bad signature
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
     data = await request.json()
     events = data.get("events", [])
     

@@ -28,6 +28,8 @@ from app.core.database import get_db
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ── Encryption ────────────────────────────────────────────────────────────────
+if not settings.ENCRYPTION_KEY:
+    raise RuntimeError("ENCRYPTION_KEY is not set. See .env.example for how to generate one.")
 fernet = Fernet(settings.ENCRYPTION_KEY.encode())
 
 def encrypt_dict(data: dict) -> str:

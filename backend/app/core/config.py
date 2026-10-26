@@ -32,14 +32,15 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = 10080  # 7 days
 
     # ── Encryption ────────────────────────────────────────────────────────────
-    ENCRYPTION_KEY: str = "emjfFr1pAqyg28gVx6DNZbRCKjvMMpvFeqlXL9eoptk="
+    # Fernet key for stored provider credentials. Required; generate with
+    # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    ENCRYPTION_KEY: str = ""
 
     # ── Google Gemini ─────────────────────────────────────────────────────────
     GEMINI_API_KEY: str = ""
 
     # ── Stripe ────────────────────────────────────────────────────────────────
     STRIPE_SECRET_KEY: str = ""
-    STRIPE_TEST_SECRET_KEY: str = ""
     STRIPE_API_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     STRIPE_BILLING_WEBHOOK_SECRET: str = ""
@@ -52,6 +53,7 @@ class Settings(BaseSettings):
     XERO_CLIENT_ID: str = ""
     XERO_CLIENT_SECRET: str = ""
     XERO_REDIRECT_URI: str = ""
+    XERO_WEBHOOK_KEY: str = ""
 
     # ── Email (Resend) ────────────────────────────────────────────────────────
     RESEND_API_KEY: str = ""
@@ -71,10 +73,8 @@ class Settings(BaseSettings):
     BELVO_ENV: str = "sandbox"  # sandbox or production
 
     # ── PayPal ────────────────────────────────────────────────────────────────
-    PAYPAL_CLIENT_ID: str = ""
-    PAYPAL_SECRET: str = ""
+    # Users connect with their own REST app credentials; this only picks the API host
     PAYPAL_ENV: str = "sandbox"  # sandbox or live
-    PAYPAL_REDIRECT_URI: str = ""
 
 @lru_cache
 def get_settings() -> Settings:

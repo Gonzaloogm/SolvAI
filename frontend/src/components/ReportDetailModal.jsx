@@ -4,6 +4,7 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../context/ToastContext.jsx';
 import { solvencyReports, billing } from '../api/client.js';
+import { API_BASE_URL } from '../config.js';
 
 const escapeHtml = (text) => String(text)
   .replace(/&/g, '&amp;')
@@ -461,7 +462,6 @@ export default function ReportDetailModal({ report, onClose }) {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://solvai-api-879357866699.europe-west1.run.app';
   const token = localStorage.getItem('solvai_token');
 
   let plan = 'free';

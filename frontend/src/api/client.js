@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config.js';
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://solvai-api-879357866699.europe-west1.run.app',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },

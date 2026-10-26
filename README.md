@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  <a href="https://solvai-frontend-879357866699.europe-west1.run.app">Live app</a> ·
   <a href="docs/architecture.md">Architecture</a> ·
-  <a href="docs/deployment.md">Deployment</a> ·
+  <a href="docs/deploy-vm.md">Deploy (single VM)</a> ·
+  <a href="docs/deployment.md">Deploy (Cloud Run)</a> ·
   <a href="docs/demo.md">Demo data</a>
 </p>
 
@@ -133,6 +133,7 @@ CI runs the same checks on every push. It also applies every Alembic migration t
 │   └── tests/
 ├── frontend/           React SPA (Vite), served by nginx in production
 ├── docs/               architecture, deployment, demo data
+├── deploy/             single-VM stack: Docker Compose, Caddy (HTTPS), deploy and backup scripts
 ├── scripts/deploy.sh   manual Cloud Run deploy
 ├── cloudbuild.yaml     CI/CD pipeline to Cloud Run
 └── docker-compose.yml  local stack

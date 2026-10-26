@@ -3,8 +3,8 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { AlertTriangle } from 'lucide-react';
+import { API_BASE_URL } from '../config.js';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://solvai-api-879357866699.europe-west1.run.app';
 
 export default function PublicReport() {
   const { token } = useParams();
@@ -13,7 +13,7 @@ export default function PublicReport() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/public/report/${token}`)
+    axios.get(`${API_BASE_URL}/public/report/${token}`)
       .then(res => { setData(res.data); setLoading(false); })
       .catch(err => {
         const msg = err.response?.data?.detail || 'Report not found or link has expired';

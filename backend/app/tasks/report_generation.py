@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.celery_app import celery_app
 from app.core.config import settings
-from app.services.agent_orchestrator import run_orchestrator_stream
+from app.services.agent_orchestrator import ReportGenerationError, run_orchestrator_stream
 
 # ── Synchronous DB engine for Celery (uses psycopg2 instead of asyncpg) ──────
 _SYNC_DATABASE_URL = settings.DATABASE_URL.replace(
@@ -132,15 +132,10 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
 
             if not financial_summary["monthly_revenue_series"]:
                 platforms = ", ".join(financial_summary["connected_platforms"]) or "none"
-                logger.warning(f"[Task {self.request.id}] No revenue data for report {report_id} (sources: {platforms})")
-                report.status = "FAILED"
-                report.report_data = {
-                    "error": f"No revenue data found in your connected sources ({platforms}). "
-                             "Connect a source with at least one successful payment and try again."
-                }
-                report.updated_at = datetime.now(timezone.utc)
-                db.commit()
-                return {"status": "failed", "report_id": report_id, "error": "no_revenue_data"}
+                raise ReportGenerationError(
+                    f"No revenue data found in your connected sources ({platforms}). "
+                    "Connect a source with at least one successful payment and try again."
+                )
 
             logger.info(
                 f"[Task {self.request.id}] financial_summary sent to Gemini: "
@@ -242,6 +237,7 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                 logger.error(f"Failed to generate/upload PDF: {e}")
                 report.document_uri = None
                 report.status = "FAILED"
+                report.report_data = {**report_data, "error": "The analysis finished but the PDF could not be generated. Please try again."}
                 db.commit()
                 return {"status": "failed", "report_id": report_id, "error": str(e)}
                 
@@ -310,24 +306,36 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                 str(exc)
             )
 
+            # Honest, user-facing failures (no data, invalid AI output, AI not configured): no retry
+            if isinstance(exc, ReportGenerationError):
+                _mark_failed(db, report_id, str(exc))
+                return {"status": "failed", "error": str(exc)}
+
             # If it's a quota issue or we hit max retries, fail the report immediately
             if "temporarily unavailable" in str(exc) or self.request.retries >= 3:
-                try:
-                    report = db.execute(
-                        select(SolvencyReport).where(SolvencyReport.id == uuid.UUID(report_id))
-                    ).scalar_one_or_none()
-                    if report:
-                        report.status = "FAILED"
-                        report.report_data = {"error": "AI analysis temporarily unavailable, please try again later."}
-                        report.updated_at = datetime.now(timezone.utc)
-                        db.commit()
-                except Exception as inner_exc:
-                    logger.error(f"Could not mark report as FAILED: {inner_exc}")
+                _mark_failed(db, report_id, "AI analysis temporarily unavailable, please try again later.")
                 return {"status": "failed", "error": str(exc)}
 
             # Exponential back-off retry: 60s, 120s, 240s
             countdown = 60 * (2 ** self.request.retries)
             raise self.retry(exc=exc, countdown=countdown)
+
+
+def _mark_failed(db, report_id: str, message: str) -> None:
+    """Mark a report FAILED with a message the UI shows to the user."""
+    from app.models.solvency_report import SolvencyReport  # noqa: PLC0415
+
+    try:
+        report = db.execute(
+            select(SolvencyReport).where(SolvencyReport.id == uuid.UUID(report_id))
+        ).scalar_one_or_none()
+        if report:
+            report.status = "FAILED"
+            report.report_data = {"error": message}
+            report.updated_at = datetime.now(timezone.utc)
+            db.commit()
+    except Exception as inner_exc:
+        logger.error(f"Could not mark report {report_id} as FAILED: {inner_exc}")
 
 
 def _build_financial_summary(sources) -> dict:

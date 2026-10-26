@@ -19,6 +19,10 @@ class AgentState(TypedDict):
     requires_human_review: bool
     report_type: str
 
+class ReportGenerationError(Exception):
+    """A report cannot be produced honestly. The message is shown to the user; the task does not retry."""
+
+
 def data_quant_node(state: AgentState) -> AgentState:
     logger.info("Executing Data Quant Agent...")
     txs = state.get("transactions", [])
@@ -31,8 +35,7 @@ import asyncio
 async def underwriter_node(state: AgentState) -> AgentState:
     logger.info("Executing Underwriter Agent (Self-Consistency)...")
     if not settings.GEMINI_API_KEY:
-        logger.warning("GEMINI_API_KEY not set. Mocking Underwriter.")
-        return {"draft_report": '{"overall_score": 80, "recommendation": "Approve"}'}
+        raise ReportGenerationError("The AI engine is not configured (GEMINI_API_KEY is missing).")
 
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
@@ -216,25 +219,6 @@ def auditor_node(state: AgentState) -> AgentState:
     logger.info(f"Executing Auditor Agent... iterations so far: {state.get('iterations', 0)}")
     iterations = state.get("iterations", 0) + 1
 
-    # ── Safe fallback skeleton: guarantees the template never receives None ────
-    # Every key consumed by report_template.html / pdf_service.py is present.
-    SAFE_REPORT_SKELETON: dict = {
-        "overall_score": 50,
-        "recommendation": "Review",
-        "rating": "Developing",
-        "narrative": "Report generated with limited data. Manual review recommended.",
-        "income_stability": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
-        "growth_trend": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
-        "seasonality": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
-        "client_concentration": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
-        "reputation_signals": {"score": 50, "description": "N/A", "lender_implications": "N/A"},
-        "risk_flags": [],
-        "recommendations": ["Manual review required due to incomplete AI output."],
-        "data_references": [],
-        "strengths": [],
-        "_fallback": True,
-    }
-
     def _parse_draft(raw: str) -> dict:
         """Parse and structurally validate the underwriter draft. Raises on failure."""
         cleaned = raw.replace('```json', '').replace('```', '').strip()
@@ -247,13 +231,7 @@ def auditor_node(state: AgentState) -> AgentState:
         return doc
 
     if not settings.GEMINI_API_KEY:
-        logger.warning("GEMINI_API_KEY not set. Mocking Auditor.")
-        try:
-            final_report = _parse_draft(state.get("draft_report", "{}"))
-        except (json.JSONDecodeError, ValueError) as parse_err:
-            logger.error(f"[Auditor mock] Draft parse failed: {parse_err}. Using safe skeleton.")
-            final_report = SAFE_REPORT_SKELETON.copy()
-        return {"is_approved": True, "iterations": iterations, "final_report": final_report}
+        raise ReportGenerationError("The AI engine is not configured (GEMINI_API_KEY is missing).")
 
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
@@ -297,19 +275,17 @@ Respond ONLY with a JSON object: {{"is_approved": true/false, "critique": "your 
                 logger.info(f"[Auditor] Draft accepted. score={final_report.get('overall_score')}")
 
             except (json.JSONDecodeError, ValueError) as parse_err:
-                # The draft is structurally broken — never pass garbage to the template.
-                logger.error(
-                    f"[Auditor] Final draft failed structural validation: {parse_err}. "
-                    f"Activating safe report skeleton."
-                )
-                skeleton = SAFE_REPORT_SKELETON.copy()
-                skeleton["auditor_critique"] = result.get("critique", "")
-                updates["final_report"] = skeleton
-                updates["requires_human_review"] = True
+                # Never publish a placeholder score: fail the report instead
+                logger.error(f"[Auditor] Final draft failed structural validation: {parse_err}")
+                raise ReportGenerationError(
+                    "The AI could not produce a valid report from your data. Please try again."
+                ) from parse_err
 
         logger.info(f"[Auditor] iteration={iterations} approved={is_approved}")
         return updates
 
+    except ReportGenerationError:
+        raise
     except Exception as e:
         import traceback
         error_msg = f"Auditor error: {str(e)}\n{traceback.format_exc()}"
@@ -364,7 +340,6 @@ async def run_orchestrator_stream(initial_state: AgentState):
     
     last_state = initial_state
     
-    import traceback
     try:
         # astream yields (node_name, state_update)
         async for output in orchestrator.astream(initial_state):
@@ -387,13 +362,15 @@ async def run_orchestrator_stream(initial_state: AgentState):
                     "payload": {} # Sending minimal payload for speed, could include diffs
                 }
     except Exception as e:
+        logger.exception("Orchestrator failed")
+        # Tracebacks stay in the logs; the terminal only shows a user-safe message
         yield {
             "agent": "system",
             "status": "error",
-            "message": f"Orchestrator failed: {str(e)}\n{traceback.format_exc()}",
+            "message": str(e) if isinstance(e, ReportGenerationError) else "Report generation failed.",
             "payload": {}
         }
-        return
+        raise
             
     # Final event
     score = last_state.get("final_report", {}).get("overall_score", "N/A")

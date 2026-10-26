@@ -101,7 +101,7 @@ export default function DashboardPage({ onNavigate }) {
          } else if (status === 'FAILED') {
            clearInterval(poll);
            setGenerating(false);
-           addToast('Report generation failed', 'error');
+           addToast(pollRes.data?.report_data?.error || 'Report generation failed', 'error');
          }
        } catch (e) {
          clearInterval(poll);

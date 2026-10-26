@@ -1,11 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { solvencyReports } from '../api/client.js';
+import { useToast } from './ToastContext.jsx';
 
 const ReportGenerationContext = createContext(null);
 
 export function ReportGenerationProvider({ children }) {
   const [generatingReports, setGeneratingReports] = useState({}); // { reportId: { status, type } }
   const pollIntervals = useRef({});
+  const { addToast } = useToast();
 
   const startPolling = useCallback((reportId, type) => {
     setGeneratingReports(prev => ({
@@ -24,6 +26,9 @@ export function ReportGenerationProvider({ children }) {
         }));
 
         if (status === 'COMPLETED' || status === 'FAILED') {
+          if (status === 'FAILED') {
+            addToast(res.data.report_data?.error || 'Report generation failed', 'error');
+          }
           clearInterval(pollIntervals.current[reportId]);
           delete pollIntervals.current[reportId];
           
@@ -48,7 +53,7 @@ export function ReportGenerationProvider({ children }) {
     }, 3000);
 
     pollIntervals.current[reportId] = interval;
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     return () => {

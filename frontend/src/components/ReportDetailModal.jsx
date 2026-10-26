@@ -358,6 +358,9 @@ export default function ReportDetailModal({ report, onClose }) {
 
   const modelName = report.subtitle?.split('·')[0]?.trim() || report.model || 'Gemini 2.5 Flash';
   const reportData = report._raw?.report_data || report.report_data || {};
+  const failureReason = (report._raw?.status || report.status) === 'FAILED'
+    ? (reportData.error || 'Report generation failed.')
+    : null;
   const accuracy = report.accuracy ?? reportData.overall_score ?? reportData.score ?? null;
   const dataSourceName = report.dataSource || reportData.financial_summary?.connected_platforms?.[0] || '—';
   
@@ -635,40 +638,50 @@ export default function ReportDetailModal({ report, onClose }) {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.narrative')}</h3>
-            <div className="bg-page rounded-md p-4 relative" style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-secondary)' }}>
-              <div style={{ filter: isLocked ? 'blur(4px)' : 'none', transition: 'filter 0.3s ease' }}>
-                <div 
-                  className="narrative-text"
-                  dangerouslySetInnerHTML={{ 
-                    __html: renderMarkdown(
-                      isLocked && explanationText.length > 200 
-                        ? explanationText.substring(0, 200) + '...' 
-                        : explanationText
-                    ) 
-                  }}
-                />
+          {failureReason ? (
+            <div className="flex items-start gap-3 rounded-md border border-[#fecaca] bg-[#fef2f2] p-4 text-[#991b1b]">
+              <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold mb-1">This report could not be generated</h3>
+                <p className="text-sm">{failureReason}</p>
               </div>
-              
-              {isLocked && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 dark:bg-black/40 rounded-md z-10 p-6 text-center backdrop-blur-[1px]">
-                  <div className="bg-card border border-border p-5 rounded-xl shadow-lg max-w-sm">
-                    <Lock className="w-8 h-8 text-[var(--brand-blue)] mb-3 mx-auto" />
-                    <h4 className="text-base font-semibold text-primary mb-2">Premium Feature</h4>
-                    <p className="text-sm text-secondary mb-4">Unlock the full AI narrative, risk flags, and PDF report.</p>
-                    <button
-                      onClick={handleUnlock}
-                      disabled={unlocking}
-                      className="w-full py-2 bg-[var(--brand-blue)] text-white rounded-lg text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors flex items-center justify-center gap-2"
-                    >
-                      {unlocking ? <Loader2 size={16} className="animate-spin" /> : 'Unlock for 9€'}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
+          ) : (
+            <div>
+              <h3 className="text-sm font-semibold text-primary mb-3">{t('solvency.narrative')}</h3>
+              <div className="bg-page rounded-md p-4 relative" style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-secondary)' }}>
+                <div style={{ filter: isLocked ? 'blur(4px)' : 'none', transition: 'filter 0.3s ease' }}>
+                  <div 
+                    className="narrative-text"
+                    dangerouslySetInnerHTML={{ 
+                      __html: renderMarkdown(
+                        isLocked && explanationText.length > 200 
+                          ? explanationText.substring(0, 200) + '...' 
+                          : explanationText
+                      ) 
+                    }}
+                  />
+                </div>
+                
+                {isLocked && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 dark:bg-black/40 rounded-md z-10 p-6 text-center backdrop-blur-[1px]">
+                    <div className="bg-card border border-border p-5 rounded-xl shadow-lg max-w-sm">
+                      <Lock className="w-8 h-8 text-[var(--brand-blue)] mb-3 mx-auto" />
+                      <h4 className="text-base font-semibold text-primary mb-2">Premium Feature</h4>
+                      <p className="text-sm text-secondary mb-4">Unlock the full AI narrative, risk flags, and PDF report.</p>
+                      <button
+                        onClick={handleUnlock}
+                        disabled={unlocking}
+                        className="w-full py-2 bg-[var(--brand-blue)] text-white rounded-lg text-sm font-medium hover:bg-[var(--brand-blue-hover)] transition-colors flex items-center justify-center gap-2"
+                      >
+                        {unlocking ? <Loader2 size={16} className="animate-spin" /> : 'Unlock for 9€'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           
           {report.report_type === 'MORTGAGE_ASSESSMENT' && (
             <div>

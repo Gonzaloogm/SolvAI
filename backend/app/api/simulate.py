@@ -1,20 +1,26 @@
-from fastapi import APIRouter, Depends
-from app.core.security import get_current_user
-from app.models.user import User
-from app.core.config import settings
-import google.generativeai as genai
 import json
 
+import google.generativeai as genai
+from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
+
+from app.core.config import settings
+from app.core.security import get_current_user
+from app.models.user import User
+
 router = APIRouter()
+
+# Same model as the report pipeline (agent_orchestrator.py)
+MODEL_NAME = "models/gemini-2.5-flash"
+
 
 @router.post("/simulate/score")
 async def simulate_score(
     payload: dict,
     current_user: User = Depends(get_current_user)
 ):
-    # Setup genai
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash") # Use flash for <5s response
+    model = genai.GenerativeModel(MODEL_NAME)
 
     # Extract input
     monthly_revenue = payload.get("monthly_revenue", 3500)
@@ -24,16 +30,16 @@ async def simulate_score(
     top_client_pct = payload.get("top_client_pct", 30.0)
 
     prompt = f"""
-    You are SolvAI's scoring engine. Given these 
+    You are SolvAI's scoring engine. Given these
     financial parameters, calculate a solvency score.
-    
+
     Parameters:
     - Monthly revenue: €{monthly_revenue}
     - Revenue consistency: {revenue_consistency}
     - Number of clients: {num_clients}
     - Months of history: {months_history}
     - Top client revenue share: {top_client_pct}%
-    
+
     Return ONLY valid JSON, no other text:
     {{
       "overall_score": <0-100 integer>,
@@ -45,27 +51,20 @@ async def simulate_score(
       "top_recommendation": "<one actionable tip to improve the score>"
     }}
     """
-    
+
     try:
-        response = model.generate_content(prompt)
-        text = response.text.strip()
-        # Clean up in case there are markdown blocks
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-        
-        result_json = json.loads(text)
-        return result_json
+        response = await model.generate_content_async(
+            prompt,
+            generation_config={"response_mime_type": "application/json"},
+        )
+        result = json.loads(response.text)
+        if not isinstance(result.get("overall_score"), (int, float)):
+            raise ValueError(f"overall_score missing or non-numeric: {result.get('overall_score')!r}")
+        return result
     except Exception as e:
-        # Fallback if Gemini fails
-        return {
-            "overall_score": 60,
-            "rating": "REVIEW",
-            "income_stability": 50,
-            "growth_trend": 50,
-            "client_concentration": 50,
-            "key_insight": "Score simulation failed.",
-            "top_recommendation": "Please try again later."
-        }
+        # Never return a made-up score: surface the failure to the UI
+        logger.error(f"Score simulation failed: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail="The AI scoring engine is unavailable right now. Please try again in a moment.",
+        )

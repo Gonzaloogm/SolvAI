@@ -95,6 +95,7 @@ const getAccuracyColor = (val) => {
         subtitle: `Gemini \u00b7 ${r.report_data?.financial_summary?.connected_platforms?.join(', ') || 'SolvAI'}`,
         type: r.report_type === 'RENTAL_CERTIFICATE' || r.report_type === 'RENTAL' ? 'Rental Certificate' : r.report_type === 'MORTGAGE_ASSESSMENT' ? 'Mortgage Assessment' : 'Solvency Assessment',
         status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? 'Generation Failed' : t('status.pending'),
+        failureReason: r.status === 'FAILED' ? (r.report_data?.error || 'Report generation failed') : null,
         dataSource: r.report_data?.financial_summary?.connected_platforms?.[0] || 'Stripe',
         accuracy: r.report_data?.overall_score ?? null,
         hasDownload: r.status === 'COMPLETED' && !!r.document_uri,
@@ -678,6 +679,11 @@ const getAccuracyColor = (val) => {
  <div className="text-[13px] text-muted mt-0.5 truncate">
  {report.subtitle}
  </div>
+ {report.failureReason && (
+ <div className="text-[12px] text-[#df1b41] mt-0.5 truncate" title={report.failureReason}>
+ {report.failureReason}
+ </div>
+ )}
  </td>
 
  {/* Type badge */}

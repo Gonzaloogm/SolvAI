@@ -168,19 +168,24 @@ class CSVService:
                 continue
 
             total_row_count += 1
+            if amount == 0:
+                continue
 
-            if amount <= 0:
-                continue  # skip outflows
-
-            income_count += 1
             key = date.strftime("%Y-%m")
-
             if key not in monthly:
                 monthly[key] = {
                     "month": key,
                     "revenue": 0.0,
                     "transactions": 0,
+                    "outflows": 0.0,
                 }
+
+            if amount < 0:
+                # Kept for the cash-flow statement; never counted as revenue
+                monthly[key]["outflows"] = round(monthly[key]["outflows"] - amount, 2)
+                continue
+
+            income_count += 1
             monthly[key]["revenue"] += amount
             monthly[key]["transactions"] += 1
 

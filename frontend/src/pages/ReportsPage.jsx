@@ -371,7 +371,7 @@ const getAccuracyColor = (val) => {
      const res = await apiClient.get('/reports/pl-statement?months=12');
      setPLData(res.data);
    } catch (err) {
-     addToast('Failed to load P&L statement', 'error');
+     addToast(err.response?.data?.detail || 'Failed to load the statement', 'error');
      setIsPLModalOpen(false);
    } finally {
      setIsLoadingPL(false);
@@ -379,7 +379,7 @@ const getAccuracyColor = (val) => {
  };
 
  const handleDownloadPL = async () => {
-   addToast('Downloading P&L PDF...', 'info');
+   addToast('Downloading statement PDF...', 'info');
    try {
      const res = await apiClient.get('/reports/pl-statement/pdf?months=12', { responseType: 'blob' });
      const blob = new Blob([res.data], { type: 'application/pdf' });
@@ -577,8 +577,8 @@ const getAccuracyColor = (val) => {
    <h2 className="text-lg font-semibold text-primary mb-4">Financial Statements</h2>
    <div className="flex items-center justify-between bg-page p-4 rounded-lg border border-border">
      <div>
-       <h3 className="font-medium text-primary">Profit &amp; Loss Statement</h3>
-       <p className="text-sm text-muted">Auto-generated P&amp;L based on your connected data sources.</p>
+       <h3 className="font-medium text-primary">Revenue &amp; Cash-Flow Statement</h3>
+       <p className="text-sm text-muted">Monthly revenue from your connected sources, plus outflows and net cash flow when a bank statement is connected.</p>
      </div>
      <div className="flex gap-2">
        <button 
@@ -1014,7 +1014,7 @@ const getAccuracyColor = (val) => {
    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
      <div className="bg-card rounded-xl w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden border border-border flex flex-col">
        <div className="flex justify-between items-center p-6 border-b border-border">
-         <h2 className="text-lg font-semibold text-primary">Profit &amp; Loss Statement Preview</h2>
+         <h2 className="text-lg font-semibold text-primary">Revenue &amp; Cash-Flow Statement</h2>
          <button 
            onClick={() => setIsPLModalOpen(false)}
            className="text-muted hover:text-primary transition-colors"
@@ -1030,29 +1030,38 @@ const getAccuracyColor = (val) => {
            </div>
          ) : plData ? (
            <div>
-             <div className="grid grid-cols-4 gap-4 mb-6">
+             <p className="text-sm text-secondary mb-4">{plData.summary_text}</p>
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                <div className="p-4 bg-page rounded-lg border border-border text-center">
                  <div className="text-xs text-muted uppercase">Total Revenue</div>
                  <div className="text-lg font-bold mt-1 text-primary">
-                   {plData.revenue.total.toLocaleString()} {plData.currency}
+                   {plData.revenue.total.toLocaleString('en-GB', { maximumFractionDigits: 2 })} {plData.currency}
                  </div>
                </div>
                <div className="p-4 bg-page rounded-lg border border-border text-center">
                  <div className="text-xs text-muted uppercase">Avg Monthly</div>
                  <div className="text-lg font-bold mt-1 text-primary">
-                   {plData.revenue.avg_monthly.toLocaleString()} {plData.currency}
+                   {plData.revenue.avg_monthly.toLocaleString('en-GB', { maximumFractionDigits: 2 })} {plData.currency}
                  </div>
                </div>
                <div className="p-4 bg-page rounded-lg border border-border text-center">
-                 <div className="text-xs text-muted uppercase">YoY Growth</div>
-                 <div className="text-lg font-bold mt-1 text-[#1a9e6e]">
-                   +{plData.growth.yoy_change}%
+                 <div className="text-xs text-muted uppercase">Trend</div>
+                 <div className={cn('text-lg font-bold mt-1', plData.growth.direction === 'DECLINING' ? 'text-[#df1b41]' : plData.growth.direction === 'GROWING' ? 'text-[#1a9e6e]' : 'text-primary')}>
+                   {plData.growth.slope_percent_per_month != null
+                     ? `${plData.growth.slope_percent_per_month > 0 ? '+' : ''}${plData.growth.slope_percent_per_month.toFixed(1)}% / mo`
+                     : '—'}
                  </div>
+                 <div className="text-[11px] text-muted mt-0.5">{plData.growth.direction}</div>
                </div>
                <div className="p-4 bg-page rounded-lg border border-border text-center">
-                 <div className="text-xs text-muted uppercase">Concentration</div>
-                 <div className="text-lg font-bold mt-1 text-[#c9870c]">
-                   {plData.client_analysis.concentration_risk}
+                 <div className="text-xs text-muted uppercase">{plData.outflows.available ? 'Net Cash Flow*' : 'Concentration'}</div>
+                 <div className="text-lg font-bold mt-1 text-primary">
+                   {plData.outflows.available
+                     ? `${plData.net_cash_flow.toLocaleString('en-GB', { maximumFractionDigits: 2 })} ${plData.currency}`
+                     : plData.client_analysis.hhi != null ? `HHI ${plData.client_analysis.hhi.toLocaleString('en-GB')}` : '—'}
+                 </div>
+                 <div className="text-[11px] text-muted mt-0.5">
+                   {plData.outflows.available ? '*months covered by bank statements' : plData.client_analysis.concentration_risk}
                  </div>
                </div>
              </div>
@@ -1063,23 +1072,37 @@ const getAccuracyColor = (val) => {
                  <thead className="bg-page border-b border-border text-muted">
                    <tr>
                      <th className="p-3 font-medium">Month</th>
+                     <th className="p-3 font-medium text-right">Payments</th>
                      <th className="p-3 font-medium text-right">Revenue</th>
-                     <th className="p-3 font-medium text-right">Expenses</th>
-                     <th className="p-3 font-medium text-right">Net Profit</th>
+                     {plData.outflows.available && <th className="p-3 font-medium text-right">Outflows</th>}
+                     {plData.outflows.available && <th className="p-3 font-medium text-right">Net Cash Flow</th>}
                    </tr>
                  </thead>
                  <tbody>
-                   {plData.revenue.monthly.map((m, i) => (
-                     <tr key={i} className="border-b border-border last:border-0 hover:bg-page">
-                       <td className="p-3 text-secondary">{m.month}</td>
-                       <td className="p-3 text-right text-secondary">{m.revenue.toLocaleString()}</td>
-                       <td className="p-3 text-right text-secondary">{m.expenses.toLocaleString()}</td>
-                       <td className="p-3 text-right text-primary font-medium">{(m.revenue - m.expenses).toLocaleString()}</td>
+                   {plData.revenue.monthly.map((m) => (
+                     <tr key={m.period} className="border-b border-border last:border-0 hover:bg-page">
+                       <td className="p-3 text-secondary">
+                         {m.month}{m.partial && <span className="ml-2 text-[11px] text-muted">(in progress)</span>}
+                       </td>
+                       <td className="p-3 text-right text-secondary">{m.payments}</td>
+                       <td className="p-3 text-right text-secondary">{m.revenue.toLocaleString('en-GB', { maximumFractionDigits: 2 })}</td>
+                       {plData.outflows.available && <td className="p-3 text-right text-secondary">{m.outflows != null ? m.outflows.toLocaleString('en-GB', { maximumFractionDigits: 2 }) : '—'}</td>}
+                       {plData.outflows.available && <td className="p-3 text-right text-primary font-medium">{m.net != null ? m.net.toLocaleString('en-GB', { maximumFractionDigits: 2 }) : '—'}</td>}
                      </tr>
                    ))}
                  </tbody>
                </table>
              </div>
+             {!plData.outflows.available && (
+               <p className="text-xs text-muted mt-2">
+                 Outflows and net cash flow appear once a bank statement (CSV) is connected. Payment platforms only report money received.
+               </p>
+             )}
+             {plData.notes?.length > 0 && (
+               <ul className="mt-4 space-y-1 text-xs text-[#b45309] list-disc pl-4">
+                 {plData.notes.map((note) => <li key={note}>{note}</li>)}
+               </ul>
+             )}
            </div>
          ) : (
            <div className="text-center py-20 text-muted">No data available.</div>

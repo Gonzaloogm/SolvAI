@@ -77,6 +77,13 @@ class Settings(BaseSettings):
     # ── PayPal ────────────────────────────────────────────────────────────────
     # Users connect with their own REST app credentials; this only picks the API host
     PAYPAL_ENV: str = "sandbox"  # sandbox or live
+    # SolvAI's own merchant app, used to bill Pro/Business through PayPal Subscriptions.
+    # Must be a different account from any user's data source.
+    PAYPAL_BILLING_CLIENT_ID: str = ""
+    PAYPAL_BILLING_SECRET: str = ""
+    PAYPAL_PRO_PLAN_ID: str = ""
+    PAYPAL_BUSINESS_PLAN_ID: str = ""
+    PAYPAL_WEBHOOK_ID: str = ""
 
 @lru_cache
 def get_settings() -> Settings:

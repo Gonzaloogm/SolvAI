@@ -39,7 +39,7 @@ Banks score borrowers with explainable credit models that the borrower never get
 - **Sharing and verification.** Expiring public share links, plus a lender verification portal with an authorize-and-track flow.
 - **Score simulator.** A "what-if" tool that shows how changes in revenue, client mix or history would move the score.
 - **Lender matching.** Lender criteria are embedded with Gemini and searched with pgvector.
-- **SaaS foundations.** Freemium plans with Stripe subscriptions and per-report PDF unlocks, signed webhooks, API keys with a public `/v1` API, alerts, six languages and dark mode.
+- **SaaS foundations.** Freemium plans paid with Stripe or **PayPal Subscriptions**, per-report PDF unlocks, signed webhooks, API keys with a public `/v1` API, alerts, six languages and dark mode.
 
 ## Tech stack
 

@@ -4,7 +4,6 @@ import { Check, CreditCard, AlertTriangle, X, Loader2 } from 'lucide-react';
 import { users, billing, auth } from '../api/client.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import ConfirmModal from '../components/ConfirmModal.jsx';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -33,11 +32,28 @@ export default function AccountPage() {
 
    const params = new URLSearchParams(window.location.search);
    const checkout = params.get('checkout');
+   const paypal = params.get('paypal');
    if (checkout === 'success') {
      addToast("Subscription activated!", "success");
      window.history.replaceState({}, document.title, window.location.pathname);
    } else if (checkout === 'cancelled') {
      addToast("Checkout cancelled", "info");
+     window.history.replaceState({}, document.title, window.location.pathname);
+   }
+
+   if (paypal === 'success' && params.get('subscription_id')) {
+     // Back from PayPal: the backend reads the subscription and activates the plan
+     window.history.replaceState({}, document.title, window.location.pathname);
+     billing.paypalConfirm(params.get('subscription_id'))
+       .then((res) => addToast(
+         res.data.status === 'active' ? 'PayPal subscription activated!' : 'PayPal is activating your subscription; it will show here shortly.',
+         res.data.status === 'active' ? 'success' : 'info',
+       ))
+       .catch((err) => addToast(err.response?.data?.detail || 'Could not confirm the PayPal subscription', 'error'))
+       .finally(fetchData);
+     return;
+   } else if (paypal === 'cancelled') {
+     addToast("PayPal checkout cancelled", "info");
      window.history.replaceState({}, document.title, window.location.pathname);
    }
 
@@ -48,7 +64,6 @@ export default function AccountPage() {
  
  const [showContactModal, setShowContactModal] = useState(false);
  const [showDeleteModal, setShowDeleteModal] = useState(false);
- const [showRemoveCardModal, setShowRemoveCardModal] = useState(false);
  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
  const [deletingAccount, setDeletingAccount] = useState(false);
 
@@ -107,7 +122,6 @@ export default function AccountPage() {
  };
 
  // Billing State
- const [paymentMethod, setPaymentMethod] = useState(null);
 
  // Contact Modal Form State
  const [contactName, setContactName] = useState('');
@@ -149,14 +163,42 @@ export default function AccountPage() {
  }
  };
 
- const handleAddCard = async () => {
- addToast("Please upgrade to add a payment method", "info");
+ const handlePayPal = async (plan) => {
+ setUpgrading(`paypal-${plan}`);
+ try {
+ const res = await billing.paypalSubscribe(plan);
+ window.location.href = res.data.approve_url;
+ } catch (error) {
+ addToast(error.response?.data?.detail || "Could not start PayPal checkout", "error");
+ setUpgrading(null);
+ }
  };
 
- const handleRemoveCard = () => {
- setPaymentMethod(null);
- addToast("Payment method removed", "success");
+ const handlePayPalCancel = async () => {
+ if (!window.confirm('Cancel your PayPal subscription? Your plan returns to Free.')) return;
+ try {
+ await billing.paypalCancel();
+ addToast('PayPal subscription cancelled', 'success');
+ setCurrentPlan('Free');
+ setRealPlan((prev) => ({ ...prev, plan: 'free', billing_provider: null }));
+ } catch (error) {
+ addToast(error.response?.data?.detail || 'Could not cancel the subscription', 'error');
+ }
  };
+
+ const PayPalButton = ({ plan }) => (
+ realPlan?.paypal_available ? (
+ <button
+ onClick={() => handlePayPal(plan)}
+ disabled={upgrading === `paypal-${plan}`}
+ className="mt-2 w-full bg-[#ffc439] hover:bg-[#f2ba36] text-[#003087] rounded-lg px-4 py-2.5 text-sm font-semibold text-center transition-colors flex items-center justify-center gap-2"
+ >
+ {upgrading === `paypal-${plan}` && <Loader2 className="w-4 h-4 animate-spin" />}
+ Pay with PayPal
+ </button>
+ ) : null
+ );
+
 
  return (
  <div className="page-enter">
@@ -329,6 +371,7 @@ export default function AccountPage() {
  Upgrade to Pro
  </button>
  )}
+ {currentPlan !== 'Pro' && <PayPalButton plan="pro" />}
  </div>
  </div>
 
@@ -371,6 +414,7 @@ export default function AccountPage() {
  {upgrading === 'business' && <Loader2 className="w-4 h-4 animate-spin" />}
  Upgrade to Business
  </button>
+ {currentPlan !== 'Business' && <PayPalButton plan="business" />}
  </div>
  </div>
  </div>
@@ -379,78 +423,43 @@ export default function AccountPage() {
  <div className="bg-card border border-border rounded-lg p-6 mt-8">
  <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>{t('account.billing')}</h2>
 
- {/* Payment method */}
- {paymentMethod ? (
+ {realPlan?.plan && realPlan.plan !== 'free' ? (
  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg gap-4">
  <div className="flex items-center gap-3">
  <div className="bg-[#f0f2f5] p-2 rounded-md">
  <CreditCard className={`w-6 h-6 ${textSecondary}`} />
  </div>
  <div>
- <p className={`text-sm font-medium ${textPrimary} flex items-center gap-2`}>
- •••• •••• •••• {paymentMethod.last4}
- <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded font-semibold text-gray-600 dark:text-gray-300">
- {paymentMethod.brand}
- </span>
+ <p className={`text-sm font-medium ${textPrimary}`}>
+ {currentPlan} plan{realPlan.billing_provider ? ` · billed through ${realPlan.billing_provider === 'paypal' ? 'PayPal' : 'Stripe'}` : ''}
  </p>
- <p className={`text-xs ${textSecondary} mt-0.5`}>Expires {paymentMethod.expiry}</p>
+ {realPlan.current_period_end && (
+ <p className={`text-xs ${textSecondary} mt-0.5`}>
+ Renews on {new Date(realPlan.current_period_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+ </p>
+ )}
  </div>
  </div>
- <button 
- onClick={() => setShowRemoveCardModal(true)}
- className="text-sm font-medium text-[#df1b41] hover:text-[#c8183a] bg-[#fef2f2] /10 px-3 py-1.5 rounded-md transition-colors"
+ {realPlan.billing_provider === 'paypal' && (
+ <button
+ onClick={handlePayPalCancel}
+ className="text-sm font-medium text-[#df1b41] hover:text-[#c8183a] bg-[#fef2f2] px-3 py-1.5 rounded-md transition-colors"
  >
- Remove
+ Cancel subscription
  </button>
+ )}
  </div>
  ) : (
  <div className="flex flex-col items-center py-8">
- <CreditCard className="w-10 h-10 text-[#d0d5dd] " />
- <p className={`text-sm font-medium ${textPrimary} mt-3`}>{t('account.noPayment')}</p>
- <p className={`text-xs ${textSecondary} mt-1`}>Add a card to enable automatic billing</p>
- <button 
- onClick={handleAddCard}
- className="mt-3 text-sm font-medium text-[var(--brand-blue)] border border-border dark:hover:border-[var(--brand-blue)] rounded-lg px-4 py-2 hover:bg-page /10 transition-colors"
- >
- {t('account.addCard')}
- </button>
+ <CreditCard className="w-10 h-10 text-[#d0d5dd]" />
+ <p className={`text-sm font-medium ${textPrimary} mt-3`}>No active subscription</p>
+ <p className={`text-xs ${textSecondary} mt-1`}>Upgrade with a card (Stripe) or with PayPal above.</p>
  </div>
  )}
 
- {/* Invoices */}
- <div className="mt-6 pt-6 border-t border-border">
- <h3 className={`text-sm font-semibold ${textPrimary} mb-4`}>{t('account.invoices')}</h3>
- 
- {currentPlan === 'Pro' ? (
- <div className="flex items-center justify-between py-3 border border-border px-4 rounded-lg">
- <div>
- <p className={`text-sm font-medium ${textPrimary}`}>INV-2026-001</p>
- <p className={`text-xs ${textSecondary}`}>Jun 1, 2026</p>
- </div>
- <div className="flex items-center gap-4">
- <span className={`text-sm font-medium ${textPrimary}`}>€29.00</span>
- <button 
- onClick={async () => {
- try {
- const res = await billing.createPortalSession?.();
- if (res?.data?.url) { window.location.href = res.data.url; }
- else { addToast("Invoice download is available in your Stripe billing portal. Please contact support@solvai.com", "info"); }
- } catch {
- addToast("To download invoices, contact support@solvai.com with your registered email.", "info");
- }
- }}
- className="text-sm font-medium text-[var(--brand-blue)] hover:text-[#0462c7]"
- >
- Download PDF
- </button>
- </div>
- </div>
- ) : (
- <div className="text-center py-8">
- <p className={`text-sm ${textSecondary}`}>{t('account.noInvoices')}</p>
- </div>
- )}
- </div>
+ <p className={`text-xs ${textSecondary} mt-4`}>
+ Receipts are e-mailed by the payment provider (Stripe or PayPal) after every charge.
+ </p>
  </div>
 
  {/* ── 5. PREFERENCES SECTION ── */}
@@ -749,16 +758,6 @@ export default function AccountPage() {
    </div>
  )}
 
- {/* Remove Card Confirm Modal */}
- <ConfirmModal 
- isOpen={showRemoveCardModal}
- onClose={() => setShowRemoveCardModal(false)}
- title="Remove payment method?"
- description="Are you sure you want to remove this card? Any active subscriptions may be affected."
- confirmLabel="Remove"
- confirmVariant="danger"
- onConfirm={handleRemoveCard}
- />
  </div>
  );
 }

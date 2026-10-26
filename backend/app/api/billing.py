@@ -12,6 +12,8 @@ from app.api.auth import get_current_user
 from app.models.user import User
 from app.models.organization import Organization
 from app.models.solvency_report import SolvencyReport
+from app.services import paypal_billing
+from app.services.paypal_billing import PayPalBillingError
 from loguru import logger
 
 router = APIRouter()
@@ -86,6 +88,8 @@ async def get_subscription(
         'plan': org.plan,
         'status': org.status,
         'current_period_end': org.current_period_end,
+        'billing_provider': org.billing_provider,
+        'paypal_available': paypal_billing.is_configured(),
     }
 
 @router.post('/webhook')
@@ -99,31 +103,26 @@ async def stripe_webhook(
     webhook_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', '')
     
     if not webhook_secret:
-        # In test mode without webhook secret, skip signature validation
-        logger.warning("STRIPE_WEBHOOK_SECRET not set. Skipping signature validation. This is UNSAFE for production.")
-        try:
-            import json
-            event = json.loads(payload)
-        except Exception as e:
-            raise HTTPException(400, f"Error parsing payload: {str(e)}")
-    else:
-        if not sig:
-            logger.error("Missing signature header")
-            raise HTTPException(400, "Missing signature")
-        try:
-            event = stripe.Webhook.construct_event(
-                payload, sig, webhook_secret
-            )
-        except ValueError as e:
-            logger.error("Invalid payload")
-            raise HTTPException(400, 'Invalid payload')
-        except stripe.error.SignatureVerificationError as e:
-            logger.error("Invalid signature")
-            raise HTTPException(400, 'Invalid signature')
-        except Exception as e:
-            logger.error(f"Webhook exception: {e}")
-            raise HTTPException(400, str(e))
-    
+        # Never accept unsigned events: they could upgrade any organisation or unlock PDFs for free
+        logger.error("STRIPE_WEBHOOK_SECRET is not set; rejecting Stripe webhook")
+        raise HTTPException(503, "Stripe webhooks are not configured")
+    if not sig:
+        logger.error("Missing signature header")
+        raise HTTPException(400, "Missing signature")
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig, webhook_secret
+        )
+    except ValueError:
+        logger.error("Invalid payload")
+        raise HTTPException(400, 'Invalid payload')
+    except stripe.error.SignatureVerificationError:
+        logger.error("Invalid signature")
+        raise HTTPException(400, 'Invalid signature')
+    except Exception as e:
+        logger.error(f"Webhook exception: {e}")
+        raise HTTPException(400, str(e))
+
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         metadata = session.get('metadata', {})
@@ -159,6 +158,7 @@ async def stripe_webhook(
                     org.plan = plan
                     org.status = 'active'
                     org.stripe_subscription_id = session.get('subscription')
+                    org.billing_provider = 'stripe'
                     org.current_period_end = datetime.utcnow() + timedelta(days=30)
                     await db.commit()
                     logger.info(f"Organization {org_id} upgraded to {plan} via Stripe webhook")
@@ -177,6 +177,7 @@ async def stripe_webhook(
                 org.plan = 'free'
                 org.status = 'active'
                 org.stripe_subscription_id = None
+                org.billing_provider = None
                 await db.commit()
                 logger.info(f"Organization {org.id} downgraded to free via Stripe webhook")
         except Exception as db_err:
@@ -200,6 +201,8 @@ async def stripe_webhook(
                     org.plan = 'free'
                     org.status = 'active'
                     org.stripe_subscription_id = None
+                    org.billing_provider = None
+                org.billing_provider = None
                 await db.commit()
                 logger.info(f"Organization {org.id} subscription updated to status {status}")
         except Exception as db_err:
@@ -314,3 +317,86 @@ async def create_report_checkout(
     except stripe.error.StripeError as e:
         logger.error(f"Stripe Error in create_report_checkout: {e}")
         raise HTTPException(400, str(e))
+
+
+# ── PayPal Subscriptions ──────────────────────────────────────────────────────
+
+class PayPalSubscribeRequest(BaseModel):
+    plan: str  # 'pro' or 'business'
+
+
+class PayPalConfirmRequest(BaseModel):
+    subscription_id: str
+
+
+async def _org_for(user: User, db: AsyncSession) -> Organization:
+    org = (await db.execute(
+        select(Organization).where(Organization.id == user.organization_id)
+    )).scalar_one_or_none()
+    if not org:
+        raise HTTPException(404, 'Organization not found')
+    return org
+
+
+@router.post('/paypal/subscribe')
+async def paypal_subscribe(
+    body: PayPalSubscribeRequest,
+    current_user: User = Depends(get_current_user),
+):
+    if body.plan not in paypal_billing.PLAN_NAMES:
+        raise HTTPException(400, 'Invalid plan')
+    if not paypal_billing.is_configured():
+        raise HTTPException(503, 'PayPal billing is not configured')
+    try:
+        return await paypal_billing.create_subscription(
+            plan=body.plan,
+            org_id=str(current_user.organization_id),
+            email=current_user.email,
+            return_url=f"{FRONTEND_URL}/account?paypal=success&plan={body.plan}",
+            cancel_url=f"{FRONTEND_URL}/account?paypal=cancelled",
+        )
+    except PayPalBillingError as e:
+        raise HTTPException(502, str(e))
+
+
+@router.post('/paypal/confirm')
+async def paypal_confirm(
+    body: PayPalConfirmRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Called when the buyer returns from PayPal: read the subscription back and activate it."""
+    try:
+        subscription = await paypal_billing.get_subscription(body.subscription_id)
+    except PayPalBillingError as e:
+        raise HTTPException(502, str(e))
+
+    # The subscription must have been started by this organisation
+    if subscription.get('custom_id') != str(current_user.organization_id):
+        raise HTTPException(403, 'This subscription belongs to another account')
+
+    org = await _org_for(current_user, db)
+    plan = paypal_billing.apply_subscription(org, subscription)
+    if plan in paypal_billing.PLAN_NAMES:
+        await db.commit()
+        logger.info(f"Organization {org.id} upgraded to {plan} via PayPal subscription {subscription['id']}")
+        return {'plan': plan, 'status': 'active'}
+    # APPROVED but not yet ACTIVE: PayPal activates it shortly and the webhook will apply it
+    return {'plan': org.plan, 'status': subscription.get('status', 'UNKNOWN').lower()}
+
+
+@router.post('/paypal/cancel')
+async def paypal_cancel(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    org = await _org_for(current_user, db)
+    if org.billing_provider != 'paypal' or not org.paypal_subscription_id:
+        raise HTTPException(400, 'No active PayPal subscription')
+    try:
+        await paypal_billing.cancel_subscription(org.paypal_subscription_id)
+    except PayPalBillingError as e:
+        raise HTTPException(502, str(e))
+    paypal_billing.apply_subscription(org, {'id': org.paypal_subscription_id, 'status': 'CANCELLED'})
+    await db.commit()
+    return {'plan': org.plan}

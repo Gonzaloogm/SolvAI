@@ -48,6 +48,10 @@ Billing also needs `STRIPE_PRO_PRICE_ID`, `STRIPE_BUSINESS_PRICE_ID`, `STRIPE_BI
 The Stripe billing webhook points to `https://<api>/webhooks/stripe-billing` with these events:
 `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`.
 
+PayPal billing needs `PAYPAL_BILLING_CLIENT_ID`, `PAYPAL_BILLING_SECRET`, `PAYPAL_PRO_PLAN_ID`, `PAYPAL_BUSINESS_PLAN_ID` (created by `backend/scripts/setup_paypal_billing.py`) and `PAYPAL_WEBHOOK_ID`. Without them the "Pay with PayPal" buttons stay hidden. The webhook points to `https://<api>/webhooks/paypal-billing` with the `BILLING.SUBSCRIPTION.*` events (activated, updated, cancelled, suspended, expired, payment failed); every event is verified with PayPal's `verify-webhook-signature` API before it changes a plan.
+
+Both Stripe and PayPal webhooks reject events while their secret or webhook ID is missing, so a misconfigured deploy can never be upgraded for free.
+
 ## Costs
 
 Cloud SQL, Memorystore and the always-on worker bill even with zero traffic. Scale them down or stop them when the product is not in use.

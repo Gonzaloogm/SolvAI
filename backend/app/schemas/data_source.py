@@ -17,6 +17,10 @@ class DataSourceConnectRequest(BaseModel):
     connection_details: dict[str, Any] = {}
 
 
+# Credentials and the per-transaction ledger stay server-side
+_PRIVATE_DETAILS = ("encrypted_data", "transactions", "client_revenue")
+
+
 class DataSourceResponse(BaseModel):
     model_config = {"from_attributes": True}
 
@@ -45,10 +49,10 @@ class DataSourceResponse(BaseModel):
             if "records_count" not in data.__dict__ or data.__dict__.get("records_count") is None:
                 data.__dict__["records_count"] = cd.get("records_count")
             if "config" not in data.__dict__ or data.__dict__.get("config") is None:
-                data.__dict__["config"] = {k: v for k, v in cd.items() if k not in ("encrypted_data",)}
+                data.__dict__["config"] = {k: v for k, v in cd.items() if k not in _PRIVATE_DETAILS}
         elif isinstance(data, dict):
             cd = data.get("connection_details") or {}
             data.setdefault("name", cd.get("name") or cd.get("filename") or None)
             data.setdefault("records_count", cd.get("records_count"))
-            data.setdefault("config", {k: v for k, v in cd.items() if k not in ("encrypted_data",)})
+            data.setdefault("config", {k: v for k, v in cd.items() if k not in _PRIVATE_DETAILS})
         return data

@@ -29,7 +29,7 @@ def test_constant_revenue_has_zero_volatility_and_stable_trend():
     assert metrics["volatility"]["level"] == "LOW"
     assert metrics["trend"]["direction"] == "STABLE"
     assert metrics["weak_months"]["below_average"] == 0
-    assert metrics["data_quality_notes"] == []
+    assert not any("month(s) of history" in n for n in metrics["data_quality_notes"])
 
 
 def test_linear_growth_is_detected_with_perfect_fit():
@@ -93,3 +93,82 @@ def test_short_history_is_flagged_and_too_short_for_trend():
 
     assert metrics["trend"]["direction"] == "UNKNOWN"
     assert "Only 2 month(s) of history" in metrics["data_quality_notes"][0]
+
+
+# ── Evidence, coverage and incomplete months ──────────────────────────────────
+from datetime import date  # noqa: E402
+
+from app.services.quant_service import complete_months, format_references  # noqa: E402
+
+
+def _tx(platform, tx_id, day, amount, client):
+    return {"platform": platform, "id": tx_id, "date": day, "amount": amount, "client": client}
+
+
+def test_current_month_is_excluded_when_older_months_exist():
+    series = [{"month": "2026-09", "total": 1000}, {"month": "2026-10", "total": 120}]
+
+    complete, excluded = complete_months(series, today=date(2026, 10, 26))
+
+    assert [m["month"] for m in complete] == ["2026-09"]
+    assert excluded == "2026-10"
+
+
+def test_only_current_month_is_kept_as_observed():
+    series = [{"month": "2026-10", "total": 1646.57}]
+
+    complete, excluded = complete_months(series, today=date(2026, 10, 26))
+
+    assert complete == series and excluded is None
+
+
+def test_partial_month_does_not_count_as_a_weak_month():
+    summary = _summary([1000.0] * 11 + [150.0], start_year=2025, start_month=11)  # 2025-11 .. 2026-10
+
+    metrics = compute_revenue_metrics(summary, today=date(2026, 10, 26))
+
+    assert metrics["months_analyzed"] == 11
+    assert metrics["weak_months"]["weak"] == 0
+    assert "2026-10" in metrics["data_quality_notes"][0]
+
+
+def test_evidence_cites_real_transactions_per_factor():
+    summary = _summary([1000.0, 400.0, 1200.0], start_year=2026, start_month=6)
+    summary["transactions"] = [
+        _tx("STRIPE", "ch_big", "2026-06-03", 700.0, "Client 1"),
+        _tx("STRIPE", "ch_small", "2026-06-20", 300.0, "Client 2"),
+        _tx("PAYPAL", "PP_LOW", "2026-07-11", 400.0, "Client 1"),
+        _tx("PAYPAL", "PP_HIGH", "2026-08-02", 1200.0, "Client 3"),
+    ]
+
+    evidence = compute_revenue_metrics(summary, today=date(2026, 10, 26))["evidence"]
+
+    assert [t["id"] for t in evidence["income_stability"]["transactions"]] == ["PP_HIGH", "PP_LOW"]
+    assert [t["id"] for t in evidence["growth_trend"]["transactions"]] == ["ch_big", "ch_small", "PP_HIGH"]
+    assert [t["id"] for t in evidence["seasonality"]["transactions"]] == ["PP_LOW"]
+    # Client 1 (700 + 400) and Client 3 (1200): Client 3 is the top client
+    assert [t["id"] for t in evidence["client_concentration"]["transactions"]] == ["PP_HIGH"]
+    assert format_references(evidence)[0] == "PAYPAL PP_HIGH · 2026-08-02 · 1,200.00 · Client 3"
+    assert len(format_references(evidence)) == 4  # deduplicated
+
+
+def test_short_source_is_described_not_extrapolated():
+    summary = _summary([1000.0] * 12, start_year=2025, start_month=10)
+    summary["source_breakdown"] = [
+        {"platform": "STRIPE", "days_covered": 360, "first_date": "2025-10-01", "last_date": "2026-09-25", "transactions": 110},
+        {"platform": "PAYPAL", "days_covered": 14, "first_date": "2026-10-13", "last_date": "2026-10-26", "transactions": 30},
+    ]
+
+    notes = compute_revenue_metrics(summary, today=date(2026, 10, 26))["data_quality_notes"]
+
+    paypal_note = [n for n in notes if n.startswith("Paypal")]
+    assert len(paypal_note) == 1
+    assert "14 day(s)" in paypal_note[0] and "not annualised" in paypal_note[0]
+    assert not any(n.startswith("Stripe") for n in notes)
+
+
+def test_missing_ledger_is_reported():
+    metrics = compute_revenue_metrics(_summary([1000.0] * 6), today=date(2026, 10, 26))
+
+    assert metrics["evidence"] == {}
+    assert any("re-sync" in n for n in metrics["data_quality_notes"])

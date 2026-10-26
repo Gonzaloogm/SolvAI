@@ -414,6 +414,32 @@
         </tbody>
     </table>
 
+    {% if raw_data.source_breakdown %}
+    <h3>Revenue by Source</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th class="text-right">Share</th>
+                <th class="text-right">Payments</th>
+                <th class="text-right">Coverage</th>
+                <th class="text-right">Revenue (EUR)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for src in raw_data.source_breakdown %}
+            <tr>
+                <td>{{ 'PayPal' if src.platform == 'PAYPAL' else src.platform | title }}</td>
+                <td class="text-right">{{ "{:,.1f}".format(src.share_percent | float) }}%</td>
+                <td class="text-right">{{ src.transactions }}</td>
+                <td class="text-right">{% if src.days_covered is not none %}{{ src.days_covered }} days{% else %}{{ src.months_covered }} months{% endif %}</td>
+                <td class="text-right">&euro; {{ "{:,.2f}".format(src.total_revenue | float) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     <div class="chart-container">
         <h3>Client Concentration Profile</h3>
         <p>Total Distinct Clients: <strong>{{ raw_data.client_concentration.distinct_clients }}</strong></p>
@@ -491,11 +517,35 @@
 
     <!-- Appendix / References -->
     <h2>Appendix: Data References</h2>
+    {% if raw_data.evidence %}
+    <p class="text-sm">Each factor is backed by the payments below, selected deterministically from the connected accounts (clients are pseudonymised).</p>
+    {% for factor, ev in raw_data.evidence.items() %}
+    <h3>{{ factor | replace('_', ' ') | title }}</h3>
+    <p class="text-sm">{{ ev.basis }}</p>
+    <table class="data-table" style="table-layout: fixed;">
+        <thead>
+            <tr><th style="width: 12%;">Source</th><th style="width: 42%;">Transaction ID</th><th style="width: 16%;">Date</th><th style="width: 12%;">Client</th><th class="text-right" style="width: 18%;">Amount (EUR)</th></tr>
+        </thead>
+        <tbody>
+            {% for tx in ev.transactions %}
+            <tr>
+                <td>{{ 'PayPal' if tx.platform == 'PAYPAL' else tx.platform | title }}</td>
+                <td class="text-mono" style="font-size: 7.5pt; word-break: break-all;">{{ tx.id }}</td>
+                <td class="text-mono" style="white-space: nowrap;">{{ tx.date }}</td>
+                <td>{{ tx.client }}</td>
+                <td class="text-right">&euro; {{ "{:,.2f}".format(tx.amount | float) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+    {% else %}
     <ul>
-        {% for ref in data.data_references %}
-        <li class="text-sm" style="margin-bottom: 5px;">{{ ref }}</li>
+        {% for ref in (data.data_references | default([], true)) %}
+        <li class="text-sm" style="margin-bottom: 5px;">{{ ref | default('N/A') }}</li>
         {% endfor %}
     </ul>
+    {% endif %}
 
     {% if verify_url %}
     <div style="margin-top: 40px; border-top: 1px solid #e4e4e7; padding-top: 20px; font-size: 9pt; color: #71717a;">

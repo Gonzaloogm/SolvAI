@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from celery.utils.log import get_task_logger
@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.celery_app import celery_app
 from app.core.config import settings
 from app.services.agent_orchestrator import ReportGenerationError, run_orchestrator_stream
-from app.services.quant_service import client_concentration
+from app.services.quant_service import client_concentration, complete_months, format_references
 
 # ── Synchronous DB engine for Celery (uses psycopg2 instead of asyncpg) ──────
 _SYNC_DATABASE_URL = settings.DATABASE_URL.replace(
@@ -179,7 +179,12 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                         if payload.get("status") == "completed":
                             final_data = payload.get("payload", {}).get("final_report", {})
                             if final_data:
-                                final_data["quant_metrics"] = payload["payload"].get("quant_metrics", {})
+                                quant = payload["payload"].get("quant_metrics", {})
+                                final_data["quant_metrics"] = quant
+                                # Appendix references are the real transactions behind each
+                                # factor, never IDs written by the model
+                                if quant.get("evidence"):
+                                    final_data["data_references"] = format_references(quant["evidence"])
                             # Include score in root for easy access
                             if final_data and "overall_score" in final_data:
                                 final_data["overall_score"] = payload.get("payload", {}).get("overall_score")
@@ -342,13 +347,18 @@ def _mark_failed(db, report_id: str, message: str) -> None:
         logger.error(f"Could not mark report {report_id} as FAILED: {inner_exc}")
 
 
-def _fill_missing_months(merged_series: dict[str, dict]) -> list[dict]:
-    """Sorted monthly series with months that had no revenue present as zero."""
+def _fill_missing_months(merged_series: dict[str, dict], today: date | None = None) -> list[dict]:
+    """Monthly series from the first payment up to the current month, with empty months as zero.
+
+    Running up to today matters: a client base that stopped paying three months ago
+    must show three zero months, not end on the last good month.
+    """
     if not merged_series:
         return []
     months = sorted(merged_series)
     current = datetime.strptime(months[0], "%Y-%m")
-    last = datetime.strptime(months[-1], "%Y-%m")
+    this_month = (today or datetime.now(timezone.utc).date()).replace(day=1)
+    last = max(datetime.strptime(months[-1], "%Y-%m"), datetime(this_month.year, this_month.month, 1))
     filled = []
     while current <= last:
         key = current.strftime("%Y-%m")
@@ -357,7 +367,41 @@ def _fill_missing_months(merged_series: dict[str, dict]) -> list[dict]:
     return filled
 
 
-def _build_financial_summary(sources) -> dict:
+def _label_clients(transactions: list[dict]) -> list[dict]:
+    """Replace client pseudonyms with "Client N", ranked by revenue across all sources."""
+    revenue = {}
+    for tx in transactions:
+        key = (tx["platform"], tx["client"])
+        revenue[key] = revenue.get(key, 0) + tx["amount"]
+    rank = {key: f"Client {i}" for i, key in enumerate(sorted(revenue, key=revenue.get, reverse=True), 1)}
+    labelled = [{**tx, "client": rank[(tx["platform"], tx["client"])]} for tx in transactions]
+    return sorted(labelled, key=lambda tx: tx["date"], reverse=True)
+
+
+def _source_breakdown(per_source: list[tuple[str, list[dict], list[dict]]], total_revenue: float) -> list[dict]:
+    """Revenue share and coverage of each connected source."""
+    breakdown = []
+    for platform, series, txs in per_source:
+        revenue = sum(m["total"] for m in series)
+        dates = sorted(tx["date"] for tx in txs)
+        first, last = (dates[0], dates[-1]) if dates else (None, None)
+        breakdown.append({
+            "platform": platform,
+            "total_revenue": round(revenue, 2),
+            "share_percent": round(revenue / total_revenue * 100, 1) if total_revenue else 0.0,
+            "transactions": len(txs) or sum(m.get("transaction_count", 0) for m in series),
+            "months_covered": len(series),
+            "first_date": first,
+            "last_date": last,
+            "days_covered": (
+                (datetime.strptime(last, "%Y-%m-%d") - datetime.strptime(first, "%Y-%m-%d")).days + 1
+                if first else None
+            ),
+        })
+    return breakdown
+
+
+def _build_financial_summary(sources, today: date | None = None) -> dict:
     """
     Build an aggregated financial summary dict from a list of
     FinancialDataSource ORM objects.
@@ -380,6 +424,8 @@ def _build_financial_summary(sources) -> dict:
     merged_series = {}
     client_revenue: list[float] = []
     legacy_concentration = None
+    transactions: list[dict] = []
+    per_source: list[tuple[str, list[dict], list[dict]]] = []
 
     for source in sources:
         t = source.type
@@ -397,6 +443,7 @@ def _build_financial_summary(sources) -> dict:
                 ],
                 "client_concentration": details.get("client_concentration"),
                 "client_revenue": details.get("client_revenue") or [],
+                "transactions": details.get("transactions") or [],
             }
         elif t == "STRIPE":
             from app.core.security import decrypt_dict
@@ -431,15 +478,21 @@ def _build_financial_summary(sources) -> dict:
             month["total"] += m["total"]
             month["transaction_count"] += m.get("transaction_count", 0)
 
+        source_txs = [{**tx, "platform": t} for tx in metrics.get("transactions") or []]
+        transactions.extend(source_txs)
+        per_source.append((t, metrics.get("monthly_revenue", []), source_txs))
+
         # Clients are counted per platform: the same client paying through two
         # platforms appears twice, which slightly understates concentration.
         client_revenue.extend(metrics.get("client_revenue") or [])
         if isinstance(metrics.get("client_concentration"), dict) and not legacy_concentration:
             legacy_concentration = metrics["client_concentration"]
 
-    monthly_revenue_series = _fill_missing_months(merged_series)
+    monthly_revenue_series = _fill_missing_months(merged_series, today)
     total_revenue = sum(m["total"] for m in monthly_revenue_series)
-    avg_monthly = total_revenue / len(monthly_revenue_series) if monthly_revenue_series else 0
+    # Same basis as the quant metrics: the current, incomplete month is left out
+    full_months, _ = complete_months(monthly_revenue_series, today)
+    avg_monthly = sum(m["total"] for m in full_months) / len(full_months) if full_months else 0
 
     summary = {
         "data_source_count": source_count,
@@ -452,6 +505,9 @@ def _build_financial_summary(sources) -> dict:
         "monthly_revenue_series": monthly_revenue_series,
         # Sources connected before client-level data existed only have top shares (no HHI)
         "client_concentration": client_concentration(client_revenue) or legacy_concentration,
+        "source_breakdown": _source_breakdown(per_source, total_revenue),
+        # Ledger for evidence; kept out of the AI prompt (see agent_orchestrator._prompt_summary)
+        "transactions": _label_clients(transactions),
     }
 
     logger.info(

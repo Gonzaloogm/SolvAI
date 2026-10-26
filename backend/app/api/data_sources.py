@@ -189,6 +189,7 @@ async def connect_stripe(
             "monthly_revenue_series": monthly_series,
             "client_concentration": metrics.get("client_concentration"),
             "client_revenue": metrics.get("client_revenue", []),
+            "transactions": metrics.get("transactions", []),
         },
     )
     db.add(source)
@@ -260,6 +261,7 @@ async def sync_data_source(
             ],
             "client_concentration": metrics.get("client_concentration"),
             "client_revenue": metrics.get("client_revenue", []),
+            "transactions": metrics.get("transactions", []),
         }
     source.connection_details = {**source.connection_details, **snapshot}
     await db.commit()
@@ -330,6 +332,7 @@ def _paypal_snapshot(metrics: dict) -> dict:
         "currency": metrics.get("currency"),
         "client_concentration": metrics.get("client_concentration"),
         "client_revenue": metrics.get("client_revenue", []),
+        "transactions": metrics.get("transactions", []),
     }
 
 @router.post("/upload", summary="Upload a bank statement CSV for preview")

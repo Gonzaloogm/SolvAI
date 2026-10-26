@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 from loguru import logger
 
 from app.core.config import settings
-from app.services.quant_service import client_concentration
+from app.services.quant_service import client_concentration, client_key, transaction_ledger
 
 # Transaction Search only accepts date ranges of up to 31 days per request
 WINDOW = timedelta(days=31)
@@ -134,6 +134,7 @@ class PayPalService:
         monthly_data = defaultdict(lambda: {"total": 0.0, "transaction_count": 0})
         client_data = defaultdict(float)
         successful_txs = []
+        ledger = []
         total_revenue = 0.0
 
         for p in sorted(payments.values(), key=lambda p: p["created"], reverse=True):
@@ -144,6 +145,7 @@ class PayPalService:
             monthly_data[month_str]["total"] += p["amount"]
             monthly_data[month_str]["transaction_count"] += 1
             client_data[p["client"]] += p["amount"]
+            ledger.append({"id": p["id"], "date": p["created"][:10], "amount": p["amount"], "client": client_key(p["client"])})
             successful_txs.append({
                 "id": p["id"],
                 "date": p["created"][:10],
@@ -178,6 +180,7 @@ class PayPalService:
             "monthly_revenue": monthly_revenue,
             "client_concentration": client_concentration(client_revenue),
             "client_revenue": client_revenue,
+            "transactions": transaction_ledger(ledger),
             "span_months": span_months,
         }
 

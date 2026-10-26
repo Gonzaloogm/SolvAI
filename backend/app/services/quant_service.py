@@ -7,7 +7,10 @@ the reasoning instead of trusting a number.
 """
 from __future__ import annotations
 
+import hashlib
 import statistics
+from collections import defaultdict
+from datetime import date, datetime, timezone
 from typing import Any
 
 # Lender rule of thumb for freelancers: income CoV under 25% reads as stable
@@ -25,6 +28,33 @@ TREND_MIN_R_SQUARED = 0.3
 WEAK_MONTH_RATIO = 0.8          # a month under 80% of average counts as weak
 MIN_MONTHS_FOR_TREND = 3
 SHORT_HISTORY_MONTHS = 6
+SHORT_SOURCE_DAYS = 90          # a source with less history is reported as-is, never annualised
+
+MAX_STORED_TRANSACTIONS = 500   # per source, most recent first
+REFS_PER_FACTOR = 4
+
+
+def client_key(raw: str) -> str:
+    """Stable pseudonym for a payer (customer ID, e-mail or account ID): never store the raw value."""
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
+
+
+def transaction_ledger(transactions: list[dict]) -> list[dict]:
+    """Successful payments kept with a source snapshot so reports can cite them by ID."""
+    rows = [
+        {"id": t["id"], "date": t["date"], "amount": round(t["amount"], 2), "client": t["client"]}
+        for t in transactions
+    ]
+    return sorted(rows, key=lambda t: t["date"], reverse=True)[:MAX_STORED_TRANSACTIONS]
+
+
+def complete_months(series: list[dict], today: date | None = None) -> tuple[list[dict], str | None]:
+    """Drop the current calendar month, which is still incomplete, when older months exist."""
+    current = (today or datetime.now(timezone.utc).date()).strftime("%Y-%m")
+    complete = [m for m in series if m["month"] != current]
+    if complete and len(complete) < len(series):
+        return complete, current
+    return series, None
 
 
 def client_concentration(client_revenue: list[float]) -> dict[str, Any] | None:
@@ -145,16 +175,90 @@ def _concentration(summary: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def compute_revenue_metrics(summary: dict[str, Any]) -> dict[str, Any]:
+def _ref(tx: dict) -> dict:
+    return {k: tx[k] for k in ("platform", "id", "date", "amount", "client")}
+
+
+def _evidence(series: list[dict], transactions: list[dict], weak: dict | None) -> dict[str, Any]:
+    """Transaction IDs behind each factor, picked by fixed rules (never by the AI)."""
+    if not series or not transactions:
+        return {}
+    by_month = defaultdict(list)
+    for tx in transactions:
+        by_month[tx["date"][:7]].append(tx)
+
+    def largest(month: str, n: int) -> list[dict]:
+        return [_ref(t) for t in sorted(by_month[month], key=lambda t: t["amount"], reverse=True)[:n]]
+
+    high = max(series, key=lambda m: m["total"])
+    low = min(series, key=lambda m: m["total"])
+    first, last = series[0], series[-1]
+    weak_list = (weak or {}).get("weak_months") or [low["month"]]
+
+    revenue_by_client = defaultdict(float)
+    for tx in transactions:
+        revenue_by_client[tx["client"]] += tx["amount"]
+    top_client = max(revenue_by_client, key=revenue_by_client.get)
+
+    return {
+        "income_stability": {
+            "basis": f"Highest month {high['month']} ({high['total']:,.2f}) and lowest month {low['month']} ({low['total']:,.2f}).",
+            "transactions": largest(high["month"], 2) + largest(low["month"], 2),
+        },
+        "growth_trend": {
+            "basis": f"Start of the period ({first['month']}: {first['total']:,.2f}) against the end ({last['month']}: {last['total']:,.2f}).",
+            "transactions": largest(first["month"], 2) + largest(last["month"], 2),
+        },
+        "seasonality": {
+            "basis": f"Weakest months: {', '.join(weak_list[:3])}.",
+            "transactions": [r for m in weak_list[:REFS_PER_FACTOR] for r in largest(m, 1)],
+        },
+        "client_concentration": {
+            "basis": f"Largest payments from the top client ({top_client}, {revenue_by_client[top_client]:,.2f} in total).",
+            "transactions": [
+                _ref(t) for t in sorted((t for t in transactions if t["client"] == top_client),
+                                        key=lambda t: t["amount"], reverse=True)[:REFS_PER_FACTOR]
+            ],
+        },
+    }
+
+
+def _source_notes(summary: dict[str, Any]) -> list[str]:
+    notes = []
+    for source in summary.get("source_breakdown") or []:
+        days = source.get("days_covered")
+        if days is not None and days < SHORT_SOURCE_DAYS:
+            notes.append(
+                f"{source['platform'].title()} has only {days} day(s) of history "
+                f"({source['first_date']} to {source['last_date']}, {source['transactions']} payment(s)). "
+                "Its figures are shown as observed and are not annualised or extrapolated."
+            )
+    return notes
+
+
+def compute_revenue_metrics(summary: dict[str, Any], today: date | None = None) -> dict[str, Any]:
     """All deterministic metrics for a financial summary built by _build_financial_summary."""
-    series = sorted(summary.get("monthly_revenue_series") or [], key=lambda m: m["month"])
+    observed = sorted(summary.get("monthly_revenue_series") or [], key=lambda m: m["month"])
+    series, excluded_month = complete_months(observed, today)
     revenues = [float(m["total"]) for m in series]
     mean = sum(revenues) / len(revenues) if revenues else 0.0
 
     data_quality = []
+    if excluded_month:
+        data_quality.append(
+            f"The current month ({excluded_month}) is still incomplete and is excluded from "
+            "averages, volatility, trend and weak-month analysis."
+        )
     if len(series) < SHORT_HISTORY_MONTHS:
         data_quality.append(
             f"Only {len(series)} month(s) of history: trend and volatility are indicative, not conclusive."
+        )
+    data_quality += _source_notes(summary)
+    weak = _weak_months(series, mean) if series else None
+    evidence = _evidence(series, summary.get("transactions") or [], weak)
+    if series and not evidence:
+        data_quality.append(
+            "Transaction-level references are unavailable for these sources; re-sync them to cite payments by ID."
         )
 
     return {
@@ -164,7 +268,21 @@ def compute_revenue_metrics(summary: dict[str, Any]) -> dict[str, Any]:
         "median_monthly_revenue": round(statistics.median(revenues), 2) if revenues else 0.0,
         "volatility": _volatility(revenues, mean),
         "trend": _trend(revenues, mean),
-        "weak_months": _weak_months(series, mean) if series else None,
+        "weak_months": weak,
         "client_concentration": _concentration(summary),
+        "source_breakdown": summary.get("source_breakdown") or [],
+        "evidence": evidence,
         "data_quality_notes": data_quality,
     }
+
+
+def format_references(evidence: dict[str, Any]) -> list[str]:
+    """Unique, human-readable transaction references for the report appendix."""
+    seen, refs = set(), []
+    for factor in evidence.values():
+        for tx in factor["transactions"]:
+            key = (tx["platform"], tx["id"])
+            if key not in seen:
+                seen.add(key)
+                refs.append(f"{tx['platform']} {tx['id']} · {tx['date']} · {tx['amount']:,.2f} · {tx['client']}")
+    return refs

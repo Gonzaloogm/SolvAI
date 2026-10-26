@@ -23,6 +23,11 @@ class ReportGenerationError(Exception):
     """A report cannot be produced honestly. The message is shown to the user; the task does not retry."""
 
 
+def _prompt_summary(state: AgentState) -> dict:
+    """Financial summary without the transaction ledger, which only feeds the evidence."""
+    return {k: v for k, v in state.get("financial_summary", {}).items() if k != "transactions"}
+
+
 QUANT_GROUNDING = """
 Quant Metrics are computed deterministically from the user's transactions. They are the ground truth:
 - Quote them with their exact values; never recompute, round differently or contradict them.
@@ -32,6 +37,10 @@ Quant Metrics are computed deterministically from the user's transactions. They 
 - Client concentration must follow client_concentration.hhi, level and top_client_percent.
   If its level is UNKNOWN, say client-level data is unavailable instead of guessing.
 - If data_quality_notes is not empty, state those limitations in the narrative.
+- source_breakdown gives each platform's share of revenue and its coverage. Comment on it; a source
+  with a short history must be described as observed so far, never annualised or extrapolated.
+- When a factor refers to evidence, cite its transactions by platform and ID exactly as listed in
+  evidence (e.g. "PAYPAL 5LT992323P9029315"). Never invent or alter a transaction ID.
 """
 
 
@@ -76,7 +85,7 @@ Lenders assess freelancers differently from employees. Focus on:
 9. Recommended downpayment percentage (e.g. 20% for freelancers) and absolute amount based on max mortgage.
 10. Industry stability and specific risk mitigations.
 
-Financial Summary: {json.dumps(state.get("financial_summary", {}))}
+Financial Summary: {json.dumps(_prompt_summary(state))}
 Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}
 {QUANT_GROUNDING}
 Use volatility.cov_percent from Quant Metrics as cov_percentage.
@@ -114,7 +123,7 @@ Return ONLY valid JSON:
         prompt = f"""You are SolvAI's Underwriter Agent.
 {rental_context}
 Generate a JSON solvency report based on the following data:
-Financial Summary: {json.dumps(state.get("financial_summary", {}))}
+Financial Summary: {json.dumps(_prompt_summary(state))}
 Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}
 {QUANT_GROUNDING}
 Previous Auditor Feedback: {state.get("auditor_feedback", "None. This is the first draft.")}
@@ -249,7 +258,7 @@ def auditor_node(state: AgentState) -> AgentState:
 
     prompt = f"""You are SolvAI's Auditor Agent (Red Team).
 Review the following Draft Report against the raw Financial Summary.
-Financial Summary: {json.dumps(state.get("financial_summary", {}))}
+Financial Summary: {json.dumps(_prompt_summary(state))}
 Quant Metrics (deterministic ground truth): {json.dumps(state.get("quant_metrics", {}))}
 Draft Report: {state.get("draft_report", "")}
 

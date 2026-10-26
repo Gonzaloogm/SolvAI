@@ -114,8 +114,6 @@ export const dataSources = {
     
   getXeroAuthUrl: () => apiClient.get('/data-sources/xero/connect'),
   
-  getPayPalAuthUrl: () => apiClient.get('/data-sources/paypal/connect'),
-
   getBelvoInstitutions: () => apiClient.get('/data-sources/belvo/institutions'),
   connectBelvo: (data) => apiClient.post('/data-sources/connect/belvo', data),
 };

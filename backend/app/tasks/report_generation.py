@@ -130,6 +130,18 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
             # ── 4. Build financial summary ────────────────────────────────────
             financial_summary = _build_financial_summary(sources)
 
+            if not financial_summary["monthly_revenue_series"]:
+                platforms = ", ".join(financial_summary["connected_platforms"]) or "none"
+                logger.warning(f"[Task {self.request.id}] No revenue data for report {report_id} (sources: {platforms})")
+                report.status = "FAILED"
+                report.report_data = {
+                    "error": f"No revenue data found in your connected sources ({platforms}). "
+                             "Connect a source with at least one successful payment and try again."
+                }
+                report.updated_at = datetime.now(timezone.utc)
+                db.commit()
+                return {"status": "failed", "report_id": report_id, "error": "no_revenue_data"}
+
             logger.info(
                 f"[Task {self.request.id}] financial_summary sent to Gemini: "
                 f"data_source_count={financial_summary.get('data_source_count')}, "
@@ -400,11 +412,12 @@ def _build_financial_summary(sources) -> dict:
                     "data_points": 0,
                 }
         else:
-            # Fallback
+            # No revenue data for this source: never invent figures
+            logger.warning(f"[_build_financial_summary] source {source.id} ({t}) has no revenue data")
             metrics = {
-                "avg_monthly": 3_000,
-                "status": "CONNECTED",
-                "data_points": 52,
+                "avg_monthly": 0,
+                "status": "NO_DATA",
+                "data_points": 0,
             }
 
         avg_monthly_map[t] = avg_monthly_map.get(t, 0) + metrics.get("avg_monthly", 0)

@@ -86,7 +86,7 @@ async def list_data_sources(
 async def get_available_integrations():
     return {
         "xero": bool(settings.XERO_CLIENT_ID and settings.XERO_CLIENT_SECRET),
-        "paypal": bool(settings.PAYPAL_CLIENT_ID and settings.PAYPAL_SECRET),
+        "paypal": True,
         "bank_account": bool(settings.BELVO_SECRET_ID and settings.BELVO_SECRET_PASSWORD),
     }
 
@@ -202,13 +202,13 @@ async def connect_stripe(
     return DataSourceResponse.model_validate(source)
 
 
-@router.post("/{source_id}/sync", response_model=DataSourceResponse, summary="Re-sync a Stripe data source")
+@router.post("/{source_id}/sync", response_model=DataSourceResponse, summary="Re-sync a Stripe or PayPal data source")
 async def sync_data_source(
     source_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> DataSourceResponse:
-    """Trigger a fresh data pull for a connected Stripe source."""
+    """Trigger a fresh data pull for a connected Stripe or PayPal source."""
     from app.services.stripe_service import fetch_stripe_metrics
 
     result = await db.execute(
@@ -221,107 +221,118 @@ async def sync_data_source(
     source = result.scalar_one_or_none()
     if not source:
         raise HTTPException(status_code=404, detail="Data source not found")
-    if source.type != "STRIPE":
-        raise HTTPException(status_code=400, detail="Sync is only supported for STRIPE sources")
+    if source.type not in ("STRIPE", "PAYPAL"):
+        raise HTTPException(status_code=400, detail="Sync is only supported for STRIPE and PAYPAL sources")
 
     encrypted = (source.connection_details or {}).get("encrypted_data")
     if not encrypted:
-        raise HTTPException(status_code=400, detail="No API key stored for this source")
+        raise HTTPException(status_code=400, detail="No credentials stored for this source")
 
+    provider = source.type.capitalize()
     try:
         import asyncio
-        logger.info(f"SYNC: encrypted value is {encrypted}")
         creds = decrypt_dict(encrypted)
-        logger.info(f"SYNC: creds from decrypt is {creds}")
-        api_key = creds.get("api_key")
-        logger.info(f"SYNC: api_key is {api_key}")
-        if not api_key:
-            raise ValueError("api_key missing from stored credentials")
         loop = asyncio.get_event_loop()
-        metrics = await loop.run_in_executor(
-            None, lambda: fetch_stripe_metrics(api_key=api_key)
-        )
+        if source.type == "PAYPAL":
+            if not creds.get("client_id") or not creds.get("client_secret"):
+                raise ValueError("client_id/client_secret missing from stored credentials")
+            metrics = await loop.run_in_executor(
+                None, lambda: paypal_service.fetch_metrics(creds["client_id"], creds["client_secret"])
+            )
+        else:
+            api_key = creds.get("api_key")
+            if not api_key:
+                raise ValueError("api_key missing from stored credentials")
+            metrics = await loop.run_in_executor(
+                None, lambda: fetch_stripe_metrics(api_key=api_key)
+            )
         logger.info(
-            f"Stripe sync {source_id}: data_points={metrics.get('data_points')}, "
+            f"{provider} sync {source_id}: data_points={metrics.get('data_points')}, "
             f"months={len(metrics.get('monthly_revenue', []))}"
         )
     except Exception as e:
-        logger.error(f"Stripe sync error for source {source_id}: {e}")
-        raise HTTPException(status_code=502, detail=f"Stripe sync failed: {e}")
+        logger.error(f"{provider} sync error for source {source_id}: {e}")
+        raise HTTPException(status_code=502, detail=f"{provider} sync failed: {e}")
 
-    monthly_series = [
-        {"month": m["month"], "revenue": m["total"], "transactions": m["transaction_count"]}
-        for m in metrics.get("monthly_revenue", [])
-    ]
-
-    source.connection_details = {
-        **source.connection_details,
-        "records_count": metrics.get("data_points", 0),
-        "monthly_revenue_series": monthly_series,
-    }
+    if source.type == "PAYPAL":
+        snapshot = _paypal_snapshot(metrics)
+    else:
+        snapshot = {
+            "records_count": metrics.get("data_points", 0),
+            "monthly_revenue_series": [
+                {"month": m["month"], "revenue": m["total"], "transactions": m["transaction_count"]}
+                for m in metrics.get("monthly_revenue", [])
+            ],
+        }
+    source.connection_details = {**source.connection_details, **snapshot}
     await db.commit()
     await db.refresh(source)
     return DataSourceResponse.model_validate(source)
 
 
-@router.get("/paypal/connect", summary="Start PayPal OAuth2 flow")
-async def paypal_auth(current_user: User = Depends(get_current_user)):
-    api_base = getattr(settings, "API_BASE_URL", "http://localhost:8000")
-    redirect_uri = getattr(settings, "PAYPAL_REDIRECT_URI", f"{api_base.rstrip('/')}/api/v1/data-sources/paypal/callback")
-    state = str(current_user.id)
-    return {"url": paypal_service.get_auth_url(redirect_uri=redirect_uri, state=state)}
-
-@router.get("/paypal/callback", summary="PayPal OAuth2 callback")
-async def paypal_callback(
-    code: str,
-    state: str = "",
+@router.post("/connect/paypal", response_model=DataSourceResponse, status_code=status.HTTP_201_CREATED, summary="Connect PayPal with REST app credentials and fetch transactions")
+async def connect_paypal(
+    body: dict,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
-    from loguru import logger
-    frontend_url = settings.FRONTEND_URL
-    api_base = getattr(settings, "API_BASE_URL", "http://localhost:8000")
-    redirect_uri = getattr(settings, "PAYPAL_REDIRECT_URI", f"{api_base.rstrip('/')}/api/v1/data-sources/paypal/callback")
-    
+) -> DataSourceResponse:
+    import asyncio
+    from app.services.paypal_service import PayPalAPIError
+    details = body.get("connection_details") or body
+    client_id = (details.get("client_id") or "").strip()
+    client_secret = (details.get("client_secret") or "").strip()
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=400, detail="client_id and client_secret are required")
+
     try:
-        try:
-            user_id = uuid.UUID(state)
-        except ValueError:
-            raise Exception("Invalid state parameter")
-
-        user_result = await db.execute(select(User).where(User.id == user_id))
-        user = user_result.scalars().first()
-        if not user:
-            raise Exception("User not found from state")
-
-        token_data = await paypal_service.get_access_token(code, redirect_uri)
-        access_token = token_data.get("access_token")
-        if not access_token:
-            raise Exception("Failed to get PayPal access token")
-
-        transactions = await paypal_service.fetch_transactions(access_token)
-        aggregated = paypal_service.aggregate_monthly(transactions)
-        
-        source = FinancialDataSource(
-            id=uuid.uuid4(),
-            user_id=user.id,
-            organization_id=user.organization_id,
-            type="PAYPAL",
-            status="CONNECTED",
-            connection_details={
-                "encrypted_data": encrypt_dict({"access_token": access_token}),
-                "records_count": len(transactions),
-                "monthly_revenue_series": aggregated.get("monthly_revenue_series", []),
-                "currency": aggregated.get("currency"),
-                "total_revenue": aggregated.get("total_revenue"),
-                "client_concentration": aggregated.get("client_concentration", [])
-            },
+        loop = asyncio.get_event_loop()
+        metrics = await loop.run_in_executor(
+            None, lambda: paypal_service.fetch_metrics(client_id, client_secret)
         )
-        db.add(source)
-        await db.commit()
-        return RedirectResponse(f"{frontend_url}/data-sources?connected=paypal")
-    except Exception as e:
-        logger.error(f"PayPal callback error: {e}")
-        return RedirectResponse(f"{frontend_url}/data-sources?error=paypal_failed")
+        logger.info(
+            f"PayPal connect: data_points={metrics.get('data_points')}, "
+            f"monthly_months={len(metrics.get('monthly_revenue', []))}, "
+            f"avg_monthly={metrics.get('avg_monthly')}"
+        )
+    except PayPalAPIError as e:
+        logger.error(f"PayPal connect error: {e}")
+        raise HTTPException(status_code=502, detail=str(e))
+
+    from sqlalchemy import delete as sa_delete
+    await db.execute(
+        sa_delete(FinancialDataSource).where(
+            FinancialDataSource.user_id == current_user.id,
+            FinancialDataSource.type == "PAYPAL",
+        )
+    )
+
+    source = FinancialDataSource(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        organization_id=current_user.organization_id,
+        type="PAYPAL",
+        status="CONNECTED",
+        connection_details={
+            "encrypted_data": encrypt_dict({"client_id": client_id, "client_secret": client_secret}),
+            **_paypal_snapshot(metrics),
+        },
+    )
+    db.add(source)
+    await db.commit()
+    await db.refresh(source)
+    return DataSourceResponse.model_validate(source)
+
+
+def _paypal_snapshot(metrics: dict) -> dict:
+    return {
+        "records_count": metrics.get("data_points", 0),
+        "monthly_revenue_series": [
+            {"month": m["month"], "revenue": m["total"], "transactions": m["transaction_count"]}
+            for m in metrics.get("monthly_revenue", [])
+        ],
+        "currency": metrics.get("currency"),
+        "client_concentration": metrics.get("client_concentration"),
+    }
 
 @router.post("/upload", summary="Upload a bank statement CSV for preview")
 async def upload_statements(

@@ -194,14 +194,6 @@ export default function DataSourcesPage() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    const paypalStatus = params.get('paypal') || params.get('connected');
-    if (paypalStatus === 'connected' || paypalStatus === 'paypal') {
-      addToast('PayPal connected successfully!', 'success');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (paypalStatus === 'error' || params.get('error') === 'paypal_failed') {
-      addToast('Failed to connect PayPal.', 'error');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
   }, [addToast]);
 
  const handleSync = async (name) => {
@@ -296,8 +288,13 @@ export default function DataSourcesPage() {
  let payload = {};
  if (connectModal.name === 'Stripe') {
    payload = { api_key: e.target.elements.api_key.value };
+ } else if (connectModal.name === 'PayPal') {
+   payload = {
+     client_id: e.target.elements.client_id.value,
+     client_secret: e.target.elements.client_secret.value,
+   };
  }
- await dataSourcesApi.connect(connectModal.name.toLowerCase(), payload);
+ const res = await dataSourcesApi.connect(connectModal.name.toLowerCase(), payload);
  
  const sourceToAdd = {
  name: connectModal.name,
@@ -308,7 +305,7 @@ export default function DataSourcesPage() {
  statusTextColor: 'text-[#1a9e6e]',
  badge: connectModal.badge || 'Integration',
  lastSync: 'Just now',
- records: '0',
+ records: String(res.data?.records_count ?? 0),
  isSyncing: false,
  };
 
@@ -317,7 +314,7 @@ export default function DataSourcesPage() {
  addToast("Connected successfully", "success");
  } catch (error) {
  console.error(error);
- addToast("Failed to connect", "error");
+ addToast(error.response?.data?.detail || "Failed to connect", "error");
  } finally {
  setIsConnecting(false);
  setConnectModal(null);
@@ -531,13 +528,6 @@ export default function DataSourcesPage() {
     window.location.href = res.data.url;
    } catch (e) {
     addToast("Failed to initiate Xero connection", "error");
-   }
-  } else if (integration.name === 'PayPal') {
-   try {
-    const res = await dataSourcesApi.getPayPalAuthUrl();
-    window.location.href = res.data.url;
-   } catch (e) {
-    addToast("Failed to initiate PayPal connection", "error");
    }
   } else {
    setConnectModal(integration);
@@ -753,6 +743,43 @@ export default function DataSourcesPage() {
      <div className="bg-[#fef3c7] text-[#92400e] border border-[#fcd34d] p-3 rounded-md mt-4 text-sm flex items-start gap-2">
        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
        <p>Your key is encrypted and stored securely. We only read transaction data — we never make charges.</p>
+     </div>
+   </>
+ ) : connectModal.name === 'PayPal' ? (
+   <>
+     <p className="text-sm text-secondary mb-4">
+       Connect your PayPal business account to analyze the last 12 months of payments received.
+     </p>
+     <div>
+       <label className="block text-sm font-medium text-primary mb-1">
+         Client ID
+       </label>
+       <input
+         name="client_id"
+         type="text"
+         autoComplete="off"
+         className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
+         required
+       />
+     </div>
+     <div>
+       <label className="block text-sm font-medium text-primary mb-1">
+         Secret
+       </label>
+       <input
+         name="client_secret"
+         type="password"
+         autoComplete="off"
+         className="w-full text-sm border border-border rounded-md p-2 bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]/20 focus:border-[var(--brand-blue)]"
+         required
+       />
+       <p className="text-xs text-muted mt-2">
+         Find these in developer.paypal.com → Apps &amp; Credentials → your REST app. The app needs the Transaction Search feature enabled.
+       </p>
+     </div>
+     <div className="bg-[#fef3c7] text-[#92400e] border border-[#fcd34d] p-3 rounded-md mt-4 text-sm flex items-start gap-2">
+       <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+       <p>Your credentials are encrypted and stored securely. We only read transaction data — we never make payments.</p>
      </div>
    </>
  ) : (

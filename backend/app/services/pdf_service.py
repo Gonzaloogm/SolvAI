@@ -249,6 +249,30 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
         else:
             analytics["insights"].append(f"Well-diversified client base (Est. HHI: {int(hhi)}). Low single-client failure risk.")
 
+    # Reports generated with deterministic quant metrics use those exact figures
+    # (same numbers the AI was grounded on); older reports keep the estimates above.
+    quant = rd.get('quant_metrics') or {}
+    analytics["hhi_is_estimate"] = True
+    if quant:
+        volatility = quant.get('volatility') or {}
+        trend = quant.get('trend') or {}
+        weak = quant.get('weak_months') or {}
+        concentration = quant.get('client_concentration') or {}
+        if volatility.get('cov_percent') is not None:
+            analytics["cov"] = volatility['cov_percent']
+            analytics["revenue_volatility"] = volatility.get('std_dev', analytics["revenue_volatility"])
+        if trend.get('slope_percent_per_month') is not None:
+            analytics["avg_mom_growth"] = round(trend['slope_percent_per_month'], 1) + 0.0
+            analytics["growth_label"] = "Revenue Trend (regression, per month)"
+        if concentration.get('hhi') is not None:
+            analytics["hhi_index"] = concentration['hhi']
+            analytics["hhi_is_estimate"] = False
+        analytics["insights"] = [
+            m['explanation']
+            for m in (volatility, trend, weak, concentration)
+            if m.get('explanation')
+        ] + list(quant.get('data_quality_notes') or [])
+
     # ==========================================
     # 4. VISUALIZATION ENGINE (MATPLOTLIB)
     # ==========================================

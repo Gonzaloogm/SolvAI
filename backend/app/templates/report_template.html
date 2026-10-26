@@ -459,7 +459,7 @@
     <div class="bg-surface" style="margin-top: 20px;">
         <table style="width: 100%; font-size: 10pt; border-collapse: collapse;">
             <tr>
-                <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7;"><strong>Average MoM Growth:</strong></td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7;"><strong>{{ raw_data.analytics.growth_label | default('Average MoM Growth') }}:</strong></td>
                 <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; text-align: right;" class="text-mono">{{ "{:,.1f}".format(raw_data.analytics.avg_mom_growth | default(0) | float) }}%</td>
             </tr>
             <tr>
@@ -471,7 +471,7 @@
                 <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; text-align: right;" class="text-mono">{{ "{:,.1f}".format(raw_data.analytics.cov | default(0) | float) }}%</td>
             </tr>
             <tr>
-                <td style="padding: 8px 0;"><strong>Estimated Client HHI (Risk Index):</strong></td>
+                <td style="padding: 8px 0;"><strong>{{ 'Estimated ' if raw_data.analytics.hhi_is_estimate else '' }}Client HHI (Risk Index):</strong></td>
                 <td style="padding: 8px 0; text-align: right;" class="text-mono">{{ "{:,.0f}".format(raw_data.analytics.hhi_index | default(0) | float) }} / 10000</td>
             </tr>
         </table>

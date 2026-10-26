@@ -8,6 +8,8 @@ import random
 import uuid
 from collections import defaultdict
 
+from app.services.quant_service import client_concentration
+
 
 def _generate_synthetic_transactions(months=6, count=40) -> list[dict]:
     now = datetime.now(timezone.utc)
@@ -191,20 +193,7 @@ def fetch_stripe_metrics(api_key=None) -> dict:
             if seasonality_desc:
                 seasonality = " ".join(seasonality_desc)
                 
-    top_client_pct = 0
-    top_3_client_pct = 0
-    distinct_clients = 0
-    if total_revenue_euros > 0:
-        clients_sorted = sorted(client_data.items(), key=lambda x: x[1], reverse=True)
-        top_client_pct = (clients_sorted[0][1] / total_revenue_euros) * 100 if clients_sorted else 0
-        top_3_client_pct = sum(c[1] for c in clients_sorted[:3]) / total_revenue_euros * 100 if clients_sorted else 0
-        distinct_clients = len(client_data)
-
-    client_concentration = {
-        "top_client_percent": round(top_client_pct, 1),
-        "top_3_clients_percent": round(top_3_client_pct, 1),
-        "distinct_clients": distinct_clients
-    }
+    client_revenue = [round(v, 2) for v in client_data.values()]
 
     return {
         "avg_monthly": avg_monthly,
@@ -214,6 +203,7 @@ def fetch_stripe_metrics(api_key=None) -> dict:
         "monthly_revenue": monthly_revenue,
         "growth_trend_signal": growth_trend,
         "seasonality_signal": seasonality,
-        "client_concentration": client_concentration,
+        "client_concentration": client_concentration(client_revenue),
+        "client_revenue": client_revenue,
         "span_months": span_months if monthly_data else 0
     }

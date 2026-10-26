@@ -8,6 +8,7 @@ from dateutil.relativedelta import relativedelta
 from loguru import logger
 
 from app.core.config import settings
+from app.services.quant_service import client_concentration
 
 # Transaction Search only accepts date ranges of up to 31 days per request
 WINDOW = timedelta(days=31)
@@ -166,12 +167,7 @@ class PayPalService:
         span_months = len(monthly_revenue)
         avg_monthly = total_revenue / span_months if span_months else 0.0
 
-        clients_sorted = sorted(client_data.values(), reverse=True)
-        client_concentration = {
-            "top_client_percent": round(clients_sorted[0] / total_revenue * 100, 1) if total_revenue else 0,
-            "top_3_clients_percent": round(sum(clients_sorted[:3]) / total_revenue * 100, 1) if total_revenue else 0,
-            "distinct_clients": len(client_data),
-        }
+        client_revenue = [round(v, 2) for v in client_data.values()]
 
         return {
             "avg_monthly": avg_monthly,
@@ -180,7 +176,8 @@ class PayPalService:
             "currency": currency or "EUR",
             "transactions_sample": successful_txs[:15],
             "monthly_revenue": monthly_revenue,
-            "client_concentration": client_concentration,
+            "client_concentration": client_concentration(client_revenue),
+            "client_revenue": client_revenue,
             "span_months": span_months,
         }
 

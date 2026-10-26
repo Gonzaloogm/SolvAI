@@ -91,11 +91,14 @@ def test_counts_payments_net_of_refunds_and_ignores_non_revenue(fake_paypal):
 
     assert metrics["data_points"] == 2
     assert sum(m["total"] for m in metrics["monthly_revenue"]) == pytest.approx(700.0)
+    # A: 400 (500 - 100 refund), B: 300 -> shares 57.1 / 42.9 -> HHI 5102
     assert metrics["client_concentration"] == {
         "top_client_percent": pytest.approx(57.1),
         "top_3_clients_percent": 100.0,
         "distinct_clients": 2,
+        "hhi": 5102,
     }
+    assert sorted(metrics["client_revenue"]) == [300.0, 400.0]
     assert metrics["currency"] == "EUR"
 
 

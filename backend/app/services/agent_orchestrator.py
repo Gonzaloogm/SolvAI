@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph, END
 import google.generativeai as genai
 
 from app.core.config import settings
-from app.services.quant_service import analyze_quant_metrics
+from app.services.quant_service import compute_revenue_metrics
 
 class AgentState(TypedDict):
     transactions: List[Dict[str, Any]]
@@ -23,12 +23,21 @@ class ReportGenerationError(Exception):
     """A report cannot be produced honestly. The message is shown to the user; the task does not retry."""
 
 
+QUANT_GROUNDING = """
+Quant Metrics are computed deterministically from the user's transactions. They are the ground truth:
+- Quote them with their exact values; never recompute, round differently or contradict them.
+- Income stability must follow volatility.cov_percent and volatility.level.
+- Growth trend must follow trend.direction, trend.slope_percent_per_month and trend.r_squared.
+- Seasonality must follow weak_months (weak and below-average months, longest streak).
+- Client concentration must follow client_concentration.hhi, level and top_client_percent.
+  If its level is UNKNOWN, say client-level data is unavailable instead of guessing.
+- If data_quality_notes is not empty, state those limitations in the narrative.
+"""
+
+
 def data_quant_node(state: AgentState) -> AgentState:
     logger.info("Executing Data Quant Agent...")
-    txs = state.get("transactions", [])
-    summary = state.get("financial_summary", {})
-    metrics = analyze_quant_metrics(txs, summary)
-    return {"quant_metrics": metrics}
+    return {"quant_metrics": compute_revenue_metrics(state.get("financial_summary", {}))}
 
 import asyncio
 
@@ -69,6 +78,8 @@ Lenders assess freelancers differently from employees. Focus on:
 
 Financial Summary: {json.dumps(state.get("financial_summary", {}))}
 Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}
+{QUANT_GROUNDING}
+Use volatility.cov_percent from Quant Metrics as cov_percentage.
 Previous Auditor Feedback: {state.get("auditor_feedback", "None. This is the first draft.")}
 
 Return ONLY valid JSON:
@@ -105,7 +116,7 @@ Return ONLY valid JSON:
 Generate a JSON solvency report based on the following data:
 Financial Summary: {json.dumps(state.get("financial_summary", {}))}
 Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}
-
+{QUANT_GROUNDING}
 Previous Auditor Feedback: {state.get("auditor_feedback", "None. This is the first draft.")}
 
 Ensure your report is fully backed by the provided data.
@@ -239,9 +250,11 @@ def auditor_node(state: AgentState) -> AgentState:
     prompt = f"""You are SolvAI's Auditor Agent (Red Team).
 Review the following Draft Report against the raw Financial Summary.
 Financial Summary: {json.dumps(state.get("financial_summary", {}))}
+Quant Metrics (deterministic ground truth): {json.dumps(state.get("quant_metrics", {}))}
 Draft Report: {state.get("draft_report", "")}
 
-1. If the draft makes claims not mathematically supported by the summary, FAIL it and provide critique.
+1. If the draft makes claims not mathematically supported by the summary, or quotes or contradicts
+   the Quant Metrics incorrectly (CoV, trend, weak months, HHI), FAIL it and provide critique.
 2. If the draft is missing a detailed "Actionable Remediation Plan" or an "Industry Context" section, FAIL it.
 Respond ONLY with a JSON object: {{"is_approved": true/false, "critique": "your feedback"}}
 """
@@ -381,6 +394,7 @@ async def run_orchestrator_stream(initial_state: AgentState):
         "payload": {
             "overall_score": score,
             "requires_human_review": last_state.get("requires_human_review", False),
-            "final_report": last_state.get("final_report", {})
+            "final_report": last_state.get("final_report", {}),
+            "quant_metrics": last_state.get("quant_metrics", {}),
         }
     }

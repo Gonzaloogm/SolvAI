@@ -162,6 +162,75 @@ function ShareModal({ isOpen, onClose, reportId }) {
   );
 }
 
+const LEVEL_STYLES = {
+  LOW: 'text-[#1a9e6e]', UNCONCENTRATED: 'text-[#1a9e6e]', GROWING: 'text-[#1a9e6e]', STABLE: 'text-[#1a9e6e]',
+  MODERATE: 'text-[#b45309]',
+  HIGH: 'text-[#df1b41]', DECLINING: 'text-[#df1b41]',
+  UNKNOWN: 'text-muted',
+};
+
+const fmtNum = (value, digits = 0) =>
+  value === null || value === undefined ? '—' : Number(value).toLocaleString('en-GB', { maximumFractionDigits: digits });
+
+// Deterministic metrics the AI was grounded on (backend/app/services/quant_service.py)
+const VerifiedMetrics = ({ metrics }) => {
+  if (!metrics?.volatility) return null;
+  const { volatility, trend, weak_months: weak, client_concentration: concentration } = metrics;
+
+  const rows = [
+    {
+      label: 'Income volatility (CoV)',
+      value: volatility.cov_percent !== null && volatility.cov_percent !== undefined ? `${fmtNum(volatility.cov_percent, 1)}%` : '—',
+      level: volatility.level,
+      explanation: volatility.explanation,
+    },
+    {
+      label: 'Revenue trend',
+      value: trend.slope_percent_per_month !== undefined ? `${trend.slope_percent_per_month > 0 ? '+' : ''}${fmtNum(trend.slope_percent_per_month, 1)}% / month` : '—',
+      level: trend.direction,
+      explanation: trend.explanation,
+    },
+    weak && {
+      label: 'Weak months',
+      value: `${weak.weak} of ${metrics.months_analyzed}`,
+      level: weak.weak === 0 ? 'LOW' : weak.weak <= 2 ? 'MODERATE' : 'HIGH',
+      explanation: weak.explanation,
+    },
+    {
+      label: 'Client concentration (HHI)',
+      value: concentration.hhi !== null && concentration.hhi !== undefined ? fmtNum(concentration.hhi) : '—',
+      level: concentration.level,
+      explanation: concentration.explanation,
+    },
+  ].filter(Boolean);
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-primary mb-1">Verified metrics</h3>
+      <p className="text-xs text-muted mb-3">
+        Computed directly from {fmtNum(metrics.months_analyzed)} months of transactions, not by the AI. The scores above are grounded on these figures.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {rows.map((row) => (
+          <div key={row.label} className="rounded-md border border-border bg-page p-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs text-muted">{row.label}</span>
+              <span className={cn('text-[11px] font-semibold uppercase tracking-wide', LEVEL_STYLES[row.level] || 'text-muted')}>
+                {row.level}
+              </span>
+            </div>
+            <div className="text-lg font-semibold text-primary mt-0.5">{row.value}</div>
+            <p className="text-xs text-secondary mt-1 leading-relaxed">{row.explanation}</p>
+          </div>
+        ))}
+      </div>
+      {metrics.data_quality_notes?.length > 0 && (
+        <p className="text-xs text-[#b45309] mt-2">{metrics.data_quality_notes.join(' ')}</p>
+      )}
+    </div>
+  );
+};
+
 const KeyFindings = ({ reportData }) => {
   const riskFlags = reportData?.risk_flags || [];
   const recommendations = reportData?.recommendations || [];
@@ -706,6 +775,8 @@ export default function ReportDetailModal({ report, onClose }) {
               </div>
             </div>
           )}
+
+          <VerifiedMetrics metrics={reportData.quant_metrics} />
 
           <KeyFindings reportData={reportData} />
         </div>

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from celery.utils.log import get_task_logger
+from dateutil.relativedelta import relativedelta
 from loguru import logger
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -13,6 +14,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.celery_app import celery_app
 from app.core.config import settings
 from app.services.agent_orchestrator import ReportGenerationError, run_orchestrator_stream
+from app.services.quant_service import client_concentration
 
 # ── Synchronous DB engine for Celery (uses psycopg2 instead of asyncpg) ──────
 _SYNC_DATABASE_URL = settings.DATABASE_URL.replace(
@@ -176,6 +178,8 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                         
                         if payload.get("status") == "completed":
                             final_data = payload.get("payload", {}).get("final_report", {})
+                            if final_data:
+                                final_data["quant_metrics"] = payload["payload"].get("quant_metrics", {})
                             # Include score in root for easy access
                             if final_data and "overall_score" in final_data:
                                 final_data["overall_score"] = payload.get("payload", {}).get("overall_score")
@@ -338,6 +342,21 @@ def _mark_failed(db, report_id: str, message: str) -> None:
         logger.error(f"Could not mark report {report_id} as FAILED: {inner_exc}")
 
 
+def _fill_missing_months(merged_series: dict[str, dict]) -> list[dict]:
+    """Sorted monthly series with months that had no revenue present as zero."""
+    if not merged_series:
+        return []
+    months = sorted(merged_series)
+    current = datetime.strptime(months[0], "%Y-%m")
+    last = datetime.strptime(months[-1], "%Y-%m")
+    filled = []
+    while current <= last:
+        key = current.strftime("%Y-%m")
+        filled.append(merged_series.get(key, {"month": key, "total": 0, "transaction_count": 0}))
+        current += relativedelta(months=1)
+    return filled
+
+
 def _build_financial_summary(sources) -> dict:
     """
     Build an aggregated financial summary dict from a list of
@@ -357,121 +376,82 @@ def _build_financial_summary(sources) -> dict:
         f"source_ids={[str(s.id) for s in sources]}"
     )
 
-    # Per-source-type revenue contributions (populated from real data only)
-    avg_monthly_map = {}
-
     platform_breakdown = {}
-    
-    # Store extracted metrics at root level for the prompt
-    monthly_revenue_series = []
-    computed_growth_trend = "Stable"
-    computed_seasonality_signal = "No significant seasonality"
-    client_concentration = None
-
-    span_months = 12
-    monthly_revenue_series = []
-    computed_growth_trend = "Stable"
-    computed_seasonality_signal = "No significant seasonality"
-    client_concentration = None
     merged_series = {}
+    client_revenue: list[float] = []
+    legacy_concentration = None
 
     for source in sources:
         t = source.type
-        metrics = None
+        details = source.connection_details or {}
 
-        if source.connection_details and source.connection_details.get("monthly_revenue_series"):
-            demo_series = source.connection_details.get("monthly_revenue_series", [])
-            total_rev = sum(m.get("revenue", 0) for m in demo_series)
-            span = len(demo_series) or 1
-            avg_mon = total_rev / span
-
+        if details.get("monthly_revenue_series"):
+            series = details["monthly_revenue_series"]
             metrics = {
-                "avg_monthly": avg_mon,
+                "avg_monthly": sum(m.get("revenue", 0) for m in series) / len(series),
                 "status": "CONNECTED",
-                "data_points": source.connection_details.get("records_count", span * 10),
-                "transactions_sample": [],
+                "data_points": details.get("records_count", 0),
                 "monthly_revenue": [
-                    {"month": m["month"], "total": m["revenue"], "transaction_count": m["transactions"]} 
-                    for m in demo_series
+                    {"month": m["month"], "total": m["revenue"], "transaction_count": m.get("transactions", 0)}
+                    for m in series
                 ],
-                "growth_trend_signal": "Stable",
-                "seasonality_signal": "No significant seasonality",
-                "client_concentration": source.connection_details.get("client_concentration", {}),
-                "span_months": span
+                "client_concentration": details.get("client_concentration"),
+                "client_revenue": details.get("client_revenue") or [],
             }
         elif t == "STRIPE":
             from app.core.security import decrypt_dict
             api_key = None
-            if source.connection_details:
-                enc_data = source.connection_details.get("encrypted_data")
-                if enc_data:
-                    dec_data = decrypt_dict(enc_data)
-                    api_key = dec_data.get("api_key")
-                else:
-                    api_key = source.connection_details.get("api_key")
+            enc_data = details.get("encrypted_data")
+            if enc_data:
+                api_key = decrypt_dict(enc_data).get("api_key")
 
             try:
                 metrics = fetch_stripe_metrics(api_key=api_key)
             except Exception as e:
                 logger.error(f"Error fetching Stripe data: {e}")
-                metrics = {
-                    "avg_monthly": 0,
-                    "status": "ERROR",
-                    "data_points": 0,
-                }
+                metrics = {"avg_monthly": 0, "status": "ERROR", "data_points": 0}
         else:
             # No revenue data for this source: never invent figures
             logger.warning(f"[_build_financial_summary] source {source.id} ({t}) has no revenue data")
-            metrics = {
-                "avg_monthly": 0,
-                "status": "NO_DATA",
-                "data_points": 0,
-            }
+            metrics = {"avg_monthly": 0, "status": "NO_DATA", "data_points": 0}
 
-        avg_monthly_map[t] = avg_monthly_map.get(t, 0) + metrics.get("avg_monthly", 0)
-        
-        # Initialize platform_breakdown if not exists
-        if t not in platform_breakdown:
-            platform_breakdown[t] = {
-                "avg_monthly": 0,
-                "status": metrics.get("status", "CONNECTED"),
-                "data_points": 0,
-                "recent_transactions": metrics.get("transactions_sample", [])
-            }
-        
-        platform_breakdown[t]["avg_monthly"] += metrics.get("avg_monthly", 0)
-        platform_breakdown[t]["data_points"] += metrics.get("data_points", 0)
-        
+        breakdown = platform_breakdown.setdefault(t, {
+            "avg_monthly": 0,
+            "status": metrics.get("status", "CONNECTED"),
+            "data_points": 0,
+            "recent_transactions": metrics.get("transactions_sample", []),
+        })
+        breakdown["avg_monthly"] += metrics.get("avg_monthly", 0)
+        breakdown["data_points"] += metrics.get("data_points", 0)
         if metrics.get("status") == "ERROR":
-            platform_breakdown[t]["status"] = "ERROR"
+            breakdown["status"] = "ERROR"
 
         for m in metrics.get("monthly_revenue", []):
-            month_str = m["month"]
-            if month_str not in merged_series:
-                merged_series[month_str] = {"month": month_str, "total": 0, "transaction_count": 0}
-            merged_series[month_str]["total"] += m["total"]
-            merged_series[month_str]["transaction_count"] += m.get("transaction_count", 0)
-            
-        if metrics.get("client_concentration") and not client_concentration:
-            client_concentration = metrics.get("client_concentration")
+            month = merged_series.setdefault(m["month"], {"month": m["month"], "total": 0, "transaction_count": 0})
+            month["total"] += m["total"]
+            month["transaction_count"] += m.get("transaction_count", 0)
 
-    avg_monthly = sum(avg_monthly_map.values())
-    if not source_types:
-        avg_monthly = 0
+        # Clients are counted per platform: the same client paying through two
+        # platforms appears twice, which slightly understates concentration.
+        client_revenue.extend(metrics.get("client_revenue") or [])
+        if isinstance(metrics.get("client_concentration"), dict) and not legacy_concentration:
+            legacy_concentration = metrics["client_concentration"]
 
-    monthly_revenue_series = sorted(list(merged_series.values()), key=lambda x: x["month"])
+    monthly_revenue_series = _fill_missing_months(merged_series)
+    total_revenue = sum(m["total"] for m in monthly_revenue_series)
+    avg_monthly = total_revenue / len(monthly_revenue_series) if monthly_revenue_series else 0
 
     summary = {
         "data_source_count": source_count,
         "connected_platforms": source_types,
-        "avg_monthly_revenue": avg_monthly,
+        "avg_monthly_revenue": round(avg_monthly, 2),
+        "total_revenue": round(total_revenue, 2),
         "currency": "EUR",
-        "analysis_period_months": span_months,
+        "analysis_period_months": len(monthly_revenue_series),
         "platform_breakdown": platform_breakdown,
         "monthly_revenue_series": monthly_revenue_series,
-        "computed_growth_trend": computed_growth_trend,
-        "computed_seasonality_signal": computed_seasonality_signal,
-        "client_concentration": client_concentration
+        # Sources connected before client-level data existed only have top shares (no HHI)
+        "client_concentration": client_concentration(client_revenue) or legacy_concentration,
     }
 
     logger.info(

@@ -50,7 +50,13 @@ flowchart LR
 2. **Request a report.** `POST /solvency-reports` creates a `PENDING` row and enqueues `generate_solvency_report_task`.
 3. **Build the financial summary.** `_build_financial_summary` merges the monthly series from every connected source. If no source has revenue data, the report is marked `FAILED` with an explanation and no AI call is made.
 4. **Run the LangGraph pipeline** (`app/services/agent_orchestrator.py`):
-   - `data_quant`: deterministic metrics such as Benford's-law deviation and a modified Z-score.
+   - `data_quant`: deterministic metrics from `app/services/quant_service.py`. These are the ground truth the AI must quote:
+     | Metric | Method | Interpretation |
+     |---|---|---|
+     | Income volatility | Coefficient of variation (sample std. dev. / mean) | < 25% stable, ≥ 50% high |
+     | Revenue trend | Least-squares slope as % of mean revenue, with R² | Flat within ±1%/month or R² < 0.3 |
+     | Weak months | Months below the mean and below 80% of it, plus the longest run below the mean | |
+     | Client concentration | Herfindahl-Hirschman Index over per-client revenue from every source | < 1,500 unconcentrated, > 2,500 high (DOJ/FTC thresholds) |
    - `underwriter`: three parallel Gemini calls at temperature 0.4 (`GEMINI_UNDERWRITER_MODEL`, default `gemini-2.5-flash`). These self-consistency samples are parsed and validated as JSON, then merged.
    - `auditor`: a temperature-0 review of the draft against the source data (`GEMINI_LIGHT_MODEL`, default `gemini-3.5-flash-lite`, also used by the score simulator). It can send the draft back to the underwriter, up to 3 iterations, or flag it for human review.
    Each step publishes progress to Redis (`solvai:telemetry:{report_id}`), which the WebSocket streams to the "Intelligence Terminal" in the UI.

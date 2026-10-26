@@ -47,7 +47,8 @@ class PayPalService:
     def fetch_transactions(self, access_token: str, months: int = 12) -> list[dict]:
         """All successful transactions in the last `months`, walking 31-day windows and every page."""
         now = datetime.now(timezone.utc).replace(microsecond=0)
-        window_start = now - relativedelta(months=months)
+        # Start on the 1st so the oldest month is complete, not a partial month that reads as weak
+        window_start = (now - relativedelta(months=months)).replace(day=1, hour=0, minute=0, second=0)
         transactions: list[dict] = []
 
         with httpx.Client(

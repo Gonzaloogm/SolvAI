@@ -15,7 +15,12 @@ def get_raw_transactions(months=6, api_key=None) -> list[dict]:
         raise ValueError("No Stripe API key provided.")
         
     stripe.api_key = api_key
-    six_months_ago = int((datetime.now(timezone.utc) - relativedelta(months=months)).timestamp())
+    # Start on the 1st so the oldest month is complete, not a partial month that reads as weak
+    six_months_ago = int((datetime.now(timezone.utc) - relativedelta(months=months))
+                         .replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
+    # Seeded demo data carries its date in metadata. Only test-mode keys may use it:
+    # in live mode anyone could backdate charges and invent a history.
+    allow_seeded_dates = api_key.startswith(("sk_test_", "rk_test_"))
     
     transactions = []
     try:
@@ -35,7 +40,7 @@ def get_raw_transactions(months=6, api_key=None) -> list[dict]:
             
             for charge in charges.data:
                 actual_created = charge.created
-                if charge.metadata and "historical_created" in charge.metadata:
+                if allow_seeded_dates and charge.metadata and "historical_created" in charge.metadata:
                     try:
                         actual_created = int(charge.metadata["historical_created"])
                     except ValueError:

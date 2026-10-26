@@ -4,41 +4,10 @@ import stripe
 from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
 from loguru import logger
-import random
-import uuid
 from collections import defaultdict
 
-from app.services.quant_service import client_concentration
+from app.services.quant_service import client_concentration, client_key, transaction_ledger
 
-
-def _generate_synthetic_transactions(months=6, count=40) -> list[dict]:
-    now = datetime.now(timezone.utc)
-    transactions = []
-    for i in range(count):
-        days_ago = random.randint(1, months * 30)
-        created_time = int((now - relativedelta(days=days_ago)).timestamp())
-        amount_cents = random.randint(50000, 400000)
-        
-        charge = {
-            "id": f"ch_{uuid.uuid4().hex[:24]}",
-            "amount": amount_cents,
-            "amount_refunded": 0,
-            "currency": "eur",
-            "created": created_time,
-            "status": "succeeded",
-            "paid": True,
-            "description": f"Synthetic Freelance Invoice #{i+1}",
-            "customer": f"cus_synthetic_{random.randint(1, 8)}"
-        }
-        # 5% chance of refund
-        if random.random() < 0.05:
-            charge["amount_refunded"] = amount_cents
-            
-        transactions.append(charge)
-    
-    # Sort by created descending
-    transactions.sort(key=lambda x: x["created"], reverse=True)
-    return transactions
 
 def get_raw_transactions(months=6, api_key=None) -> list[dict]:
     if not api_key:
@@ -109,6 +78,7 @@ def fetch_stripe_metrics(api_key=None) -> dict:
     total_revenue_cents = 0
     data_points = 0
     successful_txs = []
+    ledger = []
     
     monthly_data = defaultdict(lambda: {"total": 0, "transaction_count": 0})
     client_data = defaultdict(float)
@@ -140,6 +110,7 @@ def fetch_stripe_metrics(api_key=None) -> dict:
             
             client_id = charge.get("customer") or charge.get("receipt_email") or "unknown_client"
             client_data[client_id] += amount_eur
+            ledger.append({"id": charge["id"], "date": date_str, "amount": amount_eur, "client": client_key(client_id)})
             
     total_revenue_euros = total_revenue_cents / 100.0
     
@@ -205,5 +176,6 @@ def fetch_stripe_metrics(api_key=None) -> dict:
         "seasonality_signal": seasonality,
         "client_concentration": client_concentration(client_revenue),
         "client_revenue": client_revenue,
+        "transactions": transaction_ledger(ledger),
         "span_months": span_months if monthly_data else 0
     }

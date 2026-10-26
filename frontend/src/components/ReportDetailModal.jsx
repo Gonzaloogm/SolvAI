@@ -183,24 +183,28 @@ const VerifiedMetrics = ({ metrics }) => {
       value: volatility.cov_percent !== null && volatility.cov_percent !== undefined ? `${fmtNum(volatility.cov_percent, 1)}%` : '—',
       level: volatility.level,
       explanation: volatility.explanation,
+      evidence: metrics.evidence?.income_stability,
     },
     {
       label: 'Revenue trend',
       value: trend.slope_percent_per_month !== undefined ? `${trend.slope_percent_per_month > 0 ? '+' : ''}${fmtNum(trend.slope_percent_per_month, 1)}% / month` : '—',
       level: trend.direction,
       explanation: trend.explanation,
+      evidence: metrics.evidence?.growth_trend,
     },
     weak && {
       label: 'Weak months',
       value: `${weak.weak} of ${metrics.months_analyzed}`,
       level: weak.weak === 0 ? 'LOW' : weak.weak <= 2 ? 'MODERATE' : 'HIGH',
       explanation: weak.explanation,
+      evidence: metrics.evidence?.seasonality,
     },
     {
       label: 'Client concentration (HHI)',
       value: concentration.hhi !== null && concentration.hhi !== undefined ? fmtNum(concentration.hhi) : '—',
       level: concentration.level,
       explanation: concentration.explanation,
+      evidence: metrics.evidence?.client_concentration,
     },
   ].filter(Boolean);
 
@@ -221,9 +225,49 @@ const VerifiedMetrics = ({ metrics }) => {
             </div>
             <div className="text-lg font-semibold text-primary mt-0.5">{row.value}</div>
             <p className="text-xs text-secondary mt-1 leading-relaxed">{row.explanation}</p>
+            {row.evidence?.transactions?.length > 0 && (
+              <ul className="mt-2 space-y-1 border-t border-border pt-2">
+                {row.evidence.transactions.map((tx) => (
+                  <li key={`${tx.platform}-${tx.id}`} className="flex items-center gap-2 text-[11px] text-secondary">
+                    <span className={cn('rounded px-1.5 py-0.5 font-semibold text-white', tx.platform === 'PAYPAL' ? 'bg-[#003087]' : 'bg-[#635bff]')}>
+                      {tx.platform === 'PAYPAL' ? 'PayPal' : tx.platform.charAt(0) + tx.platform.slice(1).toLowerCase()}
+                    </span>
+                    <span className="font-mono truncate" title={tx.id}>{tx.id}</span>
+                    <span className="ml-auto whitespace-nowrap">{tx.date} · €{fmtNum(tx.amount, 2)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>
+      {metrics.source_breakdown?.length > 0 && (
+        <div className="mt-4">
+          <h4 className="text-xs font-semibold text-primary mb-2">Revenue by source</h4>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-muted text-left">
+                <th className="py-1 font-medium">Source</th>
+                <th className="py-1 font-medium text-right">Share</th>
+                <th className="py-1 font-medium text-right">Payments</th>
+                <th className="py-1 font-medium text-right">Coverage</th>
+                <th className="py-1 font-medium text-right">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.source_breakdown.map((src) => (
+                <tr key={src.platform} className="border-t border-border text-primary">
+                  <td className="py-1.5">{src.platform === 'PAYPAL' ? 'PayPal' : src.platform.charAt(0) + src.platform.slice(1).toLowerCase()}</td>
+                  <td className="py-1.5 text-right">{fmtNum(src.share_percent, 1)}%</td>
+                  <td className="py-1.5 text-right">{fmtNum(src.transactions)}</td>
+                  <td className="py-1.5 text-right">{src.days_covered != null ? `${src.days_covered} days` : `${src.months_covered} months`}</td>
+                  <td className="py-1.5 text-right">€{fmtNum(src.total_revenue, 2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {metrics.data_quality_notes?.length > 0 && (
         <p className="text-xs text-[#b45309] mt-2">{metrics.data_quality_notes.join(' ')}</p>
       )}

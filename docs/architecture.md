@@ -62,6 +62,8 @@ flowchart LR
    Each step publishes progress to Redis (`solvai:telemetry:{report_id}`), which the WebSocket streams to the "Intelligence Terminal" in the UI.
 5. **Render and store.** WeasyPrint and Jinja2 templates (`app/templates/`) render the PDF with matplotlib charts and a verification QR code. The file is uploaded to Cloud Storage and the report becomes `COMPLETED`.
 
+Every factor is also backed by **evidence**: real transaction IDs (Stripe charges, PayPal transactions) selected by fixed rules, such as the largest payments in the highest and lowest months or the top client's largest payments. The report appendix lists these, never IDs written by the model. Clients are pseudonymised (`Client 1` = highest revenue). The summary also carries a per-source breakdown (share, payments, days covered). A source with a short history is described as observed and never annualised, and the current, incomplete month is left out of every statistic.
+
 A report makes about 4 Gemini calls when the first draft is approved and up to 12 with three audit rounds. To run entirely on the Gemini free tier, set both models to `gemini-3.5-flash-lite`; Lite models usually get the most generous free quota (check your project's limits in Google AI Studio). If the AI fails, the report is marked `FAILED` with a reason: there is no mocked or placeholder score.
 
 ## Data source adapters

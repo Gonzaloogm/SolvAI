@@ -384,7 +384,11 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
         "strengths": strengths,
         "risk_flags": risk_flags,
         "recommendations": clean_recs,
-        "data_references": rd.get("financial_summary", {}).get("connected_platforms", ["STRIPE"])
+        # Real transaction references when the report has evidence; older reports list platforms
+        "data_references": (
+            rd.get("data_references") if (rd.get("quant_metrics") or {}).get("evidence")
+            else rd.get("financial_summary", {}).get("connected_platforms", ["STRIPE"])
+        ),
     }
 
     raw_data_for_template = {
@@ -399,7 +403,9 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
             "top_3_clients_percent": top_3
         },
         "analytics": analytics,
-        "charts": charts
+        "charts": charts,
+        "source_breakdown": quant.get("source_breakdown") or rd.get("financial_summary", {}).get("source_breakdown") or [],
+        "evidence": quant.get("evidence") or {},
     }
     
     context = {

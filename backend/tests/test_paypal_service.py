@@ -99,6 +99,11 @@ def test_counts_payments_net_of_refunds_and_ignores_non_revenue(fake_paypal):
         "hhi": 5102,
     }
     assert sorted(metrics["client_revenue"]) == [300.0, 400.0]
+    # The ledger keeps IDs for evidence, but never the payer's raw account ID
+    ledger = {tx["id"]: tx for tx in metrics["transactions"]}
+    assert set(ledger) == {"PAY1", "PAY2"}
+    assert ledger["PAY1"]["amount"] == 400.0
+    assert ledger["PAY1"]["client"] != "A" and len(ledger["PAY1"]["client"]) == 12
     assert metrics["currency"] == "EUR"
 
 

@@ -121,7 +121,6 @@ def _trend(revenues: list[float], mean: float) -> dict[str, Any]:
         "direction": direction,
         "slope_per_month": round(slope, 2),
         "slope_percent_per_month": round(pct, 2),
-        "annualised_change_percent": round(pct * 12, 1),
         "r_squared": round(r2, 2),
         "thresholds": {"flat_within_percent": TREND_FLAT_PCT_PER_MONTH, "min_r_squared": TREND_MIN_R_SQUARED},
         "explanation": (

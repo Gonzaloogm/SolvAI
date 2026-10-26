@@ -55,3 +55,8 @@ def test_xero_webhook_accepts_valid_signature(client, monkeypatch):
 
     assert response.status_code == 200
     assert queued == ["tenant-1"]
+
+
+@pytest.mark.parametrize("path", ["/reports/pl-statement", "/reports/pl-statement/pdf"])
+def test_statement_requires_auth(client, path):
+    assert client.get(path).status_code == 401

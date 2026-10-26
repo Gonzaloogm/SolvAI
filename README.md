@@ -35,7 +35,7 @@ Banks score borrowers with explainable credit models that the borrower never get
 - **Multi-agent pipeline.** A [LangGraph](https://github.com/langchain-ai/langgraph) graph runs three steps. A deterministic quant step computes the verified metrics: income volatility (coefficient of variation), revenue trend (least-squares regression with R²), weak months and client concentration (Herfindahl-Hirschman Index). A Gemini underwriter runs as three parallel self-consistency samples. A temperature-0 auditor sends weak drafts back for revision.
 - **Live reasoning view.** Pipeline progress is streamed over Redis pub/sub and WebSockets to an in-app "Intelligence Terminal".
 - **Lender-ready output.** A multi-page PDF (WeasyPrint) includes revenue trend, concentration and radar charts, plus a QR code that verifies the report's authenticity.
-- **More report types.** Rental certificates for tenants, mortgage assessments and P&L statements.
+- **More report types.** Rental certificates for tenants, mortgage assessments and a revenue & cash-flow statement built only from connected data (outflows come from uploaded bank statements).
 - **Sharing and verification.** Expiring public share links, plus a lender verification portal with an authorize-and-track flow.
 - **Score simulator.** A "what-if" tool that shows how changes in revenue, client mix or history would move the score.
 - **Lender matching.** Lender criteria are embedded with Gemini and searched with pgvector.

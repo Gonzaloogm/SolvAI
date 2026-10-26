@@ -426,6 +426,7 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
     legacy_concentration = None
     transactions: list[dict] = []
     per_source: list[tuple[str, list[dict], list[dict]]] = []
+    outflow_sources: list[str] = []  # only bank statements report money going out
 
     for source in sources:
         t = source.type
@@ -438,7 +439,8 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
                 "status": "CONNECTED",
                 "data_points": details.get("records_count", 0),
                 "monthly_revenue": [
-                    {"month": m["month"], "total": m["revenue"], "transaction_count": m.get("transactions", 0)}
+                    {"month": m["month"], "total": m["revenue"], "transaction_count": m.get("transactions", 0),
+                     **({"outflows": m["outflows"]} if "outflows" in m else {})}
                     for m in series
                 ],
                 "client_concentration": details.get("client_concentration"),
@@ -477,6 +479,10 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
             month = merged_series.setdefault(m["month"], {"month": m["month"], "total": 0, "transaction_count": 0})
             month["total"] += m["total"]
             month["transaction_count"] += m.get("transaction_count", 0)
+            if "outflows" in m:
+                month["outflows"] = month.get("outflows", 0) + m["outflows"]
+                if t not in outflow_sources:
+                    outflow_sources.append(t)
 
         source_txs = [{**tx, "platform": t} for tx in metrics.get("transactions") or []]
         transactions.extend(source_txs)
@@ -506,6 +512,7 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
         # Sources connected before client-level data existed only have top shares (no HHI)
         "client_concentration": client_concentration(client_revenue) or legacy_concentration,
         "source_breakdown": _source_breakdown(per_source, total_revenue),
+        "outflow_sources": outflow_sources,
         # Ledger for evidence; kept out of the AI prompt (see agent_orchestrator._prompt_summary)
         "transactions": _label_clients(transactions),
     }

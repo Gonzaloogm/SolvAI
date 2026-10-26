@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Profit & Loss Statement</title>
+    <title>Revenue &amp; Cash-Flow Statement</title>
     <style>
         @page {
             size: A4;
@@ -111,12 +111,12 @@
     <!-- PAGE 1 -->
     <div class="header">
         <h1>SolvAI</h1>
-        <h2>Profit & Loss Statement</h2>
-        <p>{{ data.period_start }} to {{ data.period_end }}</p>
+        <h2>Revenue &amp; Cash-Flow Statement</h2>
+        <p>{{ data.period_start }} to {{ data.period_end }} &middot; {{ data.data_sources | join(', ') }}</p>
     </div>
 
     <div class="summary-box">
-        <strong>AI Summary:</strong>
+        <strong>Summary</strong>
         <p>{{ data.summary_text }}</p>
     </div>
 
@@ -126,13 +126,22 @@
             <div class="metric-val">{{ "{:,.2f}".format(data.revenue.total) }} {{ data.currency }}</div>
         </div>
         <div class="metric-card">
-            <div class="metric-title">Avg Monthly</div>
+            <div class="metric-title">Avg Monthly (complete months)</div>
             <div class="metric-val">{{ "{:,.2f}".format(data.revenue.avg_monthly) }} {{ data.currency }}</div>
         </div>
         <div class="metric-card">
-            <div class="metric-title">YoY Growth</div>
-            <div class="metric-val">{{ data.growth.yoy_change }}%</div>
+            <div class="metric-title">Revenue Trend</div>
+            <div class="metric-val">
+                {% if data.growth.slope_percent_per_month is not none %}{{ "{:+.1f}".format(data.growth.slope_percent_per_month) }}% / month{% else %}&mdash;{% endif %}
+            </div>
+            <div class="metric-title">{{ data.growth.direction }}</div>
         </div>
+        {% if data.outflows.available %}
+        <div class="metric-card">
+            <div class="metric-title">Net Cash Flow (statement months)</div>
+            <div class="metric-val">{{ "{:,.2f}".format(data.net_cash_flow) }} {{ data.currency }}</div>
+        </div>
+        {% endif %}
     </div>
 
     <h3>Monthly Revenue</h3>
@@ -140,64 +149,105 @@
         <thead>
             <tr>
                 <th>Month</th>
+                <th class="text-right">Payments</th>
                 <th class="text-right">Revenue</th>
-                <th class="text-right">Expenses</th>
-                <th class="text-right">Net Profit</th>
+                {% if data.outflows.available %}
+                <th class="text-right">Outflows</th>
+                <th class="text-right">Net Cash Flow</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for m in data.revenue.monthly %}
             <tr>
-                <td>{{ m.month }}</td>
+                <td>{{ m.month }}{% if m.partial %} (in progress){% endif %}</td>
+                <td class="text-right">{{ m.payments }}</td>
                 <td class="text-right">{{ "{:,.2f}".format(m.revenue) }}</td>
-                <td class="text-right">{{ "{:,.2f}".format(m.expenses) }}</td>
-                <td class="text-right">{{ "{:,.2f}".format(m.revenue - m.expenses) }}</td>
+                {% if data.outflows.available %}
+                <td class="text-right">{% if m.outflows is not none %}{{ "{:,.2f}".format(m.outflows) }}{% else %}&mdash;{% endif %}</td>
+                <td class="text-right">{% if m.net is not none %}{{ "{:,.2f}".format(m.net) }}{% else %}&mdash;{% endif %}</td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    {% if not data.outflows.available %}
+    <p class="footer-note" style="margin-top: 8px; text-align: left;">Outflows and net cash flow are not shown: no bank statement is connected. Payment platforms only report money received.</p>
+    {% endif %}
 
     <div class="chart-container">
         <img src="data:image/png;base64,{{ rev_chart_b64 }}" alt="Revenue Chart">
     </div>
-    
-    <div class="qr-placeholder">
-        [QR Code]
-    </div>
 
     <!-- PAGE 2 -->
     <div class="page-break"></div>
-    
+
     <div class="header">
         <h1>SolvAI</h1>
-        <h2>Client Concentration & Analysis</h2>
+        <h2>Sources &amp; Client Concentration</h2>
     </div>
+
+    {% if data.by_source %}
+    <h3>Revenue by Source</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th class="text-right">Share</th>
+                <th class="text-right">Payments</th>
+                <th class="text-right">Coverage</th>
+                <th class="text-right">Revenue</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for src in data.by_source %}
+            <tr>
+                <td>{{ 'PayPal' if src.platform == 'PAYPAL' else src.platform | title }}</td>
+                <td class="text-right">{{ "{:,.1f}".format(src.share_percent | float) }}%</td>
+                <td class="text-right">{{ src.transactions }}</td>
+                <td class="text-right">{% if src.days_covered is not none %}{{ src.days_covered }} days{% else %}{{ src.months_covered }} months{% endif %}</td>
+                <td class="text-right">{{ "{:,.2f}".format(src.total_revenue | float) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
 
     <div class="metrics-grid">
         <div class="metric-card">
             <div class="metric-title">Total Clients</div>
-            <div class="metric-val">{{ data.client_analysis.total_clients }}</div>
+            <div class="metric-val">{{ data.client_analysis.total_clients if data.client_analysis.total_clients is not none else '&mdash;' }}</div>
         </div>
         <div class="metric-card">
             <div class="metric-title">Top Client Share</div>
-            <div class="metric-val">{{ data.client_analysis.top_client_share }}%</div>
+            <div class="metric-val">{% if data.client_analysis.top_client_share is not none %}{{ data.client_analysis.top_client_share }}%{% else %}&mdash;{% endif %}</div>
         </div>
         <div class="metric-card">
-            <div class="metric-title">Concentration Risk</div>
-            <div class="metric-val">{{ data.client_analysis.concentration_risk }}</div>
+            <div class="metric-title">Concentration (HHI)</div>
+            <div class="metric-val">{% if data.client_analysis.hhi is not none %}{{ "{:,}".format(data.client_analysis.hhi) }}{% else %}&mdash;{% endif %}</div>
+            <div class="metric-title">{{ data.client_analysis.concentration_risk }}</div>
         </div>
     </div>
 
+    {% if client_chart_b64 %}
     <div class="chart-container">
         <h3>Client Revenue Distribution</h3>
         <img src="data:image/png;base64,{{ client_chart_b64 }}" alt="Client Concentration Chart" style="max-width: 60%;">
     </div>
+    {% endif %}
+
+    {% if data.notes %}
+    <h3>Data Notes</h3>
+    <ul>
+        {% for note in data.notes %}
+        <li style="font-size: 11px; margin-bottom: 4px;">{{ note }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 
     <div class="footer-note">
-        <p>Data Sources: {{ data.data_sources | join(', ') }}</p>
         <p>Generated at: {{ data.generated_at }}</p>
-        <p>This report is auto-generated by SolvAI. Not for official tax filing purposes.</p>
+        <p>Built only from the connected accounts listed above. Not for official tax filing purposes.</p>
     </div>
-
 </body>
 </html>

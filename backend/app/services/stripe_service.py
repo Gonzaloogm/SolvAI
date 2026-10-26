@@ -58,7 +58,8 @@ def get_raw_transactions(months=6, api_key=None) -> list[dict]:
                         "paid": charge.paid,
                         "description": charge.description,
                         "customer": getattr(charge, 'customer', None),
-                        "receipt_email": getattr(charge, 'receipt_email', None)
+                        "receipt_email": getattr(charge, 'receipt_email', None),
+                        "disputed": bool(getattr(charge, 'disputed', False)),
                     })
             
             has_more = charges.has_more
@@ -88,8 +89,17 @@ def fetch_stripe_metrics(api_key=None) -> dict:
     monthly_data = defaultdict(lambda: {"total": 0, "transaction_count": 0})
     client_data = defaultdict(float)
     
+    # Payment integrity: refunds and disputes against everything that was paid
+    integrity = {"gross": 0.0, "refunded": 0.0, "payments": 0, "refunded_payments": 0, "disputes": 0}
+
     for charge in transactions:
         if charge["status"] == "succeeded" and charge["paid"]:
+            integrity["gross"] += charge["amount"] / 100
+            integrity["refunded"] += charge.get("amount_refunded", 0) / 100
+            integrity["payments"] += 1
+            integrity["refunded_payments"] += charge.get("amount_refunded", 0) > 0
+            integrity["disputes"] += charge.get("disputed", False)
+
             net_amount = charge["amount"] - charge.get("amount_refunded", 0)
             if net_amount <= 0:
                 continue
@@ -182,5 +192,6 @@ def fetch_stripe_metrics(api_key=None) -> dict:
         "client_concentration": client_concentration(client_revenue),
         "client_revenue": client_revenue,
         "transactions": transaction_ledger(ledger),
+        "payment_integrity": {k: round(v, 2) if isinstance(v, float) else int(v) for k, v in integrity.items()},
         "span_months": span_months if monthly_data else 0
     }

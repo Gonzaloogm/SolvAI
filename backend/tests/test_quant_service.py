@@ -161,7 +161,7 @@ def test_short_source_is_described_not_extrapolated():
 
     notes = compute_revenue_metrics(summary, today=date(2026, 10, 26))["data_quality_notes"]
 
-    paypal_note = [n for n in notes if n.startswith("Paypal")]
+    paypal_note = [n for n in notes if n.startswith("PayPal")]
     assert len(paypal_note) == 1
     assert "14 day(s)" in paypal_note[0] and "not annualised" in paypal_note[0]
     assert not any(n.startswith("Stripe") for n in notes)
@@ -172,3 +172,32 @@ def test_missing_ledger_is_reported():
 
     assert metrics["evidence"] == {}
     assert any("re-sync" in n for n in metrics["data_quality_notes"])
+
+
+# ── Payment integrity (grounded "reputation" factor) ───────────────────────────
+def _integrity(gross, refunded, payments, refunded_payments, disputes):
+    return {"gross": gross, "refunded": refunded, "payments": payments,
+            "refunded_payments": refunded_payments, "disputes": disputes, "sources": ["STRIPE"]}
+
+
+@pytest.mark.parametrize("data, level", [
+    (_integrity(10_000, 100, 100, 2, 0), "LOW"),        # 1% refunded, no disputes
+    (_integrity(10_000, 400, 100, 5, 0), "MODERATE"),   # 4% refunded
+    (_integrity(10_000, 0, 100, 0, 1), "HIGH"),         # 1% disputed
+    (_integrity(10_000, 1_200, 100, 9, 0), "HIGH"),     # 12% refunded
+])
+def test_payment_integrity_levels(data, level):
+    summary = _summary([1000.0] * 12)
+    summary["payment_integrity"] = data
+
+    pi = compute_revenue_metrics(summary, today=date(2026, 10, 26))["payment_integrity"]
+
+    assert pi["level"] == level
+    assert pi["refund_rate_percent"] == round(data["refunded"] / data["gross"] * 100, 2)
+    assert pi["history_months"] == 12
+
+
+def test_payment_integrity_unknown_without_data():
+    pi = compute_revenue_metrics(_summary([1000.0] * 6), today=date(2026, 10, 26))["payment_integrity"]
+
+    assert pi["level"] == "UNKNOWN" and "not available" in pi["explanation"]

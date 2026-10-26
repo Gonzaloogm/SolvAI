@@ -31,3 +31,16 @@ def test_live_mode_ignores_metadata_dates(one_backdated_charge):
     [tx] = stripe_service.get_raw_transactions(months=12, api_key="sk_live_x")
 
     assert tx["created"] != BACKDATED
+
+
+def test_payment_integrity_from_charges(monkeypatch):
+    def charge(cid, amount, refunded=0, disputed=False):
+        return SimpleNamespace(id=cid, amount=amount, amount_refunded=refunded, currency="eur", created=int(NOW.timestamp()),
+                               status="succeeded", paid=True, description="", customer=None,
+                               receipt_email=f"{cid}@example.com", disputed=disputed, metadata={})
+    charges = [charge("ch_1", 10_000), charge("ch_2", 10_000, refunded=2_500), charge("ch_3", 5_000, disputed=True)]
+    monkeypatch.setattr(stripe_service.stripe.Charge, "list", lambda **_: SimpleNamespace(data=charges, has_more=False))
+
+    pi = stripe_service.fetch_stripe_metrics(api_key="sk_test_x")["payment_integrity"]
+
+    assert pi == {"gross": 250.0, "refunded": 25.0, "payments": 3, "refunded_payments": 1, "disputes": 1}

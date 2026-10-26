@@ -427,6 +427,7 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
     transactions: list[dict] = []
     per_source: list[tuple[str, list[dict], list[dict]]] = []
     outflow_sources: list[str] = []  # only bank statements report money going out
+    integrity = {"gross": 0.0, "refunded": 0.0, "payments": 0, "refunded_payments": 0, "disputes": 0, "sources": []}
 
     for source in sources:
         t = source.type
@@ -446,6 +447,7 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
                 "client_concentration": details.get("client_concentration"),
                 "client_revenue": details.get("client_revenue") or [],
                 "transactions": details.get("transactions") or [],
+                "payment_integrity": details.get("payment_integrity"),
             }
         elif t == "STRIPE":
             from app.core.security import decrypt_dict
@@ -484,6 +486,11 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
                 if t not in outflow_sources:
                     outflow_sources.append(t)
 
+        if metrics.get("payment_integrity"):
+            for key in ("gross", "refunded", "payments", "refunded_payments", "disputes"):
+                integrity[key] += metrics["payment_integrity"].get(key, 0)
+            integrity["sources"].append(t)
+
         source_txs = [{**tx, "platform": t} for tx in metrics.get("transactions") or []]
         transactions.extend(source_txs)
         per_source.append((t, metrics.get("monthly_revenue", []), source_txs))
@@ -513,6 +520,7 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
         "client_concentration": client_concentration(client_revenue) or legacy_concentration,
         "source_breakdown": _source_breakdown(per_source, total_revenue),
         "outflow_sources": outflow_sources,
+        "payment_integrity": integrity if integrity["sources"] else None,
         # Ledger for evidence; kept out of the AI prompt (see agent_orchestrator._prompt_summary)
         "transactions": _label_clients(transactions),
     }

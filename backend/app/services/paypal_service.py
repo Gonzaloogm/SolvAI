@@ -116,6 +116,7 @@ class PayPalService:
         """Normalise PayPal transactions into the same metrics shape as fetch_stripe_metrics."""
         payments: dict[str, dict] = {}
         refunds: list[tuple[str, float]] = []
+        chargebacks = 0
         currency = None
 
         for t in transactions:
@@ -140,11 +141,22 @@ class PayPalService:
                 }
             elif code.startswith("T11") and amount < 0 and info.get("paypal_reference_id"):
                 refunds.append((info["paypal_reference_id"], -amount))
+            elif code.startswith("T12"):
+                chargebacks += 1  # T12xx: chargeback events
 
+        integrity = {
+            "gross": round(sum(p["amount"] for p in payments.values()), 2),
+            "refunded": 0.0,
+            "payments": len(payments),
+            "refunded_payments": 0,
+            "disputes": chargebacks,
+        }
         # Net refunds against the original payment, like Stripe's amount_refunded
         for ref_id, refunded in refunds:
             if ref_id in payments:
                 payments[ref_id]["amount"] -= refunded
+                integrity["refunded"] = round(integrity["refunded"] + refunded, 2)
+                integrity["refunded_payments"] += 1
 
         monthly_data = defaultdict(lambda: {"total": 0.0, "transaction_count": 0})
         client_data = defaultdict(float)
@@ -196,6 +208,7 @@ class PayPalService:
             "client_concentration": client_concentration(client_revenue),
             "client_revenue": client_revenue,
             "transactions": transaction_ledger(ledger),
+            "payment_integrity": integrity,
             "span_months": span_months,
         }
 

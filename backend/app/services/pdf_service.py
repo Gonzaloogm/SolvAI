@@ -82,22 +82,26 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
     sub_score = overall_score
 
     # 2.2 Component Analysis
-    def build_component(target_keys, fallback_description='Data not available'):
+    # A factor without its own score is shown as not assessed, never given the overall score
+    def build_component(target_keys, fallback_description='Not assessed: no data for this factor.'):
         comp_data = find_key(rd, target_keys)
         if isinstance(comp_data, dict):
+            score = comp_data.get('score', comp_data.get('rating'))
             return {
-                'score': comp_data.get('score', comp_data.get('rating', sub_score)),
+                'score': score if isinstance(score, (int, float)) else None,
                 'description': comp_data.get('analysis', comp_data.get('assessment', comp_data.get('description', fallback_description))),
-                'lender_implications': comp_data.get('lender_implications', comp_data.get('trend', comp_data.get('impact', 'N/A')))
+                'lender_implications': comp_data.get('lender_implications', comp_data.get('trend', comp_data.get('impact', '')))
             }
         elif isinstance(comp_data, str):
-            return {'score': sub_score, 'description': comp_data, 'lender_implications': 'N/A'}
-        return {'score': sub_score, 'description': fallback_description, 'lender_implications': 'N/A'}
+            return {'score': None, 'description': comp_data, 'lender_implications': ''}
+        return {'score': None, 'description': fallback_description, 'lender_implications': ''}
 
     income_stability = build_component(['income_stability', 'revenue_stability', 'revenue_volatility'])
     growth_trend = build_component(['growth_trend', 'trend_analysis', 'growth'])
     seasonality = build_component(['seasonality', 'seasonality_analysis'])
     client_concentration_comp = build_component(['client_concentration', 'client_concentration_analysis'])
+    # Stored as reputation_signals; grounded in refunds, disputes and history length
+    payment_integrity_comp = build_component(['reputation_signals'])
     
     # 2.3 Risk Flags, Strengths, and Recommendations
     risk_flags = []
@@ -335,15 +339,21 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
         
     # 4.3 Radar Chart for Component Scores
     try:
-        categories = ['Income Stability', 'Growth Trend', 'Seasonality', 'Client Diversification']
+        # Every factor score is "higher is healthier"; factors without a score are left out
+        axes = [
+            ('Income Stability', income_stability.get('score')),
+            ('Growth Trend', growth_trend.get('score')),
+            ('Seasonality', seasonality.get('score')),
+            ('Client Diversification', client_concentration_comp.get('score')),
+            ('Payment Integrity', payment_integrity_comp.get('score')),
+        ]
+        axes = [(name, score) for name, score in axes if score is not None]
+        if len(axes) < 3:
+            raise ValueError("fewer than three scored factors")
+        categories = [name for name, _ in axes]
         N = len(categories)
         
-        scores = [
-            income_stability.get('score', 50),
-            growth_trend.get('score', 50),
-            seasonality.get('score', 50),
-            100 - client_concentration_comp.get('score', 50) # Invert concentration for 'Diversification' score
-        ]
+        scores = [score for _, score in axes]
         
         angles = [n / float(N) * 2 * np.pi for n in range(N)]
         scores += scores[:1]
@@ -380,7 +390,7 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
         "growth_trend": growth_trend,
         "seasonality": seasonality,
         "client_concentration": client_concentration_comp,
-        "reputation_signals": {'score': sub_score, 'description': 'Normal operations', 'lender_implications': 'No adverse signals'},
+        "reputation_signals": payment_integrity_comp,
         "strengths": strengths,
         "risk_flags": risk_flags,
         "recommendations": clean_recs,

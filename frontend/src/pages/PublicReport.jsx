@@ -67,7 +67,7 @@ export default function PublicReport() {
     growth_trend: 'Growth Trend',
     seasonality: 'Seasonality',
     client_concentration: 'Client Concentration',
-    reputation_signals: 'Reputation Signals',
+    reputation_signals: 'Payment Integrity',
   };
 
   return (
@@ -124,10 +124,16 @@ export default function PublicReport() {
                   <td style={{ padding: '12px 0', fontSize: 14, color: '#374151' }}>{componentLabels[key] || key}</td>
                   <td style={{ padding: '12px 0', textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 80, height: 6, background: '#f3f4f6', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ width: `${score}%`, height: '100%', background: getScoreColor(score), borderRadius: 3 }} />
-                      </div>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: getScoreColor(score), minWidth: 28, textAlign: 'right' }}>{score}</span>
+                      {score == null ? (
+                        <span style={{ fontSize: 13, color: '#9ca3af' }}>Not assessed</span>
+                      ) : (
+                        <>
+                          <div style={{ width: 80, height: 6, background: '#f3f4f6', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{ width: `${score}%`, height: '100%', background: getScoreColor(score), borderRadius: 3 }} />
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: getScoreColor(score), minWidth: 28, textAlign: 'right' }}>{score}</span>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -147,11 +153,13 @@ export default function PublicReport() {
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Verified By</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>{data.verified_by || 'SolvAI Inc.'}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>{data.verified_by || 'SolvAI'}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Data Sources</div>
-                <div style={{ fontSize: 14, color: '#374151' }}>Stripe (verified)</div>
+                <div style={{ fontSize: 14, color: '#374151' }}>
+                  {(data.data_sources || []).map((src) => (src === 'PAYPAL' ? 'PayPal' : src.charAt(0) + src.slice(1).toLowerCase().replace('_', ' '))).join(', ') || '—'}
+                </div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Valid Until</div>

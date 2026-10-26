@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import hmac
+import uuid
 from fastapi import APIRouter, Request, HTTPException, Header
 import stripe
 from loguru import logger
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
 from app.models.organization import Organization
+from app.services import paypal_billing
 import datetime
 
 router = APIRouter()
@@ -243,4 +245,47 @@ async def stripe_billing_webhook(
         # Monitor application logs for these failures.
         return {"status": "error", "detail": "internal processing error"}
 
+    return {"status": "success"}
+
+
+@router.post("/paypal-billing")
+async def paypal_billing_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """Keep PayPal subscriptions in sync (activation, cancellation, failed payments)."""
+    event = await request.json()
+    try:
+        verified = await paypal_billing.verify_webhook(dict(request.headers), event)
+    except paypal_billing.PayPalBillingError:
+        verified = False
+    if not verified:
+        logger.warning("Rejected PayPal webhook with an invalid or unverifiable signature")
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    event_type = event.get("event_type", "")
+    subscription = event.get("resource") or {}
+    if not event_type.startswith("BILLING.SUBSCRIPTION."):
+        return {"status": "ignored"}
+
+    # Activation is matched by the organisation that started it; later events by subscription ID
+    org = None
+    if subscription.get("custom_id"):
+        try:
+            org = (await db.execute(
+                select(Organization).where(Organization.id == uuid.UUID(subscription["custom_id"]))
+            )).scalar_one_or_none()
+        except ValueError:
+            org = None
+    if org is None and subscription.get("id"):
+        org = (await db.execute(
+            select(Organization).where(Organization.paypal_subscription_id == subscription["id"])
+        )).scalar_one_or_none()
+    if org is None:
+        logger.warning(f"PayPal webhook {event_type} for unknown subscription {subscription.get('id')}")
+        return {"status": "ignored"}
+
+    if event_type == "BILLING.SUBSCRIPTION.PAYMENT.FAILED":
+        org.status = "past_due"
+    else:
+        paypal_billing.apply_subscription(org, subscription)
+    await db.commit()
+    logger.info(f"PayPal webhook {event_type}: organization {org.id} -> plan {org.plan}, status {org.status}")
     return {"status": "success"}

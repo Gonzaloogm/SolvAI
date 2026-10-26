@@ -30,6 +30,9 @@ class Organization(Base, TimestampMixin, SoftDeleteMixin):
     # ── Subscription ──────────────────────────────────────────────────────────
     stripe_customer_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # "stripe" or "paypal": who bills the current paid plan
+    billing_provider: Mapped[str | None] = mapped_column(Text, nullable=True)
+    paypal_subscription_id: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)
     plan: Mapped[str] = mapped_column(Text, default="free", server_default="free", nullable=False)
     status: Mapped[str | None] = mapped_column(Text, nullable=True)
     current_period_end: Mapped[datetime.datetime | None] = mapped_column(nullable=True)

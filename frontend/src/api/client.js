@@ -208,6 +208,10 @@ export const billing = {
   createReportCheckout: (reportId) => apiClient.post('/billing/create-report-checkout', { report_id: reportId }),
 
   applyPromo: (code) => apiClient.post('/billing/apply-promo', { code }),
+
+  paypalSubscribe: (plan) => apiClient.post('/billing/paypal/subscribe', { plan }),
+  paypalConfirm: (subscriptionId) => apiClient.post('/billing/paypal/confirm', { subscription_id: subscriptionId }),
+  paypalCancel: () => apiClient.post('/billing/paypal/cancel'),
 };
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────

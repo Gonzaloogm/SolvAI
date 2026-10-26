@@ -19,6 +19,28 @@ class PayPalAPIError(Exception):
     pass
 
 
+def _payer_key(payer: dict) -> str:
+    """Stable identity of whoever paid.
+
+    A verified PayPal account (payer_status "Y") keeps its account_id. Guest card
+    payments get a new account_id on every payment, so they are matched by e-mail
+    or name instead; otherwise one client would count as several.
+    """
+    name = payer.get("payer_name", {})
+    full_name = name.get("alternate_full_name") or " ".join(
+        filter(None, [name.get("given_name"), name.get("surname")])
+    )
+    if payer.get("payer_status") == "Y" and payer.get("account_id"):
+        return payer["account_id"]
+    email = payer.get("email_address")
+    return (
+        (email and email.lower())
+        or (full_name and full_name.strip().lower())
+        or payer.get("account_id")
+        or "unknown_client"
+    )
+
+
 class PayPalService:
     """Reads a merchant's PayPal history with their own REST app credentials.
 
@@ -106,15 +128,7 @@ class PayPalService:
             # T00xx = payments received; T11xx = reversals/refunds. Everything else
             # (bank deposits, transfers, holds, fees) is not revenue.
             if code.startswith("T00") and amount > 0:
-                payer = t.get("payer_info", {})
-                name = payer.get("payer_name", {})
-                client = (
-                    payer.get("account_id")
-                    or payer.get("email_address")
-                    or name.get("alternate_full_name")
-                    or " ".join(filter(None, [name.get("given_name"), name.get("surname")]))
-                    or "unknown_client"
-                )
+                client = _payer_key(t.get("payer_info", {}))
                 currency = currency or info.get("transaction_amount", {}).get("currency_code")
                 payments[info["transaction_id"]] = {
                     "id": info["transaction_id"],

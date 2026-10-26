@@ -1,5 +1,4 @@
 import csv
-import io
 import re
 import datetime
 from typing import Optional

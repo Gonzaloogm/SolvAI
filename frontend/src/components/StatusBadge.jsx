@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * StatusBadge — renders a colored pill badge for a given status string.

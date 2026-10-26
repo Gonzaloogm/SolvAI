@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from jose import JWTError, jwt
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import BackgroundTasks
 
 from app.core.config import settings
 from app.core.database import get_db

@@ -1,4 +1,3 @@
-from datetime import datetime
 import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String

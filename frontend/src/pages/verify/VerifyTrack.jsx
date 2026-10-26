@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CheckCircle2, Loader2, Clock, AlertCircle, ArrowRight } from 'lucide-react';
 import apiClient from '../../api/client';

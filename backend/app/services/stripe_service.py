@@ -8,7 +8,6 @@ import random
 import uuid
 from collections import defaultdict
 
-from app.core.config import settings
 
 def _generate_synthetic_transactions(months=6, count=40) -> list[dict]:
     now = datetime.now(timezone.utc)

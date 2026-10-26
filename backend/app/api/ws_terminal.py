@@ -1,17 +1,9 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import Dict, Any
+from typing import Dict
 import json
 import asyncio
-import uuid
-from datetime import datetime, timezone
 from loguru import logger
-from sqlalchemy import select
 
-from app.core.database import AsyncSessionLocal
-from app.models.solvency_report import SolvencyReport
-from app.models.financial_data_source import FinancialDataSource
-from app.services.agent_orchestrator import run_orchestrator_stream
-from app.tasks.report_generation import _build_financial_summary
 
 router = APIRouter()
 
@@ -45,7 +37,6 @@ async def websocket_terminal(websocket: WebSocket, org_id: str, report_id: str |
     
     async def run_and_stream():
         import redis.asyncio as aioredis
-        import json
         redis_client = None
         pubsub = None
         

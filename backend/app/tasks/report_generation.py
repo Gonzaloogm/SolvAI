@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from celery.utils.log import get_task_logger
 from loguru import logger
@@ -84,7 +85,6 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
     from app.models.solvency_report import SolvencyReport  # noqa: PLC0415
     from app.models.user import User  # noqa: PLC0415
     from app.models.organization import Organization
-    from sqlalchemy import func
 
     logger.info(f"[Task {self.request.id}] Starting report generation for report_id={report_id}")
 

@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * LoadingSpinner — centered cyan ring spinner.

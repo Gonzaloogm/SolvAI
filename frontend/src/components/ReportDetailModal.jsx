@@ -350,8 +350,10 @@ export default function ReportDetailModal({ report, onClose }) {
       const user = JSON.parse(userStr);
       plan = user?.organization?.plan ?? user?.plan ?? 'free';
     }
-  } catch (e) {}
-  
+  } catch {
+    // Corrupt cached user: treat as free plan
+  }
+
   const isLocked = plan !== 'pro' && plan !== 'business' && !report._raw?.pdf_unlocked;
 
   const modelName = report.subtitle?.split('·')[0]?.trim() || report.model || 'Gemini 2.5 Flash';

@@ -1,15 +1,17 @@
+"""Seed the lender manifests used by lender matching (Gemini embeddings + pgvector).
+
+Run from backend/:  python scripts/seed_lenders.py
+"""
 import asyncio
 import os
 import sys
-import uuid
 import google.generativeai as genai
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from dotenv import load_dotenv
 
-# Add backend to path so we can import the app models
-sys.path.append(os.path.join(os.path.dirname(__file__), "backend"))
-load_dotenv(os.path.join(os.path.dirname(__file__), "backend/.env"))
+# Make `app` importable when run from backend/
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from app.core.config import settings
 from app.models.lender_profile import LenderManifest
 
 LENDERS = [
@@ -46,23 +48,14 @@ LENDERS = [
 ]
 
 async def main():
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("GEMINI_API_KEY not found in backend/.env")
+    if not settings.GEMINI_API_KEY:
+        print("GEMINI_API_KEY is not set")
         return
-        
-    genai.configure(api_key=api_key)
-    
-    db_url = os.getenv("DATABASE_URL")
-    if not db_url:
-        print("DATABASE_URL not found. Using default localhost url.")
-        db_url = "postgresql+asyncpg://postgres:postgres@localhost:5432/solvai"
-    else:
-        # We are running outside docker, so target localhost
-        db_url = db_url.replace("@db:", "@localhost:")
-        
-    print(f"Connecting to {db_url}")
-    engine = create_async_engine(db_url)
+
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+
+    # Outside docker the compose hostname `db` is localhost
+    engine = create_async_engine(settings.DATABASE_URL.replace("@db:", "@localhost:"))
     async_session = async_sessionmaker(engine, expire_on_commit=False)
     
     async with async_session() as session:

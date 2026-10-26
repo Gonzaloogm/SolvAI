@@ -123,5 +123,5 @@ async def get_pl_statement_pdf(months: int = Query(12, ge=1, le=60)):
     pdf = HTML(string=html_out).write_pdf()
     
     return Response(content=pdf, media_type="application/pdf", headers={
-        "Content-Disposition": f"attachment; filename=pl_statement.pdf"
+        "Content-Disposition": "attachment; filename=pl_statement.pdf"
     })

@@ -1,38 +1,44 @@
+# ── Web / API ────────────────────────────────────────────────
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+pydantic==2.7.1
+pydantic-settings==2.3.0
+python-dotenv==1.0.1
+httpx==0.27.0
+loguru==0.7.2
+
+# ── Database ─────────────────────────────────────────────────
 sqlalchemy==2.0.30
 asyncpg==0.29.0
-alembic==1.13.1
 psycopg2-binary==2.9.9
-reportlab==4.1.0
-matplotlib==3.8.3
+greenlet
+alembic==1.13.1
+pgvector==0.2.5
+
+# ── Async jobs ───────────────────────────────────────────────
 celery==5.3.6
 redis==5.0.4
-google-generativeai==0.7.0
+
+# ── Auth & security ──────────────────────────────────────────
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
 bcrypt==3.2.2
-loguru==0.7.2
-resend==0.7.2
-google-cloud-storage==2.16.0
-pydantic-settings==2.3.0
-pydantic==2.7.1
-python-multipart==0.0.9
-httpx==0.27.0
-tenacity==8.3.0
-python-dotenv==1.0.1
-stripe>=8.0.0
-weasyprint
-jinja2==3.1.4
+
+# ── AI ───────────────────────────────────────────────────────
+google-generativeai==0.7.0
 langgraph>=0.2.0
 langchain-core>=0.2.27
-pgvector==0.2.5
-matplotlib
+
+# ── Integrations ─────────────────────────────────────────────
+stripe>=8.0.0
+resend==0.7.2
+google-cloud-storage==2.16.0
+
+# ── Reports (PDF, charts, parsing) ───────────────────────────
+weasyprint
+jinja2==3.1.4
+matplotlib==3.8.3
 numpy
-pdfplumber>=0.11.0
-paypalrestsdk>=1.13.3
-pytest
-greenlet
 qrcode[pil]
-requests
-requests-oauthlib
+pdfplumber>=0.11.0

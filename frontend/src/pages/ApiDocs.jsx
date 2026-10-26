@@ -1,7 +1,5 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Shield, Code, Server, PlayCircle } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext.jsx';
 
 export default function ApiDocs() {
   const { t } = useTranslation();

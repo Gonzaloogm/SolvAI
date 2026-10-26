@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
  LayoutDashboard,
@@ -9,8 +9,6 @@ import {
  Settings,
  Menu,
  X,
- Sun,
- Moon,
 } from 'lucide-react';
 import { users as usersApi } from './api/client.js';
 

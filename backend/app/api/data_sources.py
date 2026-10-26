@@ -9,25 +9,18 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_current_user, encrypt_dict, decrypt_dict
 from app.models.financial_data_source import FinancialDataSource
 from app.models.user import User
 from app.schemas.data_source import DataSourceConnectRequest, DataSourceResponse
-
 from app.services.belvo_service import belvo_service
+from app.services.csv_service import CSVService
 from app.services.paypal_service import paypal_service
 from app.services.xero_service import XeroService
-import secrets
-import hashlib
-xero_service = XeroService()
-from app.services.invoice_upload_service import invoice_upload_service
-from app.core.config import settings
-from app.services.csv_service import CSVService
-from fastapi import UploadFile, File, Form
-import json
-import uuid
 
+xero_service = XeroService()
 csv_service = CSVService()
 _upload_sessions = {}
 
@@ -425,7 +418,6 @@ async def confirm_upload(
     )
 
     # Check if a CSV/MANUAL_UPLOAD source already exists for this user
-    from sqlalchemy import delete as sa_delete
     existing = await db.execute(
         select(FinancialDataSource).where(
             FinancialDataSource.user_id == current_user.id,

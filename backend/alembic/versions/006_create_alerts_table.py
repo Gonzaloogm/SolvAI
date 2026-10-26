@@ -7,7 +7,6 @@ Create Date: 2026-06-28
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
-import datetime
 
 revision = '006_alerts'
 down_revision = '005_report_type'

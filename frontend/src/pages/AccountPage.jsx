@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, CreditCard, AlertTriangle, Zap, ArrowUpRight, X, Loader2 } from 'lucide-react';
+import { Check, CreditCard, AlertTriangle, X, Loader2 } from 'lucide-react';
 import { users, billing, auth } from '../api/client.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';

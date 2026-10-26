@@ -3,13 +3,8 @@ import {
  Sun,
  Moon,
  Monitor,
- Eye,
- EyeOff,
  Copy,
- RefreshCw,
- X,
- AlertCircle,
- Fingerprint
+ X
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';

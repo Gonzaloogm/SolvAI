@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * MetricCard — displays a single solvency metric with score bar.

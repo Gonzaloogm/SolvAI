@@ -1,4 +1,3 @@
-import React from 'react';
 import { X, AlertCircle } from 'lucide-react';
 
 export default function ConfirmModal({ 

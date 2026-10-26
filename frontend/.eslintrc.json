@@ -18,13 +18,24 @@
   },
   "plugins": [
     "react",
-    "react-hooks"
+    "react-hooks",
+    "unused-imports"
   ],
   "rules": {
+    "no-unused-vars": "off",
     "no-undef": "error",
-    "no-unused-vars": "warn",
     "react-hooks/rules-of-hooks": "error",
-    "react/prop-types": "off"
+    "react/prop-types": "off",
+    "unused-imports/no-unused-imports": "error",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "args": "after-used",
+        "argsIgnorePattern": "^_",
+        "caughtErrors": "none"
+      }
+    ]
   },
   "settings": {
     "react": {

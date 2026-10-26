@@ -3,10 +3,12 @@
 End-to-end test: register, connect Stripe, generate report, poll, dump raw
 JSON, then download PDF and write to disk for inspection.
 """
-import requests
 import json
-import time
+import os
 import sys
+import time
+
+import requests
 
 API = "http://localhost:8000"
 EMAIL = f"e2e-test-{int(time.time())}@example.com"
@@ -31,11 +33,12 @@ token = r.json()["access_token"]
 headers = {"Authorization": f"Bearer {token}"}
 print(f"   Token obtained for {EMAIL}")
 
-# ── 2. Connect Stripe (synthetic) ────────────────────────────────────────
-print("2. Connecting Stripe (synthetic demo key)…")
-import os
+# ── 2. Connect Stripe (demo test account) ────────────────────────────────────────
+print("2. Connecting Stripe (demo test key)…")
+if not os.environ.get("STRIPE_DEMO_TEST_KEY"):
+    fail("STRIPE_DEMO_TEST_KEY is not set (see docs/demo.md)")
 r = requests.post(f"{API}/data-sources/connect/stripe", headers=headers, json={
-    "connection_details": {"api_key": os.environ.get("STRIPE_SECRET_KEY", "")}
+    "connection_details": {"api_key": os.environ.get("STRIPE_DEMO_TEST_KEY", "")}
 })
 print(f"   Status: {r.status_code}")
 

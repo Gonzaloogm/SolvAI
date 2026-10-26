@@ -8,14 +8,11 @@ import {
  Activity,
  Eye,
  Download,
- Cloud,
- FileSpreadsheet,
- Globe,
  RefreshCw,
  Loader2,
  Plus,
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import ReportDetailModal from '../components/ReportDetailModal.jsx';
 import { solvencyReports, dataSources as dataSourcesApi, users, billing, alerts as alertsApi } from '../api/client.js';
 

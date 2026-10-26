@@ -1,70 +1,48 @@
-# Python
+# ── Secrets ──────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!frontend/.env.production
+*.pem
+*.key
+*.crt
+backend/gcp-credentials.json
+.aws/
+
+# ── Python ───────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-.venv/
 *.egg-info/
-dist/
-build/
+.venv*/
+venv/
+env/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
 
-# Environment
-.env
-.env.local
-.env.demo
-.env.*.local
-
-# Database
-*.db
-*.sqlite3
-
-# Alembic
-# (keep versions tracked)
-
-# Node / Frontend
+# ── Node / frontend ──────────────────────────────────────────
 node_modules/
 frontend/dist/
 frontend/.vite/
 *.tsbuildinfo
 
-# IDE
+# ── Generated output (reports, smoke tests, logs) ────────────
+*.log
+logs/
+*.pdf
+e2e_report.json
+celerybeat-schedule
+celerybeat.pid
+
+# ── Local tooling ────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 .DS_Store
 Thumbs.db
-
-# Docker
 .docker/
-
-# Logs
-*.log
-logs/
-
-# Coverage
-htmlcov/
-.coverage
-coverage.xml
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# AWS
-.aws/
-
-# Secrets
-*.pem
-*.key
-*.crt
-
-# Credenciales confidenciales de Google Cloud Platform
-backend/gcp-credentials.json
-.env
+test_env/

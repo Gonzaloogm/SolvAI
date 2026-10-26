@@ -36,6 +36,9 @@ Quant Metrics are computed deterministically from the user's transactions. They 
 - Seasonality must follow weak_months (weak and below-average months, longest streak).
 - Client concentration must follow client_concentration.hhi, level and top_client_percent.
   If its level is UNKNOWN, say client-level data is unavailable instead of guessing.
+- reputation_signals is the payment-integrity factor: refunds, disputes/chargebacks and history
+  length from payment_integrity (its level is a risk level: LOW is good). If its level is UNKNOWN,
+  set its score to null and say it could not be assessed. Never infer reputation from anything else.
 - If data_quality_notes is not empty, state those limitations in the narrative.
 - source_breakdown gives each platform's share of revenue and its coverage. Comment on it; a source
   with a short history must be described as observed so far, never annualised or extrapolated.
@@ -139,7 +142,7 @@ The JSON MUST have exactly these keys:
   "growth_trend": {{"score": <int 0-100>, "description": <string>, "lender_implications": <string>}},
   "seasonality": {{"score": <int 0-100>, "pattern": <string>, "description": <string>, "lender_implications": <string>}},
   "client_concentration": {{"score": <int 0-100>, "description": <string>, "lender_implications": <string>}},
-  "reputation_signals": {{"score": <int 0-100>, "description": <string>, "lender_implications": <string>}},
+  "reputation_signals": {{"score": <int 0-100, or null when payment_integrity is UNKNOWN>, "description": <string>, "lender_implications": <string>}},
   "narrative": <string 300-500 words explaining the score in plain English>,
   "risk_flags": [<list of strings>],
   "recommendations": [<list of strings>],

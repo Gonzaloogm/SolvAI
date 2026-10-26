@@ -18,10 +18,11 @@ def _sanitize_report_data(report: SolvencyReport) -> dict:
     rd = report.report_data or {}
 
     # Extract component scores only (no descriptions with amounts)
+    # None (not assessed) rather than 0, which would read as the worst possible score
     def safe_score(component):
-        if isinstance(component, dict):
-            return component.get("score", 0)
-        return 0
+        if isinstance(component, dict) and isinstance(component.get("score"), (int, float)):
+            return component["score"]
+        return None
 
     components = {
         "income_stability": safe_score(rd.get("income_stability")),

@@ -154,6 +154,49 @@ def _weak_months(series: list[dict], mean: float) -> dict[str, Any]:
     }
 
 
+# Card networks start monitoring merchants at ~1% chargebacks; refunds above a
+# few percent of revenue suggest delivery or quality problems
+DISPUTE_RATE_HIGH_PCT = 1.0
+REFUND_RATE_MODERATE_PCT = 3.0
+REFUND_RATE_HIGH_PCT = 10.0
+
+
+def _payment_integrity(summary: dict[str, Any], months: int) -> dict[str, Any]:
+    """Refunds, disputes and history length: the grounded "reputation" factor."""
+    data = summary.get("payment_integrity")
+    if not data or not data.get("payments"):
+        return {"level": "UNKNOWN",
+                "explanation": "Refund and dispute data is not available for the connected sources."}
+    refund_rate = data["refunded"] / data["gross"] * 100 if data["gross"] else 0.0
+    dispute_rate = data["disputes"] / data["payments"] * 100
+    if dispute_rate >= DISPUTE_RATE_HIGH_PCT or refund_rate >= REFUND_RATE_HIGH_PCT:
+        level = "HIGH"
+    elif data["disputes"] or refund_rate >= REFUND_RATE_MODERATE_PCT:
+        level = "MODERATE"
+    else:
+        level = "LOW"
+    return {
+        "level": level,  # risk level: LOW is good
+        "refund_rate_percent": round(refund_rate, 2),
+        "refunded_payments": data["refunded_payments"],
+        "disputes": data["disputes"],
+        "dispute_rate_percent": round(dispute_rate, 2),
+        "payments": data["payments"],
+        "history_months": months,
+        "sources": data.get("sources", []),
+        "thresholds": {
+            "dispute_rate_high_percent": DISPUTE_RATE_HIGH_PCT,
+            "refund_rate_moderate_percent": REFUND_RATE_MODERATE_PCT,
+            "refund_rate_high_percent": REFUND_RATE_HIGH_PCT,
+        },
+        "explanation": (
+            f"{data['refunded_payments']} of {data['payments']} payments were refunded "
+            f"({refund_rate:.1f}% of gross revenue) and {data['disputes']} were disputed "
+            f"({dispute_rate:.2f}%), across {months} month(s) of history."
+        ),
+    }
+
+
 def _concentration(summary: dict[str, Any]) -> dict[str, Any]:
     cc = summary.get("client_concentration")
     if not isinstance(cc, dict) or cc.get("hhi") is None:
@@ -222,13 +265,17 @@ def _evidence(series: list[dict], transactions: list[dict], weak: dict | None) -
     }
 
 
+def _platform_name(platform: str) -> str:
+    return {"PAYPAL": "PayPal", "MANUAL_UPLOAD": "Bank statement"}.get(platform, platform.title())
+
+
 def _source_notes(summary: dict[str, Any]) -> list[str]:
     notes = []
     for source in summary.get("source_breakdown") or []:
         days = source.get("days_covered")
         if days is not None and days < SHORT_SOURCE_DAYS:
             notes.append(
-                f"{source['platform'].title()} has only {days} day(s) of history "
+                f"{_platform_name(source['platform'])} has only {days} day(s) of history "
                 f"({source['first_date']} to {source['last_date']}, {source['transactions']} payment(s)). "
                 "Its figures are shown as observed and are not annualised or extrapolated."
             )
@@ -269,6 +316,7 @@ def compute_revenue_metrics(summary: dict[str, Any], today: date | None = None) 
         "trend": _trend(revenues, mean),
         "weak_months": weak,
         "client_concentration": _concentration(summary),
+        "payment_integrity": _payment_integrity(summary, len(series)),
         "source_breakdown": summary.get("source_breakdown") or [],
         "evidence": evidence,
         "data_quality_notes": data_quality,

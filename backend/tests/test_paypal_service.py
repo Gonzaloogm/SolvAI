@@ -161,3 +161,16 @@ def test_verified_accounts_keep_their_account_id(fake_paypal):
     metrics = paypal_service.fetch_metrics("id", "secret")
 
     assert metrics["client_concentration"]["distinct_clients"] == 2
+
+
+def test_payment_integrity_counts_refunds_and_chargebacks(fake_paypal):
+    fake_paypal.transactions = [
+        _tx("PAY1", "T0006", 500.0, 10, payer="A"),
+        _tx("PAY2", "T0006", 500.0, 9, payer="B"),
+        _tx("REF1", "T1107", -50.0, 7, ref="PAY1"),
+        _tx("CB1", "T1201", -500.0, 5),          # chargeback
+    ]
+
+    pi = paypal_service.fetch_metrics("id", "secret")["payment_integrity"]
+
+    assert pi == {"gross": 1000.0, "refunded": 50.0, "payments": 2, "refunded_payments": 1, "disputes": 1}

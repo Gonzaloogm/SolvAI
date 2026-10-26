@@ -206,6 +206,14 @@ const VerifiedMetrics = ({ metrics }) => {
       explanation: concentration.explanation,
       evidence: metrics.evidence?.client_concentration,
     },
+    metrics.payment_integrity && {
+      label: 'Payment integrity',
+      value: metrics.payment_integrity.refund_rate_percent != null
+        ? `${fmtNum(metrics.payment_integrity.refund_rate_percent, 1)}% refunded · ${metrics.payment_integrity.disputes} disputes`
+        : '—',
+      level: metrics.payment_integrity.level,
+      explanation: metrics.payment_integrity.explanation,
+    },
   ].filter(Boolean);
 
   return (
@@ -503,8 +511,8 @@ export default function ReportDetailModal({ report, onClose }) {
   if (reportData.client_concentration?.score !== undefined) {
     features.push({ label: 'Client Concentration', value: reportData.client_concentration.score });
   }
-  if (reportData.reputation_signals?.score !== undefined) {
-    features.push({ label: 'Reputation Signals', value: reportData.reputation_signals.score });
+  if (reportData.reputation_signals?.score != null) {
+    features.push({ label: 'Payment Integrity', value: reportData.reputation_signals.score });
   }
 
   const explanationText = reportData.narrative || report.description || `Analysis of ${report.dataSource || 'connected data source'} using ${modelName}. Key drivers identified include revenue trends, risk exposure, and compliance metrics.`;

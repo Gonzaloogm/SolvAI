@@ -325,15 +325,22 @@
 
     {% macro metric_bar(label, data_obj) %}
     <div class="metric-row">
+        {% if data_obj.score is none %}
         <div class="metric-header">
             <span>{{ label }}</span>
-            <span>{{ data_obj.score | default(50) | int }} / 100</span>
+            <span style="color: #71717a;">Not assessed</span>
+        </div>
+        {% else %}
+        <div class="metric-header">
+            <span>{{ label }}</span>
+            <span>{{ data_obj.score | int }} / 100</span>
         </div>
         <div class="metric-bar-bg">
-            {% set _score = data_obj.score | default(50) | int %}
+            {% set _score = data_obj.score | int %}
             {% set c_class = 'background-color: #10b981;' if _score >= 70 else ('background-color: #f59e0b;' if _score >= 40 else 'background-color: #ef4444;') %}
             <div class="metric-bar-fill" style="width: {{ _score }}%; {{ c_class }}"></div>
         </div>
+        {% endif %}
         <p class="text-sm" style="margin-top: 5px;">{{ data_obj.description | default('N/A') }}</p>
         {% if data_obj.lender_implications | default('') %}
         <div style="background-color: #f8fafc; padding: 10px; border-left: 3px solid #6366f1; font-size: 8.5pt; color: #334155; margin-top: 8px;">
@@ -347,7 +354,7 @@
     {{ metric_bar('Growth Trend', data.growth_trend) }}
     {{ metric_bar('Seasonality', data.seasonality) }}
     {{ metric_bar('Client Concentration', data.client_concentration) }}
-    {{ metric_bar('Reputation Signals', data.reputation_signals) }}
+    {{ metric_bar('Payment Integrity', data.reputation_signals) }}
 
     <!-- Risk Flags and Recommendations -->
     <hr style="border: 0; border-top: 1px solid #e4e4e7; margin: 30px 0;">

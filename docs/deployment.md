@@ -1,5 +1,7 @@
 # Deployment (Google Cloud)
 
+> The cheapest way to keep the demo online is a single VM with Docker Compose: see [deploy-vm.md](deploy-vm.md). This page describes the scalable Cloud Run setup.
+
 Production runs in GCP project `solvai-prod`, region `europe-west1`.
 
 | Component | Service |

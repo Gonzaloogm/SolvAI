@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from typing import List
 
@@ -15,10 +14,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    FRONTEND_URL: str = os.getenv(
-        "FRONTEND_URL",
-        "https://solvai-frontend-879357866699.europe-west1.run.app"
-    )
+    # Public URL of the web app (links in e-mails, payment return URLs)
+    FRONTEND_URL: str = "http://localhost:5173"
 
     # ── Database ──────────────────────────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/solvai"

@@ -22,7 +22,7 @@ PRICE_IDS = {
     'business': settings.STRIPE_BUSINESS_PRICE_ID,
 }
 
-FRONTEND_URL = getattr(settings, 'FRONTEND_URL', None) or 'https://solvai-frontend-879357866699.europe-west1.run.app'
+FRONTEND_URL = settings.FRONTEND_URL.rstrip('/')
 
 class CheckoutRequest(BaseModel):
     plan: str  # 'pro' or 'business'

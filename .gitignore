@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-!frontend/.env.production
+!deploy/.env.prod.example
 *.pem
 *.key
 *.crt
@@ -46,3 +46,6 @@ celerybeat.pid
 Thumbs.db
 .docker/
 test_env/
+
+# ── Deployment ───────────────────────────────────────────────
+deploy/backups/

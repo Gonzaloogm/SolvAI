@@ -1,0 +1,99 @@
+# Single-VM production stack: Caddy (HTTPS + frontend) -> FastAPI + Celery, Postgres (pgvector), Redis.
+# Usage (from the repo root):  ./deploy/deploy.sh      — see docs/deploy-vm.md
+name: solvai-prod
+
+x-backend: &backend
+  build:
+    context: ../backend
+  env_file: .env.prod
+  environment:
+    DATABASE_URL: postgresql+asyncpg://solvai:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env.prod}@db:5432/solvai
+    REDIS_URL: redis://redis:6379/0
+    FRONTEND_URL: https://${DOMAIN:?set DOMAIN in deploy/.env.prod}
+    CORS_ORIGINS: '["https://${DOMAIN}"]'
+  restart: unless-stopped
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: solvai
+      POSTGRES_USER: solvai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U solvai -d solvai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    # Celery broker + live telemetry only: nothing worth persisting
+    image: redis:7.2-alpine
+    command: redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy noeviction
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: alembic upgrade head
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    # Served under https://DOMAIN/api; root-path keeps /docs and OpenAPI links correct
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+      --root-path /api --proxy-headers --forwarded-allow-ips "*"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    <<: *backend
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  caddy:
+    build:
+      context: ../frontend
+      dockerfile: ../deploy/caddy.Dockerfile
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # TLS certificates: keep them across restarts
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

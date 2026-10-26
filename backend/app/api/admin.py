@@ -64,7 +64,7 @@ async def create_beta_user(
                 email=body.email,
                 password=body.password,
                 plan=body.plan,
-                login_url="https://solvai-frontend-879357866699.europe-west1.run.app/login"
+                login_url=f"{settings.FRONTEND_URL.rstrip('/')}/login"
             )
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -81,7 +81,7 @@ async def create_beta_user(
         email=body.email,
         password=body.password,
         plan=org.plan,
-        login_url="https://solvai-frontend-879357866699.europe-west1.run.app/login"
+        login_url=f"{settings.FRONTEND_URL.rstrip('/')}/login"
     )
 
 @router.post(

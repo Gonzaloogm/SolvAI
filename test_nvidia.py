@@ -1,9 +1,10 @@
+import os
 import subprocess
 from openai import OpenAI
 
 client = OpenAI(
   base_url = "https://integrate.api.nvidia.com/v1",
-  api_key = "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"
+  api_key = os.environ["NVIDIA_API_KEY"]
 )
 
 def get_code_from_nvidia_nim(prompt: str) -> str:

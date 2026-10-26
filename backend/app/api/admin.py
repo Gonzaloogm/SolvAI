@@ -134,33 +134,6 @@ async def promo_stats(
     return result.scalars().all()
 
 
-@router.post("/test-crypto")
-async def test_crypto(body: dict):
-    from app.core.security import encrypt_dict, decrypt_dict
-    import traceback
-    try:
-        data = body.get("data", {"api_key": "sk_test_123"})
-        encrypted = encrypt_dict(data)
-        decrypted = decrypt_dict(encrypted)
-        
-        # also test with exact decrypt logic
-        from cryptography.fernet import Fernet
-        import json
-        from app.core.config import settings
-        f = Fernet(settings.ENCRYPTION_KEY.encode())
-        raw_decrypt = f.decrypt(encrypted.encode()).decode()
-        
-        return {
-            "success": True,
-            "data": data,
-            "encrypted": encrypted,
-            "decrypted": decrypted,
-            "raw_decrypt": raw_decrypt,
-            "matches": data == decrypted
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
-
 @router.delete(
     "/cleanup-failed-reports",
     summary="Admin: Delete FAILED/stale GENERATING reports for an org",

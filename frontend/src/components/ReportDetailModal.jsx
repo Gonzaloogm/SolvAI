@@ -5,9 +5,17 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../context/ToastContext.jsx';
 import { solvencyReports, billing } from '../api/client.js';
 
+const escapeHtml = (text) => String(text)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 const renderMarkdown = (text) => {
   if (!text) return '';
-  const html = text
+  // Escape first so AI/user content can't inject HTML; only our tags below are emitted
+  const html = escapeHtml(text)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`(.*?)`/g, '<code style="background:var(--bg-page);padding:1px 4px;border-radius:3px;font-size:0.9em">$1</code>')

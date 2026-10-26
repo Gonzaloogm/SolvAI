@@ -4,7 +4,7 @@ import subprocess
 from openai import OpenAI
 
 # Configuración del cliente usando NVIDIA NIM
-API_KEY = "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"
+API_KEY = os.environ["NVIDIA_API_KEY"]
 MODEL = "meta/llama-3.1-405b-instruct"
 
 client = OpenAI(

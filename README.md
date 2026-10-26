@@ -1,177 +1,150 @@
-# SolvAI
+<p align="center">
+  <img src="frontend/public/SolvAI-logo.png" alt="SolvAI" width="120">
+</p>
 
-**Self-Serve Explainable Credit AI for EU/UK Freelancers & Microbusinesses**
+<h1 align="center">SolvAI</h1>
 
-SolvAI brings the same explainable credit AI that today is only accessible to large banks (via enterprise vendors) directly to individual freelancers and microbusinesses in the Stripe ecosystem—as a self-serve report they can request for themselves, not something locked inside a bank's underwriting department.
+<p align="center">
+  <strong>Bank-grade credit explainability, in the hands of the freelancers who need it most.</strong>
+</p>
 
----
+<p align="center">
+  <a href="https://solvai-frontend-879357866699.europe-west1.run.app">Live app</a> ·
+  <a href="docs/architecture.md">Architecture</a> ·
+  <a href="docs/deployment.md">Deployment</a> ·
+  <a href="docs/demo.md">Demo data</a>
+</p>
 
-## Architecture
-
-```
-solvai/
-├── backend/          # FastAPI + SQLAlchemy + Celery + Gemini
-├── frontend/         # Vite + React 18
-├── docker-compose.yml
-└── .env.example
-```
-
-### Backend Stack
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Python 3.11 |
-| API Framework | FastAPI 0.111 |
-| ORM | SQLAlchemy 2.0 (async) |
-| Migrations | Alembic 1.13 |
-| Database | PostgreSQL 16 |
-| Cache/Broker | Redis 7.2 |
-| Task Queue | Celery 5.3 |
-| AI/ML | Google Gemini Pro |
-| Auth | JWT (python-jose + passlib) |
-| Email | Resend |
-| Storage | AWS S3 |
-| Logging | Loguru |
-
-### Frontend Stack
-| Layer | Technology |
-|-------|-----------|
-| Framework | Vite 5 + React 18 |
-| Routing | React Router 6 |
-| HTTP | Axios |
-| Styling | Vanilla CSS (design tokens) |
-| Fonts | Geist Sans + JetBrains Mono |
+<p align="center">
+  <img alt="CI" src="https://github.com/Gonzaloogm/SolvAI/actions/workflows/ci.yml/badge.svg">
+  <img alt="Python 3.11" src="https://img.shields.io/badge/python-3.11-3776AB">
+  <img alt="React 18" src="https://img.shields.io/badge/react-18-61DAFB">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
+</p>
 
 ---
 
-## Quick Start
+Banks score borrowers with explainable credit models that the borrower never gets to see. Freelancers and microbusinesses get a "no" with no reason attached. Their income is irregular, comes from a handful of clients and lives in payment platforms rather than in a payslip.
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 20+
-- Python 3.11+
+**SolvAI gives them the report a lender would build, before they apply.** They connect their Stripe or PayPal account (or upload a bank statement), and a multi-agent AI pipeline produces a solvency report. Every score, risk flag and recommendation in it is traced back to the underlying transactions. The report can be downloaded as a verifiable PDF or shared with a lender through a tracked, consent-based link.
 
-### 1. Clone and configure environment
+## Features
+
+- **Real data, no guesses.** Connects Stripe (secret key), PayPal (REST credentials, Transaction Search), CSV bank statements, Xero and open banking (Belvo). If there is no data, the report fails with a clear reason. It never fabricates figures.
+- **Explainable scoring.** Each report covers income stability, growth trend, seasonality, client concentration and reputation signals. For each factor it gives a score, a plain-language explanation, what it means to a lender, and references to the transactions behind it.
+- **Multi-agent pipeline.** A [LangGraph](https://github.com/langchain-ai/langgraph) graph runs three steps. A deterministic quant step computes Benford's-law deviation and a modified Z-score. A Gemini underwriter runs as three parallel self-consistency samples. A temperature-0 auditor sends weak drafts back for revision.
+- **Live reasoning view.** Pipeline progress is streamed over Redis pub/sub and WebSockets to an in-app "Intelligence Terminal".
+- **Lender-ready output.** A multi-page PDF (WeasyPrint) includes revenue trend, concentration and radar charts, plus a QR code that verifies the report's authenticity.
+- **More report types.** Rental certificates for tenants, mortgage assessments and P&L statements.
+- **Sharing and verification.** Expiring public share links, plus a lender verification portal with an authorize-and-track flow.
+- **Score simulator.** A "what-if" tool that shows how changes in revenue, client mix or history would move the score.
+- **Lender matching.** Lender criteria are embedded with Gemini and searched with pgvector.
+- **SaaS foundations.** Freemium plans with Stripe subscriptions and per-report PDF unlocks, signed webhooks, API keys with a public `/v1` API, alerts, six languages and dark mode.
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite 5, React Router, Tailwind CSS 4, Recharts, i18next |
+| API | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async), Alembic |
+| Async work | Celery, Redis (broker and pub/sub), WebSockets |
+| AI | Google Gemini 2.5 Flash, LangGraph, pgvector embeddings |
+| Documents | WeasyPrint, Jinja2, matplotlib, QR codes |
+| Payments and data | Stripe, PayPal REST APIs, Xero, Belvo |
+| Infrastructure | Google Cloud Run, Cloud SQL (PostgreSQL 16), Memorystore, Secret Manager, Cloud Storage, Cloud Build, Docker |
+| Quality | pytest, ruff, ESLint, GitHub Actions |
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Stripe / PayPal / CSV] -->|normalised monthly series| B[Financial summary]
+    B --> C[data_quant<br/>deterministic metrics]
+    C --> D[underwriter<br/>Gemini ×3 self-consistency]
+    D --> E{auditor}
+    E -->|revise| D
+    E -->|approved| F[PDF + share link]
+    C & D & E -.->|telemetry| G[WebSocket terminal]
+```
+
+The full request lifecycle, data model and security model are described in [docs/architecture.md](docs/architecture.md).
+
+## Getting started
+
+**Prerequisites:** Docker, Node.js 20+, Python 3.11+.
+
 ```bash
-git clone <repo>
-cd solvai
-cp .env.example .env
-# Fill in your API keys in .env
+git clone https://github.com/Gonzaloogm/SolvAI.git
+cd SolvAI
+cp .env.example .env          # set GEMINI_API_KEY, JWT_SECRET and ENCRYPTION_KEY
 ```
 
-### 2. Start with Docker Compose
+**Option A: everything in Docker** (Postgres + pgvector, Redis, API, worker, Flower):
+
 ```bash
 docker compose up -d
-```
-
-Services:
-- **API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Flower** (Celery UI): http://localhost:5555
-
-### 3. Run database migrations
-```bash
 docker compose exec api alembic upgrade head
 ```
 
-### 4. Start the frontend (development)
+**Option B: API locally**, with Postgres and Redis from Docker:
+
+```bash
+docker compose up -d db redis
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+cp ../.env .env
+alembic upgrade head
+uvicorn app.main:app --reload                       # http://localhost:8000/docs
+celery -A app.celery_app worker --loglevel=info     # in a second terminal
+```
+
+> WeasyPrint needs Pango. On macOS: `brew install pango` (and `export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` on Apple Silicon).
+
+**Frontend:**
+
 ```bash
 cd frontend
 npm install
-npm run dev
+echo "VITE_API_BASE_URL=http://localhost:8000" > .env.local
+npm run dev                                         # http://localhost:5173
 ```
 
-Frontend: http://localhost:5173
+To try it with real test data, see [docs/demo.md](docs/demo.md).
 
----
+## Tests and quality
 
-## Local Development (without Docker)
-
-### Backend
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-# Start PostgreSQL and Redis locally, then:
-uvicorn app.main:app --reload --port 8000
-
-# In a separate terminal, start Celery worker:
-celery -A app.celery_app worker --loglevel=info
+cd backend && pytest        # unit and API tests; no external services required
+cd backend && ruff check .
+cd frontend && npm run lint && npm run build
 ```
 
-### Database Migrations
-```bash
-cd backend
-alembic upgrade head          # Apply all migrations
-alembic downgrade -1          # Rollback one migration
-alembic revision --autogenerate -m "description"  # Generate new migration
+CI runs the same checks on every push. It also applies every Alembic migration to a clean pgvector database and builds both Docker images.
+
+## Project structure
+
+```
+.
+├── backend/            FastAPI app, Celery tasks, Alembic migrations, tests
+│   ├── app/            api · core · models · schemas · services · tasks · templates
+│   ├── alembic/
+│   ├── scripts/        seeding test data, end-to-end smoke test
+│   └── tests/
+├── frontend/           React SPA (Vite), served by nginx in production
+├── docs/               architecture, deployment, demo data
+├── scripts/deploy.sh   manual Cloud Run deploy
+├── cloudbuild.yaml     CI/CD pipeline to Cloud Run
+└── docker-compose.yml  local stack
 ```
 
----
+## Roadmap
 
-## API Documentation
-
-FastAPI auto-generates interactive API docs:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Key Endpoints
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/register` | Register user + organization |
-| POST | `/auth/login` | Login, returns JWT |
-| GET | `/users/me` | Current user profile |
-| GET | `/data-sources` | List connected data sources |
-| POST | `/data-sources/connect/{type}` | Connect a data source |
-| POST | `/solvency-reports` | Trigger report generation |
-| GET | `/solvency-reports/{id}` | Get report (poll for status) |
-| GET | `/lender-matching/{report_id}` | Get lender matches |
-
----
-
-## Database Schema
-
-Four tables: `organizations` → `users` → `financial_data_sources`, `solvency_reports`
-
-All tables use:
-- UUID v4 primary keys
-- Soft delete (`is_deleted` + `deleted_at`)
-- Timestamps (`created_at`, `updated_at`)
-
----
-
-## Environment Variables
-
-See [`.env.example`](.env.example) for all required variables.
-
-**Critical for MVP:**
-- `DATABASE_URL` — PostgreSQL connection string
-- `JWT_SECRET` — Random secret for JWT signing
-- `GEMINI_API_KEY` — Google AI Studio API key
-- `REDIS_URL` — Redis connection string
-
-**Optional for MVP (stubs in place):**
-- `STRIPE_SECRET_KEY` — Stripe data ingestion
-- `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` — Xero integration
-- `RESEND_API_KEY` — Email notifications
-- AWS credentials — S3 document storage
-
----
-
-## Project Status
-
-MVP — Core features implemented:
-- [x] User registration & JWT authentication
-- [x] Organization management
-- [x] Financial data source connections (Stripe, Xero, PayPal, Manual)
-- [x] AI solvency report generation via Gemini Pro (async Celery task)
-- [x] Lender matching (stub matches based on solvency score)
-- [x] React frontend with 5 screens (Login, Register, Dashboard, Report Detail, Data Sources)
-- [x] Docker Compose local dev environment
-- [x] GitHub Actions CI
-
----
+- Historical comparison between a user's reports
+- Guided onboarding for first-time users
+- Expense-side data (bank outflows) for a full cash-flow view
+- Migration to the new `google-genai` SDK
 
 ## License
-Proprietary — SprintFounders / SolvAI 2026
+
+[MIT](LICENSE) © 2026 Gonzaloogm

@@ -1,0 +1,49 @@
+# Demo data
+
+SolvAI never fabricates financial data, so the demo runs on real test-mode accounts. Their keys live in `.env.demo` at the repo root. The file is git-ignored; ask the maintainer for it.
+
+```bash
+# .env.demo
+STRIPE_DEMO_TEST_KEY=sk_test_...
+PAYPAL_SANDBOX_CLIENT_ID=...
+PAYPAL_SANDBOX_SECRET=...
+```
+
+## Stripe (12 months of history)
+
+The Stripe test account behind `STRIPE_DEMO_TEST_KEY` holds a clean 12-month history: about €7,200/month, 10 clients, top client about 26%.
+
+**Do not run `backend/scripts/seed_stripe.py` against it again.** Layering seed runs creates outliers that distort the report.
+
+## PayPal sandbox (built up daily)
+
+PayPal's sandbox cannot backdate transactions, so history is built by creating a few real sandbox payments every day:
+
+```bash
+cd backend
+set -a; . ../.env.demo; set +a
+python scripts/seed_paypal_sandbox.py --count 3     # --dry-run only checks credentials
+```
+
+Payments are card payments captured through Orders v2 from six weighted fictional clients. They show up in Transaction Search after a delay of up to a few hours.
+
+Sandbox app requirements (developer.paypal.com → Apps & Credentials):
+
+- The app is linked to a **Spain/EUR business** sandbox account.
+- **Transaction search** is enabled under Features. After enabling it, the old cached token must expire or be revoked (`POST /v1/oauth2/token/terminate`) before new tokens carry the `reporting/search/read` scope.
+
+## Demo flow
+
+1. Register a fresh account.
+2. Go to **Data Sources** and connect **Stripe** (paste `STRIPE_DEMO_TEST_KEY`) and **PayPal** (paste the sandbox Client ID and Secret).
+3. On the **Dashboard**, click **Generate New Report** and watch the Intelligence Terminal stream the pipeline steps.
+4. Open the report: the score, explainable factors, risk flags and data references, each traceable to transactions.
+5. Download the PDF (Pro/Business, or unlock per report) and scan the QR code to verify it.
+
+## Smoke test
+
+`backend/scripts/e2e_test.py` registers a user, connects Stripe, generates a report, polls it and downloads the PDF against a running local API:
+
+```bash
+cd backend && STRIPE_DEMO_TEST_KEY=... python scripts/e2e_test.py
+```

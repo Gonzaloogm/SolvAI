@@ -10,9 +10,6 @@ from app.models.user import User
 
 router = APIRouter()
 
-# Same model as the report pipeline (agent_orchestrator.py)
-MODEL_NAME = "models/gemini-2.5-flash"
-
 
 @router.post("/simulate/score")
 async def simulate_score(
@@ -20,7 +17,7 @@ async def simulate_score(
     current_user: User = Depends(get_current_user)
 ):
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(MODEL_NAME)
+    model = genai.GenerativeModel(settings.GEMINI_LIGHT_MODEL)
 
     # Extract input
     monthly_revenue = payload.get("monthly_revenue", 3500)

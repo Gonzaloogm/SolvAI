@@ -38,7 +38,7 @@ async def underwriter_node(state: AgentState) -> AgentState:
         raise ReportGenerationError("The AI engine is not configured (GEMINI_API_KEY is missing).")
 
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
+    model = genai.GenerativeModel(model_name=settings.GEMINI_UNDERWRITER_MODEL)
 
     report_type = state.get("report_type", "FULL")
 
@@ -234,7 +234,7 @@ def auditor_node(state: AgentState) -> AgentState:
         raise ReportGenerationError("The AI engine is not configured (GEMINI_API_KEY is missing).")
 
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
+    model = genai.GenerativeModel(model_name=settings.GEMINI_LIGHT_MODEL)
 
     prompt = f"""You are SolvAI's Auditor Agent (Red Team).
 Review the following Draft Report against the raw Financial Summary.

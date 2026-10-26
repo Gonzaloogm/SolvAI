@@ -38,6 +38,11 @@ class Settings(BaseSettings):
 
     # ── Google Gemini ─────────────────────────────────────────────────────────
     GEMINI_API_KEY: str = ""
+    # Underwriter writes the report (3 parallel calls per draft): the quality model.
+    GEMINI_UNDERWRITER_MODEL: str = "gemini-2.5-flash"
+    # Auditor and score simulator: short structured answers. Lite models usually
+    # get the largest free-tier quota; set both to gemini-3.5-flash-lite to run for free.
+    GEMINI_LIGHT_MODEL: str = "gemini-3.5-flash-lite"
 
     # ── Stripe ────────────────────────────────────────────────────────────────
     STRIPE_SECRET_KEY: str = ""

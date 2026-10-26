@@ -88,3 +88,22 @@ def test_simulator_failure_is_an_error_not_a_score(client, fake_gemini, model_kw
 
     assert response.status_code == 502
     assert "overall_score" not in response.json()
+
+
+def test_each_agent_uses_its_configured_model(monkeypatch, client):
+    used = []
+
+    def model_factory(*args, **kwargs):
+        used.append(kwargs.get("model_name") or args[0])
+        return _FakeModel(text='{"is_approved": true, "overall_score": 70}')
+
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "GEMINI_UNDERWRITER_MODEL", "writer-model")
+    monkeypatch.setattr(settings, "GEMINI_LIGHT_MODEL", "light-model")
+    monkeypatch.setattr("google.generativeai.configure", lambda **_: None)
+    monkeypatch.setattr("google.generativeai.GenerativeModel", model_factory)
+
+    auditor_node({"draft_report": '{"overall_score": 70}', "iterations": 0, "financial_summary": {}})
+    client.post("/simulate/score", json={})
+
+    assert used == ["light-model", "light-model"]

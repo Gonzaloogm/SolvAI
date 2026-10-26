@@ -39,6 +39,8 @@ Mounted with `--set-secrets` in `cloudbuild.yaml`:
 | `GEMINI_API_KEY` | `solvai-gemini-api-key` |
 | `ADMIN_KEY` | `solvai-admin-key` |
 
+Optional: `GEMINI_UNDERWRITER_MODEL` (default `gemini-2.5-flash`) and `GEMINI_LIGHT_MODEL` (default `gemini-3.5-flash-lite`) choose the model per agent.
+
 Billing also needs `STRIPE_PRO_PRICE_ID`, `STRIPE_BUSINESS_PRICE_ID`, `STRIPE_BILLING_WEBHOOK_SECRET` and `STRIPE_WEBHOOK_SECRET`. Without the price IDs, checkout returns `503 Billing is not configured`.
 
 The Stripe billing webhook points to `https://<api>/webhooks/stripe-billing` with these events:

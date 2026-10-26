@@ -48,7 +48,7 @@ Banks score borrowers with explainable credit models that the borrower never get
 | Frontend | React 18, Vite 5, React Router, Tailwind CSS 4, Recharts, i18next |
 | API | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async), Alembic |
 | Async work | Celery, Redis (broker and pub/sub), WebSockets |
-| AI | Google Gemini 2.5 Flash, LangGraph, pgvector embeddings |
+| AI | Google Gemini 2.5 Flash and 3.5 Flash-Lite (configurable per agent; runs on the free tier), LangGraph, pgvector embeddings |
 | Documents | WeasyPrint, Jinja2, matplotlib, QR codes |
 | Payments and data | Stripe, PayPal REST APIs, Xero, Belvo |
 | Infrastructure | Google Cloud Run, Cloud SQL (PostgreSQL 16), Memorystore, Secret Manager, Cloud Storage, Cloud Build, Docker |

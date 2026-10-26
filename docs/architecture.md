@@ -28,7 +28,7 @@ flowchart LR
 
     DB[(PostgreSQL 16 + pgvector)]
     REDIS[(Redis: broker + pub/sub)]
-    GEMINI[Gemini 2.5 Flash]
+    GEMINI[Gemini 2.5 Flash / 3.5 Flash-Lite]
     GCS[(Cloud Storage)]
 
     UI -- HTTPS --> REST
@@ -51,10 +51,12 @@ flowchart LR
 3. **Build the financial summary.** `_build_financial_summary` merges the monthly series from every connected source. If no source has revenue data, the report is marked `FAILED` with an explanation and no AI call is made.
 4. **Run the LangGraph pipeline** (`app/services/agent_orchestrator.py`):
    - `data_quant`: deterministic metrics such as Benford's-law deviation and a modified Z-score.
-   - `underwriter`: three parallel Gemini calls at temperature 0.4. These self-consistency samples are parsed and validated as JSON, then merged.
-   - `auditor`: a temperature-0 review of the draft against the source data. It can send the draft back to the underwriter, up to 3 iterations, or flag it for human review.
+   - `underwriter`: three parallel Gemini calls at temperature 0.4 (`GEMINI_UNDERWRITER_MODEL`, default `gemini-2.5-flash`). These self-consistency samples are parsed and validated as JSON, then merged.
+   - `auditor`: a temperature-0 review of the draft against the source data (`GEMINI_LIGHT_MODEL`, default `gemini-3.5-flash-lite`, also used by the score simulator). It can send the draft back to the underwriter, up to 3 iterations, or flag it for human review.
    Each step publishes progress to Redis (`solvai:telemetry:{report_id}`), which the WebSocket streams to the "Intelligence Terminal" in the UI.
 5. **Render and store.** WeasyPrint and Jinja2 templates (`app/templates/`) render the PDF with matplotlib charts and a verification QR code. The file is uploaded to Cloud Storage and the report becomes `COMPLETED`.
+
+A report makes about 4 Gemini calls when the first draft is approved and up to 12 with three audit rounds. To run entirely on the Gemini free tier, set both models to `gemini-3.5-flash-lite`; Lite models usually get the most generous free quota (check your project's limits in Google AI Studio). If the AI fails, the report is marked `FAILED` with a reason: there is no mocked or placeholder score.
 
 ## Data source adapters
 

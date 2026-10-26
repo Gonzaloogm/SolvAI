@@ -1,0 +1,7 @@
+target-version = "py311"
+extend-exclude = [".venv"]
+
+[lint]
+# Pyflakes + syntax errors. F841 (unused locals) is noisy in except-blocks; revisit later.
+select = ["E9", "F"]
+ignore = ["F841"]

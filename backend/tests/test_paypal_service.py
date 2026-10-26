@@ -123,3 +123,41 @@ def test_fills_empty_months_with_zero(fake_paypal):
 def test_invalid_credentials_raise_a_clear_error(fake_paypal):
     with pytest.raises(PayPalAPIError, match="Invalid PayPal Client ID or Secret"):
         paypal_service.fetch_metrics("bad", "bad")
+
+
+def _card_tx(tid, amount, account_id, name, status="N"):
+    tx = _tx(tid, "T0005", amount, 3)
+    tx["payer_info"] = {
+        "account_id": account_id,
+        "payer_status": status,
+        "payer_name": {"alternate_full_name": name},
+    }
+    return tx
+
+
+def test_guest_card_payments_from_one_client_count_once(fake_paypal):
+    # PayPal assigns a fresh account_id to every guest card payment
+    fake_paypal.transactions = [
+        _card_tx("C1", 600.0, "SMRH3XP5XEY52", "Brightpath Ltd"),
+        _card_tx("C2", 200.0, "R8AWRNUD7K2ZA", "Brightpath Ltd"),
+        _card_tx("C3", 200.0, "XS2RCMZMKNMP4", "Atlas Retail SA"),
+    ]
+
+    metrics = paypal_service.fetch_metrics("id", "secret")
+
+    assert metrics["client_concentration"]["distinct_clients"] == 2
+    assert metrics["client_concentration"]["top_client_percent"] == 80.0
+    clients = {tx["id"]: tx["client"] for tx in metrics["transactions"]}
+    assert clients["C1"] == clients["C2"] != clients["C3"]
+
+
+def test_verified_accounts_keep_their_account_id(fake_paypal):
+    # Two different verified PayPal users who happen to share a name
+    fake_paypal.transactions = [
+        _card_tx("P1", 100.0, "ACCOUNT_A", "Alex Garcia", status="Y"),
+        _card_tx("P2", 100.0, "ACCOUNT_B", "Alex Garcia", status="Y"),
+    ]
+
+    metrics = paypal_service.fetch_metrics("id", "secret")
+
+    assert metrics["client_concentration"]["distinct_clients"] == 2

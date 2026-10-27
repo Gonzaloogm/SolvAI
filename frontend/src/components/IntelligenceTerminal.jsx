@@ -38,7 +38,7 @@ export default function IntelligenceTerminal({ reportId }) {
 
  ws.onopen = () => {
  if (isMounted) {
- setLogs([{ agent: 'system', status: 'info', message: 'Terminal connected. Awaiting telemetry...', payload: {} }]);
+ setLogs([{ agent: 'system', status: 'info', message: 'Terminal connected. Awaiting telemetry...', payload: {}, at: Date.now() }]);
  }
  };
 
@@ -46,7 +46,7 @@ export default function IntelligenceTerminal({ reportId }) {
  if (!isMounted) return;
  try {
  const data = JSON.parse(event.data);
- setLogs((prevLogs) => [...prevLogs, data]);
+ setLogs((prevLogs) => [...prevLogs, { ...data, at: Date.now() }]);
  
  if (data.status === 'completed') {
  const score = data.payload?.overall_score;
@@ -65,7 +65,7 @@ export default function IntelligenceTerminal({ reportId }) {
 
  ws.onclose = () => {
  if (isMounted) {
- setLogs((prevLogs) => [...prevLogs, { agent: 'system', status: 'info', message: 'Connection closed.', payload: {} }]);
+ setLogs((prevLogs) => [...prevLogs, { agent: 'system', status: 'info', message: 'Connection closed.', payload: {}, at: Date.now() }]);
  }
  };
  } catch (e) {
@@ -108,7 +108,7 @@ export default function IntelligenceTerminal({ reportId }) {
  
  {logs.map((log, index) => (
  <div key={index} className="terminal-log">
- <span className="log-timestamp">{new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}</span>
+ <span className="log-timestamp">{new Date(log.at || Date.now()).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}</span>
  <span className="log-agent" style={{ color: getAgentColor(log.agent) }}>
  [{log.agent.toUpperCase()}]
  </span>

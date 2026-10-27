@@ -14,7 +14,9 @@ import {
 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import ReportDetailModal from '../components/ReportDetailModal.jsx';
+import IntelligenceTerminal from '../components/IntelligenceTerminal.jsx';
 import { solvencyReports, dataSources as dataSourcesApi, users, billing, alerts as alertsApi } from '../api/client.js';
+import { platformLabel } from '../utils/platforms.js';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -34,6 +36,8 @@ export default function DashboardPage({ onNavigate }) {
  const [subscription, setSubscription] = useState(null);
  const [loading, setLoading] = useState(true);
  const [generating, setGenerating] = useState(false);
+ // Report whose pipeline is streamed to the live terminal
+ const [liveReportId, setLiveReportId] = useState(null);
  const [scoreHistory, setScoreHistory] = useState([]);
  const [activeAlerts, setActiveAlerts] = useState([]);
 
@@ -85,6 +89,7 @@ export default function DashboardPage({ onNavigate }) {
      const res = await solvencyReports.create();
      const newId = res.data?.id;
      if (!newId) throw new Error('No report ID returned');
+     setLiveReportId(newId);
      addToast('Report generation started...', 'info');
      const poll = setInterval(async () => {
        try {
@@ -165,9 +170,9 @@ export default function DashboardPage({ onNavigate }) {
  }));
 
  const displaySources = realSources.map(s => ({
- name: (s.source_type || s.type || 'Source').charAt(0).toUpperCase() + (s.source_type || s.type || 'Source').slice(1).toLowerCase(),
+ name: platformLabel(s.source_type || s.type || 'Source'),
  icon: Database,
- bgColor: (s.source_type || s.type || '').toLowerCase() === 'stripe' ? 'bg-[#635bff]' : (s.source_type || s.type || '').toLowerCase() === 'xero' ? 'bg-[#00b0e0]' : 'bg-[#336791]',
+ bgColor: { stripe: 'bg-[#635bff]', paypal: 'bg-[#003087]', xero: 'bg-[#00b0e0]' }[(s.source_type || s.type || '').toLowerCase()] || 'bg-[#697386]',
  connected: (s.status || '').toUpperCase() === 'CONNECTED',
  lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(new Date(s.created_at)) : '—',
  }));
@@ -301,6 +306,18 @@ export default function DashboardPage({ onNavigate }) {
  );
  })}
  </div>
+
+ {liveReportId && (
+ <div className="bg-card border border-border rounded-lg p-5 mt-6">
+ <div className="flex justify-between items-center mb-3">
+ <h2 className="text-base font-semibold text-primary">Live analysis</h2>
+ {!generating && (
+ <button onClick={() => setLiveReportId(null)} className="text-sm text-muted hover:text-primary">Close</button>
+ )}
+ </div>
+ <IntelligenceTerminal key={liveReportId} reportId={liveReportId} />
+ </div>
+ )}
 
  <ScoreEvolutionCard history={scoreHistory} onGenerateReport={handleGenerate} />
 

@@ -7,19 +7,11 @@ import {
  Plus,
  Cloud,
  Database,
- FileSpreadsheet,
  Globe,
  RefreshCw,
  Settings,
- HardDrive,
- BarChart3,
- Users,
  CreditCard,
- FileText,
  FileUp,
- LayoutGrid,
- BarChart2,
- Server,
  Loader2,
  AlertTriangle,
  X
@@ -27,71 +19,16 @@ import {
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
-const initialConnectedSources = [
- {
- name: 'Salesforce',
- iconBg: 'bg-[var(--brand-blue)]',
- Icon: Cloud,
- statusColor: 'bg-[#1a9e6e]',
- statusText: 'Connected',
- statusTextColor: 'text-[#1a9e6e]',
- badge: 'CRM',
- lastSync: '2 hours ago',
- records: '24,521',
- },
- {
- name: 'PostgreSQL',
- iconBg: 'bg-[#336791]',
- Icon: Database,
- statusColor: 'bg-[#1a9e6e]',
- statusText: 'Connected',
- statusTextColor: 'text-[#1a9e6e]',
- badge: 'Database',
- lastSync: '30 min ago',
- records: '1,203,847',
- },
- {
- name: 'Google Sheets',
- iconBg: 'bg-[#1a9e6e]',
- Icon: FileSpreadsheet,
- statusColor: 'bg-[#c9870c]',
- statusText: 'Syncing',
- statusTextColor: 'text-[#c9870c]',
- badge: 'Spreadsheet',
- lastSync: 'Syncing now...',
- records: '8,432',
- isSyncing: true,
- },
- {
- name: 'REST API',
- iconBg: 'bg-[#c9870c]',
- Icon: Globe,
- statusColor: 'bg-[#df1b41]',
- statusText: 'Error',
- statusTextColor: 'text-[#df1b41]',
- badge: 'API',
- lastSync: 'Failed 1h ago',
- records: '0',
- },
-];
 
+ // Only sources the backend really supports. Xero, PayPal and Open Banking are switched
+ // off at runtime when the server has no credentials for them (/available-integrations).
  const initialAvailableIntegrations = [
-  { name: 'MySQL', iconBg: 'bg-[#00758f]', Icon: Database, available: true, badge: 'Database' },
-  { name: 'MongoDB', iconBg: 'bg-[#1a9e6e]', Icon: HardDrive, available: true, badge: 'Database' },
-  { name: 'Snowflake', iconBg: 'bg-[#29b5e8]', Icon: Cloud, available: true, badge: 'Data Warehouse' },
-  { name: 'BigQuery', iconBg: 'bg-[#4285f4]', Icon: BarChart3, available: true, badge: 'Data Warehouse' },
-  { name: 'HubSpot', iconBg: 'bg-[#ff7a59]', Icon: Users, available: false, badge: 'CRM' },
   { name: 'Stripe', iconBg: 'bg-[#635bff]', Icon: CreditCard, available: true, badge: 'Payments' },
-  { name: 'Xero', iconBg: 'bg-[#00b0e0]', Icon: Database, available: true, badge: 'Accounting' },
   { name: 'PayPal', iconBg: 'bg-[#003087]', Icon: CreditCard, available: true, badge: 'Payments' },
+  { name: 'CSV Upload', iconBg: 'bg-[#697386]', Icon: FileUp, available: true, badge: 'Bank statement' },
+  { name: 'Xero', iconBg: 'bg-[#00b0e0]', Icon: Database, available: true, badge: 'Accounting' },
   { name: 'Bank Account (Open Banking)', iconBg: 'bg-[var(--brand-blue)]', Icon: Globe, available: true, badge: 'Bank' },
-  { name: 'Notion', iconBg: 'bg-[var(--text-primary)]', Icon: FileText, available: false, badge: 'Docs' },
-  { name: 'CSV Upload', iconBg: 'bg-[#697386]', Icon: FileUp, available: true, badge: 'File' },
-  { name: 'Amazon S3', iconBg: 'bg-[#ff9900]', Icon: HardDrive, available: false, badge: 'Storage' },
-  { name: 'Airtable', iconBg: 'bg-[#18bfff]', Icon: LayoutGrid, available: false, badge: 'Spreadsheet' },
-  { name: 'Tableau', iconBg: 'bg-[#e97627]', Icon: BarChart2, available: false, badge: 'BI' },
-  { name: 'Kafka', iconBg: 'bg-[var(--text-primary)]', Icon: Server, available: false, badge: 'Event Stream' },
-];
+ ];
 
 export default function DataSourcesPage() {
  const [connected, setConnected] = useState([]);
@@ -151,7 +88,7 @@ export default function DataSourcesPage() {
            statusTextColor: (s.status || '').toUpperCase() === 'CONNECTED' ? 'text-[#1a9e6e]' : 'text-[#df1b41]',
            badge,
            lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(s.created_at)) : '—',
-           records: s.record_count?.toLocaleString() || s.connection_details?.records_count?.toLocaleString() || '0',
+           records: (s.records_count ?? 0).toLocaleString(),
            isSyncing: false,
          };
        });

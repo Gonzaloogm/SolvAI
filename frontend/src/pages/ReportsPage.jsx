@@ -21,6 +21,7 @@ import { solvencyReports } from '../api/client.js';
 import apiClient from '../api/client.js';
 import ReportDetailModal from '../components/ReportDetailModal.jsx';
 import { useReportGeneration } from '../context/ReportGenerationContext.jsx';
+import { platformLabel } from '../utils/platforms.js';
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -92,11 +93,11 @@ const getAccuracyColor = (val) => {
       const mapped = data.map(r => ({
         id: r.id,
         name: `Report ${r.id?.split('-')[0]?.toUpperCase() || ''}`,
-        subtitle: `Gemini \u00b7 ${r.report_data?.financial_summary?.connected_platforms?.join(', ') || 'SolvAI'}`,
+        subtitle: `Gemini \u00b7 ${(r.report_data?.financial_summary?.connected_platforms || []).map(platformLabel).join(' + ') || 'SolvAI'}`,
         type: r.report_type === 'RENTAL_CERTIFICATE' || r.report_type === 'RENTAL' ? 'Rental Certificate' : r.report_type === 'MORTGAGE_ASSESSMENT' ? 'Mortgage Assessment' : 'Solvency Assessment',
         status: r.status === 'COMPLETED' ? t('status.complete') : r.status === 'GENERATING' ? t('status.processing') : r.status === 'FAILED' ? 'Generation Failed' : t('status.pending'),
         failureReason: r.status === 'FAILED' ? (r.report_data?.error || 'Report generation failed') : null,
-        dataSource: r.report_data?.financial_summary?.connected_platforms?.[0] || 'Stripe',
+        dataSource: (r.report_data?.financial_summary?.connected_platforms || []).map(platformLabel).join(' + ') || '—',
         accuracy: r.report_data?.overall_score ?? null,
         hasDownload: r.status === 'COMPLETED' && !!r.document_uri,
         document_uri: r.document_uri,

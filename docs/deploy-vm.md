@@ -76,6 +76,14 @@ To update to the latest `main`, run the same command again: it pulls and rebuild
 
 - **PayPal webhook:** in the SolvAI Billing app (developer.paypal.com → Apps & Credentials → app → Webhooks), add `https://$DOMAIN/api/webhooks/paypal-billing` with the `BILLING.SUBSCRIPTION.*` events. Put its ID in `PAYPAL_WEBHOOK_ID` and redeploy. Payment return URLs need no setup: they come from `DOMAIN`.
 - **Stripe webhook** (if Stripe billing is used): `https://$DOMAIN/api/billing/webhook`.
+- **Demo account for judges:** registers the account through the API, connects the Stripe demo account and the PayPal sandbox, sets it to Pro and generates a first report:
+  ```bash
+  docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod exec \
+    -e DEMO_EMAIL=demo@yourdomain -e DEMO_PASSWORD='choose-one' \
+    -e STRIPE_DEMO_TEST_KEY=sk_test_... -e PAYPAL_SANDBOX_CLIENT_ID=... -e PAYPAL_SANDBOX_SECRET=... \
+    api python scripts/create_demo_account.py
+  ```
+  It is safe to run again later to refresh the data.
 - **Lender matching data** (optional): `docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod exec api python scripts/seed_lenders.py`.
 
 ## Operating it

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, CreditCard, AlertTriangle, X, Loader2 } from 'lucide-react';
-import { users, billing, auth } from '../api/client.js';
+import { users, billing, auth, solvencyReports, dataSources as dataSourcesApi } from '../api/client.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 
@@ -14,6 +14,7 @@ export default function AccountPage() {
 
  const [currentPlan, setCurrentPlan] = useState('Free');
  const [realPlan, setRealPlan] = useState(null);
+ const [usage, setUsage] = useState({});
  const [loading, setLoading] = useState(true);
 
  useEffect(() => {
@@ -23,6 +24,16 @@ export default function AccountPage() {
        const plan = subRes.data?.plan || 'free';
        setCurrentPlan(plan.charAt(0).toUpperCase() + plan.slice(1));
        setRealPlan(subRes.data);
+       const [reportsRes, sourcesRes] = await Promise.all([
+         solvencyReports.list().catch(() => ({ data: [] })),
+         dataSourcesApi.list().catch(() => ({ data: [] })),
+       ]);
+       const reports = Array.isArray(reportsRes.data) ? reportsRes.data : (reportsRes.data?.items ?? []);
+       const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+       setUsage({
+         reportsThisMonth: reports.filter((r) => new Date(r.created_at) >= monthStart).length,
+         sources: (Array.isArray(sourcesRes.data) ? sourcesRes.data : []).length,
+       });
      } catch (err) {
        console.error('Account fetch error:', err);
      } finally {
@@ -136,14 +147,7 @@ export default function AccountPage() {
  const [prefEmail, setPrefEmail] = useState(true);
 
  // Tooltip State
- const [showReportsTooltip, setShowReportsTooltip] = useState(false);
- const [showApiTooltip, setShowApiTooltip] = useState(false);
 
- const getUsageColor = (percentage) => {
- if (percentage < 70) return 'bg-[var(--brand-blue)]';
- if (percentage <= 90) return 'bg-[#f59e0b]';
- return 'bg-[#ef4444]';
- };
 
  // Text colors
  const textPrimary = "text-primary";
@@ -223,8 +227,8 @@ export default function AccountPage() {
 
  <div className={`flex items-center gap-0 text-sm ${textMuted}`}>
  {currentPlan === 'Pro' 
- ? '1,000 reports/mo · 10 data sources · Priority support' 
- : '100 reports/mo · 1 data source · Community support'}
+ ? 'Full AI narrative · PDF reports with QR verification · Unlimited rental certificates'
+ : 'Score and verified metrics · PDF unlock per report · 1 rental certificate'}
  </div>
 
  {currentPlan !== 'Pro' && (
@@ -241,46 +245,13 @@ export default function AccountPage() {
 
  <div className="mt-5 pt-5 border-t border-border">
  <div className="grid grid-cols-2 gap-6">
- <div>
- <div className="flex justify-between text-sm mb-1.5">
- <span className={textMuted}>Reports</span>
- <span className={textSecondary}>23/100</span>
+ <div className="flex justify-between text-sm">
+ <span className={textMuted}>Reports this month</span>
+ <span className={textPrimary}>{usage.reportsThisMonth ?? '—'}</span>
  </div>
- <div 
- className="h-1.5 bg-[var(--border-color)] rounded-full relative cursor-pointer"
- onMouseEnter={() => setShowReportsTooltip(true)}
- onMouseLeave={() => setShowReportsTooltip(false)}
- onClick={() => setShowReportsTooltip(!showReportsTooltip)}
- >
- <div className={`w-[23%] ${getUsageColor(23)} rounded-full h-full transition-colors`} />
- {showReportsTooltip && (
- <div className="absolute -top-8 left-[23%] -translate-x-1/2 bg-[var(--text-primary)] dark:bg-card text-white dark:text-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
- Exact numbers: 23 / 100
- <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0a2540] dark:border-t-white" />
- </div>
- )}
- </div>
- </div>
-
- <div>
- <div className="flex justify-between text-sm mb-1.5">
- <span className={textMuted}>API Calls</span>
- <span className={textSecondary}>1,240/10,000</span>
- </div>
- <div 
- className="h-1.5 bg-[var(--border-color)] rounded-full relative cursor-pointer"
- onMouseEnter={() => setShowApiTooltip(true)}
- onMouseLeave={() => setShowApiTooltip(false)}
- onClick={() => setShowApiTooltip(!showApiTooltip)}
- >
- <div className={`w-[12.4%] ${getUsageColor(12.4)} rounded-full h-full transition-colors`} />
- {showApiTooltip && (
- <div className="absolute -top-8 left-[12.4%] -translate-x-1/2 bg-[var(--text-primary)] dark:bg-card text-white dark:text-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
- Exact numbers: 1,240 / 10,000
- <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0a2540] dark:border-t-white" />
- </div>
- )}
- </div>
+ <div className="flex justify-between text-sm">
+ <span className={textMuted}>Connected data sources</span>
+ <span className={textPrimary}>{usage.sources ?? '—'}</span>
  </div>
  </div>
  </div>
@@ -301,19 +272,23 @@ export default function AccountPage() {
  <ul className="mt-6 space-y-3 flex-1">
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>100 reports/month</span>
+ <span className={`text-sm ${textMuted}`}>Solvency score and verified metrics</span>
  </li>
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>1 data source</span>
+ <span className={`text-sm ${textMuted}`}>AI narrative preview</span>
  </li>
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Community support</span>
+ <span className={`text-sm ${textMuted}`}>PDF unlock per report (€9)</span>
  </li>
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Basic analytics</span>
+ <span className={`text-sm ${textMuted}`}>1 rental certificate</span>
+ </li>
+ <li className="flex items-center gap-2.5">
+ <Check className="w-4 h-4 text-[#1a9e6e]" />
+ <span className={`text-sm ${textMuted}`}>Revenue &amp; cash-flow statement</span>
  </li>
  </ul>
 
@@ -329,31 +304,26 @@ export default function AccountPage() {
  <div className="bg-card border-2 border-[var(--brand-blue)] rounded-lg p-6 relative h-full flex flex-col">
  <p className={`text-lg font-semibold ${textPrimary}`}>{t('account.pro')}</p>
  <div className="mt-2">
- <span className={`text-3xl font-bold ${textPrimary}`}>€29</span>
+ <span className={`text-3xl font-bold ${textPrimary}`}>€19</span>
  <span className={`text-sm ${textSecondary} ml-1`}>/month</span>
  </div>
- <p className={`text-xs ${textSecondary} mt-1`}>prod_Um5HdQslaAVfSH</p>
 
  <ul className="mt-6 space-y-3 flex-1">
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>1,000 reports/month</span>
+ <span className={`text-sm ${textMuted}`}>Everything in Free</span>
  </li>
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>10 data sources</span>
+ <span className={`text-sm ${textMuted}`}>Full AI narrative and risk flags</span>
  </li>
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Priority support</span>
+ <span className={`text-sm ${textMuted}`}>Verifiable PDF reports with QR code</span>
  </li>
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Advanced analytics</span>
- </li>
- <li className="flex items-center gap-2.5">
- <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Custom branding</span>
+ <span className={`text-sm ${textMuted}`}>Unlimited rental certificates</span>
  </li>
  </ul>
 
@@ -378,31 +348,22 @@ export default function AccountPage() {
  <div className="bg-card border border-border rounded-lg p-6 flex flex-col">
  <p className={`text-lg font-semibold ${textPrimary}`}>{t('account.business')}</p>
  <div className="mt-2">
- <span className={`text-3xl font-bold ${textPrimary}`}>€99</span>
+ <span className={`text-3xl font-bold ${textPrimary}`}>€49</span>
  <span className={`text-sm ${textSecondary} ml-1`}>/month</span>
  </div>
- <p className={`text-xs ${textSecondary} mt-1`}>prod_Um5JyQcX6PpBnb</p>
 
  <ul className="mt-6 space-y-3 flex-1">
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Unlimited reports</span>
+ <span className={`text-sm ${textMuted}`}>Everything in Pro</span>
  </li>
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Unlimited data sources</span>
+ <span className={`text-sm ${textMuted}`}>Public API access with API keys</span>
  </li>
  <li className="flex items-center gap-2.5">
  <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Dedicated support + SLA</span>
- </li>
- <li className="flex items-center gap-2.5">
- <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>Custom integrations</span>
- </li>
- <li className="flex items-center gap-2.5">
- <Check className="w-4 h-4 text-[#1a9e6e]" />
- <span className={`text-sm ${textMuted}`}>SSO / SAML</span>
+ <span className={`text-sm ${textMuted}`}>Shareable verification links for lenders</span>
  </li>
  </ul>
 

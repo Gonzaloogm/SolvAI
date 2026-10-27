@@ -41,6 +41,17 @@ Banks score borrowers with explainable credit models that the borrower never get
 - **Lender matching.** Lender criteria are embedded with Gemini and searched with pgvector.
 - **SaaS foundations.** Freemium plans paid with Stripe or **PayPal Subscriptions**, per-report PDF unlocks, signed webhooks, API keys with a public `/v1` API, alerts, six languages and dark mode.
 
+## Screenshots
+
+The demo account below is the same one judges use: 12 months of Stripe test data plus PayPal sandbox payments.
+
+| | |
+|---|---|
+| ![Landing page](docs/images/landing.png) **Landing:** the solvency report a lender would build, for freelancers | ![Live analysis](docs/images/live-terminal.png) **Live analysis:** the agent pipeline streamed over WebSockets, including an auditor revision round |
+| ![Report detail](docs/images/report-detail.png) **Report:** a narrative that quotes the verified metrics | ![Verified metrics](docs/images/verified-metrics.png) **Verified metrics:** each factor with its threshold, explanation and real transaction IDs |
+| ![Data sources](docs/images/data-sources.png) **Data sources:** Stripe and PayPal connected, CSV bank statements | ![PayPal billing](docs/images/billing-paypal.png) **Billing:** Pro and Business paid with PayPal Subscriptions |
+| ![PDF report](docs/images/pdf-report.png) **PDF:** deterministic analytics and an appendix of cited payments | |
+
 ## Tech stack
 
 | Layer | Technology |

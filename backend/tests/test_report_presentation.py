@@ -46,3 +46,14 @@ def test_public_link_does_not_turn_missing_scores_into_zero():
 
     assert public["components"]["reputation_signals"] is None
     assert public["components"]["income_stability"] == 82
+
+
+def test_cover_shows_the_applicant_organisation():
+    text = _pdf_text(_report(organization_name="Demo Studio"))
+
+    assert "Demo Studio" in text and "Prepared by:" in text
+    assert "SolvAI Assessment Partner" not in text and "Confidential\n" not in text
+
+
+def test_cover_without_stored_organisation_says_so():
+    assert "Not specified" in _pdf_text(_report())

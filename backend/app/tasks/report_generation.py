@@ -198,6 +198,9 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                 raise ValueError("Orchestrator failed to produce a final report.")
                 
             report_data["financial_summary"] = financial_summary
+            # Shown on the PDF cover (stored so a later re-render shows the same names)
+            if org is not None:
+                report_data["organization_name"] = org.name
 
             # ── 6. Persist results and Upload to S3 ───────────────────────────────
             report.report_data = report_data

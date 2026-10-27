@@ -104,6 +104,9 @@ async def get_current_user(
         api_key = result.scalar_one_or_none()
         if not api_key or not pwd_context.verify(token, api_key.key_hash):
             raise credentials_exception
+        # A key stops working when the organisation leaves the Business plan
+        from app.core.plans import require_api_access  # noqa: PLC0415
+        await require_api_access(db, api_key.organization_id)
         
         user_id = str(api_key.user_id)
     else:

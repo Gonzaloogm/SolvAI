@@ -191,7 +191,7 @@ export default function SettingsPage() {
      setNewKeyName('');
      loadApiKeys();
    } catch (error) {
-     addToast("Failed to create API key", "error");
+     addToast(error.response?.data?.detail || "Failed to create API key", "error");
    } finally {
      setIsCreatingKey(false);
    }

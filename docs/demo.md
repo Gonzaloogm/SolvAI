@@ -41,6 +41,31 @@ Sandbox app requirements (developer.paypal.com → Apps & Credentials):
 - The app is linked to a **Spain/EUR business** sandbox account.
 - **Transaction search** is enabled under Features. After enabling it, the old cached token must expire or be revoked (`POST /v1/oauth2/token/terminate`) before new tokens carry the `reporting/search/read` scope.
 
+### Running it every day automatically (macOS)
+
+`backend/scripts/daily_paypal_seed.sh` creates 2–4 payments per run. To schedule it daily at 10:30 with launchd (if the Mac is asleep then, it runs on wake), save this as `~/Library/LaunchAgents/com.solvai.paypal-seed.plist`, adjusting the paths:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.solvai.paypal-seed</string>
+  <key>ProgramArguments</key>
+  <array><string>/Users/YOU/SolvAI/SolvAI/backend/scripts/daily_paypal_seed.sh</string></array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>30</integer></dict>
+  <key>StandardOutPath</key><string>/Users/YOU/SolvAI/SolvAI/logs/paypal-seed.log</string>
+  <key>StandardErrorPath</key><string>/Users/YOU/SolvAI/SolvAI/logs/paypal-seed.log</string>
+</dict>
+</plist>
+```
+
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.solvai.paypal-seed.plist   # enable
+launchctl bootout gui/$(id -u)/com.solvai.paypal-seed                                 # disable after the hackathon
+```
+
 ## Demo flow
 
 1. Register a fresh account.

@@ -8,6 +8,7 @@ import uuid
 from app.core.database import get_db
 from app.models.api_key import ApiKey
 from app.models.solvency_report import SolvencyReport
+from app.core.plans import require_api_access
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -32,6 +33,7 @@ async def get_api_key(request: Request, db: AsyncSession = Depends(get_db)) -> A
     
     for key in potential_keys:
         if pwd_context.verify(key_str, key.key_hash):
+            await require_api_access(db, key.organization_id)
             key.last_used_at = datetime.now(timezone.utc)
             await db.commit()
             return key

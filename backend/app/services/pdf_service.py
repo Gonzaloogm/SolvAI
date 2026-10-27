@@ -380,8 +380,9 @@ def generate_solvency_pdf(report: SolvencyReport) -> io.BytesIO:
     # ==========================================
 
     data_for_template = {
-        "applicant_name": find_key(rd, ['applicant_name', 'applicant_id'], 'Confidential'),
-        "organization_name": "SolvAI Assessment Partner",
+        # The applicant is the user's organisation; older reports did not store it
+        "applicant_name": rd.get('organization_name') or 'Not specified',
+        "organization_name": "SolvAI (automated assessment)",
         "overall_score": overall_score,
         "rating": rating,
         "narrative": narrative,

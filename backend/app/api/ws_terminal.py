@@ -26,9 +26,60 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+AUTH_TIMEOUT_SECONDS = 10
+
+
+async def _authorized(token: str, org_id: str, report_id: str | None) -> bool:
+    """The token's user must belong to org_id, and the report (if any) to that organisation."""
+    import uuid
+
+    from jose import JWTError, jwt
+    from sqlalchemy import select
+
+    from app.core.config import settings
+    from app.core.database import AsyncSessionLocal
+    from app.models.solvency_report import SolvencyReport
+    from app.models.user import User
+
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("token_type") != "access":
+            return False
+        user_id, org_uuid = uuid.UUID(payload["sub"]), uuid.UUID(org_id)
+        report_uuid = uuid.UUID(report_id) if report_id else None
+    except (JWTError, KeyError, ValueError):
+        return False
+
+    async with AsyncSessionLocal() as db:
+        user = (await db.execute(
+            select(User).where(User.id == user_id, User.is_deleted.is_(False))
+        )).scalar_one_or_none()
+        if user is None or user.organization_id != org_uuid:
+            return False
+        if report_uuid:
+            report = (await db.execute(
+                select(SolvencyReport).where(SolvencyReport.id == report_uuid)
+            )).scalar_one_or_none()
+            if report is None or report.organization_id != org_uuid:
+                return False
+    return True
+
+
 @router.websocket("/{org_id}")
 async def websocket_terminal(websocket: WebSocket, org_id: str, report_id: str | None = None):
     await manager.connect(websocket, org_id)
+
+    # First message must carry the access token (kept out of the URL and access logs)
+    try:
+        first = json.loads(await asyncio.wait_for(websocket.receive_text(), AUTH_TIMEOUT_SECONDS))
+        token = first.get("token") if isinstance(first, dict) else None
+    except (asyncio.TimeoutError, json.JSONDecodeError, WebSocketDisconnect):
+        token = None
+    if not token or not await _authorized(token, org_id, report_id):
+        logger.warning(f"Rejected unauthorised terminal connection for org {org_id}")
+        manager.disconnect(websocket, org_id)
+        await websocket.close(code=1008)
+        return
     
     # We create an asyncio Event to allow the background task to know when to stop 
     # attempting to send over the websocket, but continue graph execution.

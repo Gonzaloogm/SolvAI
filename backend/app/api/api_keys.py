@@ -10,6 +10,7 @@ from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.models.api_key import ApiKey
+from app.core.plans import require_api_access
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -41,6 +42,7 @@ async def create_api_key(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    await require_api_access(db, current_user.organization_id)
     raw_key = f"sk-solv-{secrets.token_hex(24)}"
     key_hash = pwd_context.hash(raw_key)
     key_prefix = raw_key[:12]

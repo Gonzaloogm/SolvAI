@@ -190,7 +190,7 @@
             <div class="meta-info">
                 <div>Date: <strong>{{ generated_at }}</strong></div>
                 <div>ID: <strong>{{ report_id[:8] }}</strong></div>
-                {% if data.applicant_name != 'Confidential' %}
+                {% if data.applicant_name and data.applicant_name != 'Not specified' %}
                 <div>Applicant: <strong>{{ data.applicant_name }}</strong></div>
                 {% endif %}
             </div>

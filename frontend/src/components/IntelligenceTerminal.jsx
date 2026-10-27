@@ -37,6 +37,8 @@ export default function IntelligenceTerminal({ reportId }) {
  wsRef.current = ws;
 
  ws.onopen = () => {
+ // Authenticate first; the server closes the socket otherwise
+ ws.send(JSON.stringify({ token: localStorage.getItem('solvai_token') }));
  if (isMounted) {
  setLogs([{ agent: 'system', status: 'info', message: 'Terminal connected. Awaiting telemetry...', payload: {}, at: Date.now() }]);
  }

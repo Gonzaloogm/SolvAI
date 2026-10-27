@@ -13,6 +13,7 @@ from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, Toke
 from app.schemas.promo_code import PromoValidateRequest, PromoValidateResponse
 from app.services import auth_service
 from app.services.email_service import send_welcome_email_async
+from app.schemas.user import UserResponse
 
 router = APIRouter()
 
@@ -174,7 +175,9 @@ async def change_password(
 
 @router.get(
     "/me",
+    response_model=UserResponse,
     summary="Get current user",
 )
 async def get_me(current_user = Depends(get_current_user)):
+    # Explicit schema: serialising the ORM object directly recursed through its relationships
     return current_user

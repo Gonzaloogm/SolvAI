@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../context/ToastContext.jsx';
 import { solvencyReports, billing } from '../api/client.js';
 import { API_BASE_URL } from '../config.js';
+import { platformLabel } from '../utils/platforms.js';
 
 const escapeHtml = (text) => String(text)
   .replace(/&/g, '&amp;')
@@ -477,13 +478,13 @@ export default function ReportDetailModal({ report, onClose }) {
 
   const isLocked = plan !== 'pro' && plan !== 'business' && !report._raw?.pdf_unlocked;
 
-  const modelName = report.subtitle?.split('·')[0]?.trim() || report.model || 'Gemini 2.5 Flash';
+  const modelName = report.subtitle?.split('·')[0]?.trim() || report.model || 'Gemini';
   const reportData = report._raw?.report_data || report.report_data || {};
   const failureReason = (report._raw?.status || report.status) === 'FAILED'
     ? (reportData.error || 'Report generation failed.')
     : null;
   const accuracy = report.accuracy ?? reportData.overall_score ?? reportData.score ?? null;
-  const dataSourceName = report.dataSource || reportData.financial_summary?.connected_platforms?.[0] || '—';
+  const dataSourceName = (reportData.financial_summary?.connected_platforms || []).map(platformLabel).join(' + ') || report.dataSource || '—';
   
   const createdDate = report.createdAt || report.created || report.created_at;
   const formattedDate = createdDate ? new Date(createdDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -515,7 +516,12 @@ export default function ReportDetailModal({ report, onClose }) {
     features.push({ label: 'Payment Integrity', value: reportData.reputation_signals.score });
   }
 
-  const explanationText = reportData.narrative || report.description || `Analysis of ${report.dataSource || 'connected data source'} using ${modelName}. Key drivers identified include revenue trends, risk exposure, and compliance metrics.`;
+  const rawStatus = report._raw?.status || report.status;
+  const explanationText = reportData.narrative || report.description || (
+    ['PENDING', 'GENERATING'].includes(rawStatus)
+      ? 'This report is still being generated. The narrative appears here as soon as the analysis finishes.'
+      : 'No narrative is available for this report.'
+  );
 
   const getMarkdown = () => {
     let md = `# ${title}\n\n`;

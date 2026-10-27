@@ -350,6 +350,31 @@ def build_orchestrator():
 # Instancia global del orquestador compilado
 orchestrator = build_orchestrator()
 
+def _step_message(node_name: str, update: dict) -> str:
+    """One readable line per pipeline step for the live terminal."""
+    if node_name == "data_quant":
+        q = update.get("quant_metrics") or {}
+        vol, trend = q.get("volatility") or {}, q.get("trend") or {}
+        conc, pi = q.get("client_concentration") or {}, q.get("payment_integrity") or {}
+        parts = [f"{q.get('months_analyzed', 0)} months analysed"]
+        if vol.get("cov_percent") is not None:
+            parts.append(f"income CoV {vol['cov_percent']}% ({vol['level']})")
+        if trend.get("direction"):
+            parts.append(f"trend {trend['direction']}")
+        if conc.get("hhi") is not None:
+            parts.append(f"client HHI {conc['hhi']:,} ({conc['level']})")
+        if pi.get("disputes") is not None:
+            parts.append(f"{pi['disputes']} disputes, {pi['refund_rate_percent']}% refunded")
+        return "Verified metrics: " + " · ".join(parts)
+    if node_name == "underwriter":
+        return "Underwriter drafted the report from 3 parallel Gemini samples (self-consistency)."
+    if node_name == "auditor":
+        if update.get("is_approved") or update.get("final_report"):
+            return "Auditor approved the draft: every figure matches the verified metrics."
+        return "Auditor sent the draft back for revision."
+    return f"Processing {node_name}..."
+
+
 async def run_orchestrator_stream(initial_state: AgentState):
     """
     Función generadora asíncrona que explota las capacidades de streaming de LangGraph.
@@ -359,32 +384,23 @@ async def run_orchestrator_stream(initial_state: AgentState):
     yield {
         "agent": "system",
         "status": "started",
-        "message": "Iniciando orquestación de agentes SolvAI...",
+        "message": "Starting the SolvAI agent pipeline...",
         "payload": {}
     }
-    
+
     last_state = initial_state
-    
+
     try:
         # astream yields (node_name, state_update)
         async for output in orchestrator.astream(initial_state):
             for node_name, state_update in output.items():
                 # Merge state update to keep track
                 last_state.update(state_update)
-                
-                message = f"Procesando en {node_name}..."
-                if node_name == "data_quant":
-                    message = "Cuantificando métricas financieras base..."
-                elif node_name == "underwriter":
-                    message = "Generando evaluación de riesgo (Self-Consistency)..."
-                elif node_name == "auditor":
-                    message = "Ejecutando revisión de cumplimiento y alucinaciones..."
-                    
                 yield {
                     "agent": node_name,
                     "status": "processing",
-                    "message": message,
-                    "payload": {} # Sending minimal payload for speed, could include diffs
+                    "message": _step_message(node_name, state_update),
+                    "payload": {}
                 }
     except Exception as e:
         logger.exception("Orchestrator failed")
@@ -402,7 +418,7 @@ async def run_orchestrator_stream(initial_state: AgentState):
     yield {
         "agent": "system",
         "status": "completed",
-        "message": f"Orquestación finalizada. Score calculado: {score}",
+        "message": f"Pipeline complete. Score: {score}",
         "payload": {
             "overall_score": score,
             "requires_human_review": last_state.get("requires_human_review", False),

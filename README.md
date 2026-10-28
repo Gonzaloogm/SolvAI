@@ -37,7 +37,7 @@ Banks score borrowers with explainable credit models that the borrower never get
 - **Lender-ready output.** A multi-page PDF (WeasyPrint) includes revenue trend, concentration and radar charts, plus a QR code that opens the copy SolvAI holds, so a lender can check the PDF against the original.
 - **More report types.** Rental certificates for tenants, mortgage assessments and a revenue & cash-flow statement built only from connected data (outflows come from uploaded bank statements).
 - **Sharing and verification.** Expiring public share links that a lender can open, or reach by scanning the QR code in the PDF.
-- **Score simulator.** A "what-if" tool that shows how changes in revenue, client mix or history would move the score.
+- **What-if simulator.** Starting from the connected data, sliders for revenue, income smoothness and top-client share recompute the verified metrics (volatility, trend, weak months, HHI, mortgage capacity) with the same rules as a report. Pure arithmetic: it never invents a score.
 - **SaaS foundations.** Freemium plans paid with Stripe or **PayPal Subscriptions**, per-report PDF unlocks, signed webhooks, API keys with a public `/v1` API, alerts, six languages and dark mode.
 
 ## Screenshots

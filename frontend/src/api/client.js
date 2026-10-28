@@ -228,7 +228,8 @@ export const apiKeys = {
 };
 
 export const simulate = {
-  score: (data) => apiClient.post('/simulate/score', data),
+  /** Verified metrics recomputed under hypothetical changes. POST /simulate/what-if */
+  whatIf: (levers) => apiClient.post('/simulate/what-if', levers),
 };
 
 export default apiClient;

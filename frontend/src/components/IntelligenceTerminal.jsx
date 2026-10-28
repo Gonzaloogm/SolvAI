@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { users } from '../api/client.js';
 import { wsBaseUrl } from '../config.js';
 
 export default function IntelligenceTerminal({ reportId }) {
+ const { t } = useTranslation();
  const [logs, setLogs] = useState([]);
  const [finalScore, setFinalScore] = useState(null);
  const [error, setError] = useState(null);
@@ -98,10 +100,10 @@ export default function IntelligenceTerminal({ reportId }) {
  return (
  <div className="intelligence-terminal">
  <div className="terminal-header">
- <div className="terminal-title">Intelligence Terminal</div>
+ <div className="terminal-title">{t('terminal.title')}</div>
  <div className="terminal-status">
  <div className={`status-dot ${error ? 'error' : 'active'}`}></div>
- {error ? 'Error' : 'Live Telemetry'}
+ {error ? t('terminal.error') : t('terminal.live')}
  </div>
  </div>
  

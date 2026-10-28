@@ -198,7 +198,7 @@ export default function AccountPage() {
  className="mt-2 w-full bg-[#ffc439] hover:bg-[#f2ba36] text-[#003087] rounded-lg px-4 py-2.5 text-sm font-semibold text-center transition-colors flex items-center justify-center gap-2"
  >
  {upgrading === `paypal-${plan}` && <Loader2 className="w-4 h-4 animate-spin" />}
- Pay with PayPal
+ {t('account.payWithPayPal')}
  </button>
  ) : null
  );

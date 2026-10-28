@@ -1,67 +1,52 @@
+"""What-if simulator: the user's verified metrics recomputed under hypothetical changes.
 
-import google.generativeai as genai
+It replaces a simulator that asked the model to invent a score from typed-in
+numbers. This one starts from the connected data and only does arithmetic.
+"""
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
-from loguru import logger
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.database import get_db
 from app.core.security import get_current_user
+from app.models.financial_data_source import FinancialDataSource
 from app.models.user import User
-from app.utils.gemini import response_json
+from app.services.quant_service import simulate_scenario
 
 router = APIRouter()
 
 
-@router.post("/simulate/score")
-async def simulate_score(
-    payload: dict,
-    current_user: User = Depends(get_current_user)
-):
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(settings.GEMINI_LIGHT_MODEL)
+class WhatIfRequest(BaseModel):
+    revenue_change_percent: float = Field(0.0, ge=-50, le=50)
+    smoothing_percent: float = Field(0.0, ge=0, le=100)
+    top_client_percent: float | None = Field(None, ge=5, le=100)
 
-    # Extract input
-    monthly_revenue = payload.get("monthly_revenue", 3500)
-    revenue_consistency = payload.get("revenue_consistency", "medium")
-    num_clients = payload.get("num_clients", 1)
-    months_history = payload.get("months_history", 12)
-    top_client_pct = payload.get("top_client_pct", 30.0)
 
-    prompt = f"""
-    You are SolvAI's scoring engine. Given these
-    financial parameters, calculate a solvency score.
+@router.post("/simulate/what-if", summary="Recompute the verified metrics under hypothetical changes")
+async def what_if(
+    body: WhatIfRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    from app.tasks.report_generation import _build_financial_summary
 
-    Parameters:
-    - Monthly revenue: €{monthly_revenue}
-    - Revenue consistency: {revenue_consistency}
-    - Number of clients: {num_clients}
-    - Months of history: {months_history}
-    - Top client revenue share: {top_client_pct}%
-
-    Return ONLY valid JSON, no other text:
-    {{
-      "overall_score": <0-100 integer>,
-      "rating": "<APPROVE|REVIEW|DECLINE>",
-      "income_stability": <0-100 integer>,
-      "growth_trend": <0-100 integer>,
-      "client_concentration": <0-100 integer>,
-      "key_insight": "<one sentence explaining the main factor driving this score>",
-      "top_recommendation": "<one actionable tip to improve the score>"
-    }}
-    """
-
-    try:
-        response = await model.generate_content_async(
-            prompt,
-            generation_config={"response_mime_type": "application/json"},
+    sources = (await db.execute(
+        select(FinancialDataSource).where(
+            FinancialDataSource.user_id == current_user.id,
+            FinancialDataSource.is_deleted.is_(False),
+            FinancialDataSource.status == "CONNECTED",
         )
-        result = response_json(response)
-        if not isinstance(result.get("overall_score"), (int, float)):
-            raise ValueError(f"overall_score missing or non-numeric: {result.get('overall_score')!r}")
-        return result
-    except Exception as e:
-        # Never return a made-up score: surface the failure to the UI
-        logger.error(f"Score simulation failed: {e}")
-        raise HTTPException(
-            status_code=502,
-            detail="The AI scoring engine is unavailable right now. Please try again in a moment.",
-        )
+    )).scalars().all()
+    if not sources:
+        raise HTTPException(status_code=400, detail="Connect a data source to simulate changes to your own figures.")
+
+    # The summary builder is synchronous (legacy sources may call Stripe)
+    summary = await asyncio.get_running_loop().run_in_executor(None, _build_financial_summary, sources)
+    if not summary.get("monthly_revenue_series"):
+        raise HTTPException(status_code=400, detail="Your connected sources have no revenue history yet.")
+
+    result = simulate_scenario(summary, body.revenue_change_percent, body.smoothing_percent, body.top_client_percent)
+    return {**result, "platforms": summary.get("connected_platforms", [])}

@@ -84,7 +84,7 @@ Every adapter returns the same metrics shape (`avg_monthly`, `monthly_revenue`, 
 ```
 backend/
 ├── app/
-│   ├── api/          # FastAPI routers, one per domain (auth, data_sources, solvency_reports, billing, verify, …)
+│   ├── api/          # FastAPI routers, one per domain (auth, data_sources, solvency_reports, billing, public_reports, …)
 │   ├── core/         # settings, async DB session, security (JWT, bcrypt, Fernet)
 │   ├── models/       # SQLAlchemy 2.0 models
 │   ├── schemas/      # Pydantic request/response models
@@ -105,7 +105,7 @@ frontend/src/
 ├── components/       # shared UI (report modal, gauge, terminal, sidebar, …)
 ├── context/          # theme, toasts, report-generation polling
 ├── i18n/             # en, es, de, fr, it, pt
-└── pages/            # routed pages (dashboard, reports, data sources, verify portal, …)
+└── pages/            # routed pages (dashboard, reports, data sources, public report, …)
 ```
 
 ## Security model

@@ -30,6 +30,11 @@ MIN_MONTHS_FOR_TREND = 3
 SHORT_HISTORY_MONTHS = 6
 SHORT_SOURCE_DAYS = 90          # a source with less history is reported as-is, never annualised
 
+# Mortgage capacity: usual EU lending rules of thumb, applied to the verified average income
+MORTGAGE_INCOME_MULTIPLE = 4.5
+MORTGAGE_MAX_DTI = 0.33
+MORTGAGE_DOWNPAYMENT_RATIO = 0.20
+
 MAX_STORED_TRANSACTIONS = 500   # per source, most recent first
 REFS_PER_FACTOR = 4
 
@@ -320,6 +325,32 @@ def compute_revenue_metrics(summary: dict[str, Any], today: date | None = None) 
         "source_breakdown": summary.get("source_breakdown") or [],
         "evidence": evidence,
         "data_quality_notes": data_quality,
+    }
+
+
+def mortgage_capacity(metrics: dict[str, Any]) -> dict[str, Any]:
+    """Mortgage figures from the verified average monthly revenue, with the rules used."""
+    monthly = float(metrics.get("average_monthly_revenue") or 0.0)
+    annual = monthly * 12
+    max_mortgage = annual * MORTGAGE_INCOME_MULTIPLE
+    return {
+        "avg_annual_income": round(annual, 2),
+        "estimated_max_mortgage": round(max_mortgage, 2),
+        "estimated_monthly_payment_capacity": round(monthly * MORTGAGE_MAX_DTI, 2),
+        "debt_to_income_ratio": f"{MORTGAGE_MAX_DTI:.0%}",
+        "downpayment_amount": round(max_mortgage * MORTGAGE_DOWNPAYMENT_RATIO, 2),
+        "downpayment_recommendation": f"{MORTGAGE_DOWNPAYMENT_RATIO:.0%} (€{max_mortgage * MORTGAGE_DOWNPAYMENT_RATIO:,.2f})",
+        "rules": {
+            "income_multiple": MORTGAGE_INCOME_MULTIPLE,
+            "max_debt_to_income": MORTGAGE_MAX_DTI,
+            "downpayment_ratio": MORTGAGE_DOWNPAYMENT_RATIO,
+        },
+        "explanation": (
+            f"Annual income is the verified average monthly revenue × 12 (€{annual:,.2f}). "
+            f"Maximum mortgage = annual income × {MORTGAGE_INCOME_MULTIPLE}; monthly payment capacity = "
+            f"{MORTGAGE_MAX_DTI:.0%} of monthly income; recommended downpayment = "
+            f"{MORTGAGE_DOWNPAYMENT_RATIO:.0%} of the maximum mortgage."
+        ),
     }
 
 

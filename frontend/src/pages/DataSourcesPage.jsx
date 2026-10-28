@@ -14,6 +14,7 @@ import {
  FileUp,
  Loader2,
  AlertTriangle,
+ Sparkles,
  X
 } from 'lucide-react';
 
@@ -39,6 +40,9 @@ export default function DataSourcesPage() {
  const [disconnectModal, setDisconnectModal] = useState(null);
  const [isConnecting, setIsConnecting] = useState(false);
  const [loading, setLoading] = useState(true);
+ const [demoAvailable, setDemoAvailable] = useState(false);
+ const [demoConnecting, setDemoConnecting] = useState(false);
+ const [refreshKey, setRefreshKey] = useState(0);
 
  const [csvFile, setCsvFile] = useState(null);
  const [uploadPreview, setUploadPreview] = useState(null);
@@ -89,6 +93,7 @@ export default function DataSourcesPage() {
            badge,
            lastSync: s.created_at ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(s.created_at)) : '—',
            records: (s.records_count ?? 0).toLocaleString(),
+           isDemo: Boolean(s.config?.demo),
            isSyncing: false,
          };
        });
@@ -102,6 +107,7 @@ export default function DataSourcesPage() {
          console.error("Failed to fetch available integrations", e);
        }
        
+       setDemoAvailable(Boolean(dynamicAvailability.demo));
        const connectedNames = mapped.map(c => c.name.toLowerCase());
        setAvailable(initialAvailableIntegrations.map(a => {
          let isAvail = a.available;
@@ -117,7 +123,7 @@ export default function DataSourcesPage() {
      }
     };
     fetchData();
-  }, [t]);
+  }, [t, refreshKey]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -289,6 +295,20 @@ export default function DataSourcesPage() {
    }
  };
 
+ const handleConnectDemo = async () => {
+ setDemoConnecting(true);
+ try {
+ const res = await dataSourcesApi.connectDemo();
+ addToast(t('dataSources.demo.done'), 'success');
+ (res.data?.warnings || []).forEach(w => addToast(w, 'info'));
+ setRefreshKey(k => k + 1);
+ } catch (err) {
+ addToast(err.response?.data?.detail || 'Could not connect the demo data', 'error');
+ } finally {
+ setDemoConnecting(false);
+ }
+ };
+
  if (loading) {
  return (
  <div className="page-enter flex items-center justify-center" style={{minHeight: '60vh'}}>
@@ -315,6 +335,27 @@ export default function DataSourcesPage() {
  {t('dataSources.connect')}
  </button>
  </div>
+
+ {/* DEMO DATA */}
+ {demoAvailable && !connected.some(c => c.isDemo) && (
+ <div className="mb-6 bg-card border border-border rounded-lg p-5 flex items-center gap-4">
+ <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[var(--brand-blue)] text-white shrink-0">
+ <Sparkles className="w-5 h-5" />
+ </div>
+ <div className="flex-1">
+ <p className="text-sm font-semibold text-primary">{t('dataSources.demo.title')}</p>
+ <p className="text-sm text-muted mt-0.5">{t('dataSources.demo.body')}</p>
+ </div>
+ <button
+ onClick={handleConnectDemo}
+ disabled={demoConnecting}
+ className="bg-[var(--brand-blue)] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[var(--brand-blue-hover)] flex items-center gap-2 transition-colors disabled:opacity-60 shrink-0"
+ >
+ {demoConnecting && <Loader2 className="w-4 h-4 animate-spin" />}
+ {demoConnecting ? t('dataSources.demo.connecting') : t('dataSources.demo.button')}
+ </button>
+ </div>
+ )}
 
  {/* CONNECTED SOURCES */}
  <div className="grid grid-cols-2 gap-4">
@@ -344,6 +385,11 @@ export default function DataSourcesPage() {
  <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#f0f2f5] text-muted">
  {source.badge}
  </span>
+ {source.isDemo && (
+ <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#fff4e5] text-[#b25e09]">
+ {t('dataSources.demo.badge')}
+ </span>
+ )}
  </div>
 
  {/* Status row */}

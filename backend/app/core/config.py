@@ -85,6 +85,13 @@ class Settings(BaseSettings):
     PAYPAL_BUSINESS_PLAN_ID: str = ""
     PAYPAL_WEBHOOK_ID: str = ""
 
+    # ── Demo data ─────────────────────────────────────────────────────────────
+    # Test-mode accounts any signed-in user can connect with one click ("Try with
+    # demo data"). Real Stripe test charges and PayPal sandbox payments, never generated.
+    DEMO_STRIPE_TEST_KEY: str = ""
+    DEMO_PAYPAL_CLIENT_ID: str = ""
+    DEMO_PAYPAL_SECRET: str = ""
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

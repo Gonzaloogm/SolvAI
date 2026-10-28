@@ -62,7 +62,7 @@ def _sanitize_report_data(report: SolvencyReport) -> dict:
         "rating": str(rating).upper(),
         "generated_on": report.created_at.isoformat() if report.created_at else None,
         "valid_until": report.share_expires_at.isoformat() if report.share_expires_at else None,
-        "verified_by": "SolvAI AI Engine",
+        "verified_by": "SolvAI",
         "data_sources": data_sources,
         "components": components,
         "risk_level": risk_level,

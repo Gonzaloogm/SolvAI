@@ -26,7 +26,7 @@
 
 Banks score borrowers with explainable credit models that the borrower never gets to see. Freelancers and microbusinesses get a "no" with no reason attached. Their income is irregular, comes from a handful of clients and lives in payment platforms rather than in a payslip.
 
-**SolvAI gives them the report a lender would build, before they apply.** They connect their Stripe or PayPal account (or upload a bank statement), and a multi-agent AI pipeline produces a solvency report. Every score, risk flag and recommendation in it is traced back to the underlying transactions. The report can be downloaded as a verifiable PDF or shared with a lender through a tracked, consent-based link.
+**SolvAI gives them the report a lender would build, before they apply.** They connect their Stripe or PayPal account (or upload a bank statement), and a multi-agent AI pipeline produces a solvency report. Every score, risk flag and recommendation in it is traced back to the underlying transactions. The report can be downloaded as a verifiable PDF or shared with a lender through an expiring link.
 
 ## Features
 
@@ -34,11 +34,10 @@ Banks score borrowers with explainable credit models that the borrower never get
 - **Explainable scoring.** Each report covers income stability, growth trend, seasonality, client concentration and reputation signals. The AI scores are grounded on deterministic metrics shown alongside them, each with its value, threshold and plain-language explanation. For each factor it gives a score, a plain-language explanation, what it means to a lender, and references to the transactions behind it.
 - **Multi-agent pipeline.** A [LangGraph](https://github.com/langchain-ai/langgraph) graph runs three steps. A deterministic quant step computes the verified metrics: income volatility (coefficient of variation), revenue trend (least-squares regression with R²), weak months and client concentration (Herfindahl-Hirschman Index). A Gemini underwriter runs as three parallel self-consistency samples. A temperature-0 auditor sends weak drafts back for revision.
 - **Live reasoning view.** Pipeline progress is streamed over Redis pub/sub and WebSockets to an in-app "Intelligence Terminal".
-- **Lender-ready output.** A multi-page PDF (WeasyPrint) includes revenue trend, concentration and radar charts, plus a QR code that verifies the report's authenticity.
+- **Lender-ready output.** A multi-page PDF (WeasyPrint) includes revenue trend, concentration and radar charts, plus a QR code that opens the copy SolvAI holds, so a lender can check the PDF against the original.
 - **More report types.** Rental certificates for tenants, mortgage assessments and a revenue & cash-flow statement built only from connected data (outflows come from uploaded bank statements).
-- **Sharing and verification.** Expiring public share links, plus a lender verification portal with an authorize-and-track flow.
+- **Sharing and verification.** Expiring public share links that a lender can open, or reach by scanning the QR code in the PDF.
 - **Score simulator.** A "what-if" tool that shows how changes in revenue, client mix or history would move the score.
-- **Lender matching.** Lender criteria are embedded with Gemini and searched with pgvector.
 - **SaaS foundations.** Freemium plans paid with Stripe or **PayPal Subscriptions**, per-report PDF unlocks, signed webhooks, API keys with a public `/v1` API, alerts, six languages and dark mode.
 
 ## Screenshots
@@ -59,7 +58,7 @@ The demo account below is the same one judges use: 12 months of Stripe test data
 | Frontend | React 18, Vite 5, React Router, Tailwind CSS 4, Recharts, i18next |
 | API | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async), Alembic |
 | Async work | Celery, Redis (broker and pub/sub), WebSockets |
-| AI | Google Gemini 2.5 Flash and 3.5 Flash-Lite (configurable per agent; runs on the free tier), LangGraph, pgvector embeddings |
+| AI | Google Gemini 2.5 Flash and 3.5 Flash-Lite (configurable per agent; runs on the free tier), LangGraph |
 | Documents | WeasyPrint, Jinja2, matplotlib, QR codes |
 | Payments and data | Stripe, PayPal REST APIs, Xero, Belvo |
 | Infrastructure | Google Cloud Run, Cloud SQL (PostgreSQL 16), Memorystore, Secret Manager, Cloud Storage, Cloud Build, Docker |

@@ -177,5 +177,11 @@
   "score.stable": "Estável",
   "score.generateNew": "Gere um novo relatório para atualizar sua pontuação",
   "score.trackEvolution": "Gere relatórios mensais para acompanhar sua evolução",
-  "score.noHistory": "Nenhum histórico de pontuação ainda"
+  "score.noHistory": "Nenhum histórico de pontuação ainda",
+  "dataSources.demo.title": "Não tem uma conta Stripe ou PayPal à mão?",
+  "dataSources.demo.body": "Ligue as contas de demonstração da SolvAI: 12 meses de pagamentos Stripe em modo de teste e pagamentos do sandbox PayPal, lidos pelas APIs reais. Nada é gerado.",
+  "dataSources.demo.button": "Experimentar com dados de demo",
+  "dataSources.demo.connecting": "A ligar dados de demo…",
+  "dataSources.demo.done": "Dados de demo ligados",
+  "dataSources.demo.badge": "Dados de demo"
 }

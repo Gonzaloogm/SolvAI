@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph, END
 import google.generativeai as genai
 
 from app.core.config import settings
-from app.services.quant_service import compute_revenue_metrics
+from app.services.quant_service import compute_revenue_metrics, mortgage_capacity
 
 class AgentState(TypedDict):
     transactions: List[Dict[str, Any]]
@@ -49,7 +49,10 @@ Quant Metrics are computed deterministically from the user's transactions. They 
 
 def data_quant_node(state: AgentState) -> AgentState:
     logger.info("Executing Data Quant Agent...")
-    return {"quant_metrics": compute_revenue_metrics(state.get("financial_summary", {}))}
+    metrics = compute_revenue_metrics(state.get("financial_summary", {}))
+    if state.get("report_type") == "MORTGAGE_ASSESSMENT":
+        metrics["mortgage_capacity"] = mortgage_capacity(metrics)
+    return {"quant_metrics": metrics}
 
 import asyncio
 
@@ -79,19 +82,21 @@ Analyze this freelancer's financial data for mortgage qualification purposes.
 Lenders assess freelancers differently from employees. Focus on:
 1. Income stability over 24 months (if available) or trend projection from 12 months
 2. Average annual income (monthly × 12)
-3. Maximum mortgage estimate (annual income × 4.5, standard EU multiplier)
+3. Maximum mortgage estimate (given in mortgage_capacity)
 4. Income trend: growing/stable/declining
 5. Income volatility: lenders prefer CoV < 25%
 6. Self-employment duration signals (from data age)
 7. Debt service capacity: can income support a mortgage payment?
-8. Estimated monthly payment capacity based on a 33% debt-to-income (DTI) limit.
-9. Recommended downpayment percentage (e.g. 20% for freelancers) and absolute amount based on max mortgage.
+8. Monthly payment capacity at a 33% debt-to-income (DTI) limit (given in mortgage_capacity).
+9. Recommended downpayment (given in mortgage_capacity).
 10. Industry stability and specific risk mitigations.
 
 Financial Summary: {json.dumps(_prompt_summary(state))}
 Quant Metrics: {json.dumps(state.get("quant_metrics", {}))}
 {QUANT_GROUNDING}
 Use volatility.cov_percent from Quant Metrics as cov_percentage.
+Copy avg_annual_income, estimated_max_mortgage, estimated_monthly_payment_capacity, debt_to_income_ratio
+and downpayment_recommendation exactly from mortgage_capacity in Quant Metrics; never compute them yourself.
 Previous Auditor Feedback: {state.get("auditor_feedback", "None. This is the first draft.")}
 
 Return ONLY valid JSON:

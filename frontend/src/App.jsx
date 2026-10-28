@@ -31,9 +31,6 @@ import ApiDocs from './pages/ApiDocs.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import Privacy from './pages/Privacy.jsx';
 import Terms from './pages/Terms.jsx';
-import VerifyPortal from './pages/verify/VerifyPortal.jsx';
-import VerifyAuthorize from './pages/verify/VerifyAuthorize.jsx';
-import VerifyTrack from './pages/verify/VerifyTrack.jsx';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 /* ── Utility ───────────────────────────────────────────────────────────────── */
@@ -221,9 +218,6 @@ export default function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/r/:token" element={<PublicReport />} />
-            <Route path="/verify" element={<VerifyPortal />} />
-            <Route path="/verify/authorize/:token" element={<VerifyAuthorize />} />
-            <Route path="/verify/track/:id" element={<VerifyTrack />} />
             <Route path="/*" element={
               <ProtectedRoute>
                 <AppLayout />

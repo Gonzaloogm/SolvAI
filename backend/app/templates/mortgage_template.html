@@ -227,6 +227,9 @@
                 <div class="metric-value">{{ report_data.downpayment_recommendation|default('N/A') }}</div>
             </div>
         </div>
+        {% if report_data.quant_metrics and report_data.quant_metrics.mortgage_capacity %}
+        <p style="font-size: 11px; color: #64748b; margin-top: 8px;">How these figures are calculated: {{ report_data.quant_metrics.mortgage_capacity.explanation }}</p>
+        {% endif %}
 
         <h2 class="section-title">Income & Stability Profile</h2>
         <div class="grid">

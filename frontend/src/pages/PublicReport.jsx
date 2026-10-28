@@ -88,7 +88,7 @@ export default function PublicReport() {
         <div style={{ background: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: 10, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
           <span style={{ fontSize: 18 }}>✓</span>
           <div>
-            <div style={{ fontWeight: 600, color: '#065f46', fontSize: 14 }}>Verified Document</div>
+            <div style={{ fontWeight: 600, color: '#065f46', fontSize: 14 }}>Original report on file at SolvAI</div>
             <div style={{ color: '#047857', fontSize: 13 }}>Generated on {generatedDate} · Valid until {expiryDate}</div>
           </div>
         </div>
@@ -180,10 +180,10 @@ export default function PublicReport() {
         {/* Tamper disclaimer */}
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '16px 20px', marginBottom: 24 }}>
           <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: '#991b1b', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>🔐</span> Cryptographically Verified Document
+            <span>🔎</span> Checking a PDF or printed copy
           </h4>
           <p style={{ margin: 0, fontSize: 13, color: '#991b1b', lineHeight: 1.5 }}>
-            This report is digitally signed and mathematically verified by SolvAI. <strong>Any modification, physical or digital, immediately invalidates the Verification ID.</strong> Never accept a printed version without scanning the QR code above to confirm authenticity on the official SolvAI platform.
+            This page shows the report exactly as SolvAI stored it when it was generated. <strong>Compare the score, the figures and the Verification ID with the copy you received: if anything differs, that copy was altered.</strong> The QR code on the PDF always leads back to this page.
           </p>
         </div>
         
@@ -194,10 +194,10 @@ export default function PublicReport() {
           </summary>
           <div style={{ marginTop: 12, fontSize: 14, color: '#4b5563', lineHeight: 1.6 }}>
             <p style={{ marginBottom: 8 }}>
-              SolvAI is an AI-powered financial verification platform that connects directly to banking and accounting software. 
+              SolvAI builds solvency reports for freelancers and small businesses from the payments they actually received.
             </p>
             <p style={{ margin: 0 }}>
-              Instead of relying on self-reported PDFs or spreadsheets which can be easily manipulated, SolvAI analyzes raw transaction data directly from the source to generate an immutable, verified assessment of financial health.
+              It reads transactions from the applicant&apos;s connected payment accounts (such as Stripe and PayPal) or uploaded bank statements. Every metric in the report is computed from those transactions.
             </p>
           </div>
         </details>
@@ -207,14 +207,11 @@ export default function PublicReport() {
           <a href="/register" style={{ background: '#6366f1', color: 'white', padding: '12px 28px', borderRadius: 8, textDecoration: 'none', fontSize: 15, fontWeight: 600, display: 'inline-block' }}>
             Request your own SolvAI report →
           </a>
-          
-          <a href={`mailto:fraud@solvai.app?subject=Verification%20Request%20-%20ID%3A%20${data.verification_id}`} style={{ color: '#6b7280', fontSize: 13, textDecoration: 'underline' }}>
-            Flag as suspicious or request manual verification
-          </a>
+
         </div>
         
         <footer style={{ textAlign: 'center', padding: '16px 0 40px', color: '#9ca3af', fontSize: 12 }}>
-          Powered by SolvAI — AI Financial Assessment · solvai.app
+          Powered by SolvAI — AI Financial Assessment
         </footer>
       </main>
     </div>

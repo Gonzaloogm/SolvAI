@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from app.core.config import settings
-from app.api import auth, data_sources, lender_matching, organizations, solvency_reports, users, webhooks, ws_terminal, billing, admin, public_reports, alerts, api_keys, public_api, simulate, reports, verify
+from app.api import auth, data_sources, organizations, solvency_reports, users, webhooks, ws_terminal, billing, admin, public_reports, alerts, api_keys, public_api, simulate, reports
 
 # ── Loguru configuration ──────────────────────────────────────────────────────
 # Remove default handler and add a clean one
@@ -54,7 +54,7 @@ app = FastAPI(
     title="SolvAI API",
     version="0.1.0",
     description=(
-        "AI-powered solvency reporting & lender matching platform for EU/UK freelancers."
+        "AI-powered solvency reporting platform for EU/UK freelancers."
     ),
     docs_url="/docs",
     redoc_url="/redoc",
@@ -77,7 +77,6 @@ app.include_router(organizations.router, prefix="/organizations", tags=["Organiz
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(data_sources.router, prefix="/data-sources", tags=["Data Sources"])
 app.include_router(solvency_reports.router, prefix="/solvency-reports", tags=["Solvency Reports"])
-app.include_router(lender_matching.router, prefix="/lender-matching", tags=["Lender Matching"])
 app.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
 app.include_router(billing.router, prefix="/billing", tags=["Billing"])
 app.include_router(ws_terminal.router, prefix="/ws/terminal", tags=["WebSockets Terminal"])
@@ -88,7 +87,6 @@ app.include_router(api_keys.router, prefix="/api-keys", tags=["API Keys"])
 app.include_router(public_api.router, prefix="/v1", tags=["Public API"])
 app.include_router(simulate.router, tags=["Score Simulator"])
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
-app.include_router(verify.router, prefix="/verify", tags=["Verify"])
 
 # ── Lifecycle events ──────────────────────────────────────────────────────────
 @app.on_event("startup")

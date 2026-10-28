@@ -337,7 +337,7 @@ export default function DataSourcesPage() {
  </div>
 
  {/* DEMO DATA */}
- {demoAvailable && !connected.some(c => c.isDemo) && (
+ {demoAvailable && !connected.some(c => c.isDemo || c.name === 'Stripe' || c.name === 'PayPal') && (
  <div className="mb-6 bg-card border border-border rounded-lg p-5 flex items-center gap-4">
  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[var(--brand-blue)] text-white shrink-0">
  <Sparkles className="w-5 h-5" />
@@ -405,11 +405,11 @@ export default function DataSourcesPage() {
  {/* Info grid */}
  <div className="grid grid-cols-2 gap-4 mt-4">
  <div>
- <p className="text-xs text-muted">Last sync</p>
+ <p className="text-xs text-muted">{t('dataSources.lastSync')}</p>
  <p className="text-sm text-primary">{source.lastSync}</p>
  </div>
  <div>
- <p className="text-xs text-muted">Records</p>
+ <p className="text-xs text-muted">{t('dataSources.records')}</p>
  <p className="text-sm text-primary">{source.records}</p>
  </div>
  </div>

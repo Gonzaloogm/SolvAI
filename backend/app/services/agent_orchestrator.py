@@ -25,8 +25,8 @@ class ReportGenerationError(Exception):
 
 
 def _prompt_summary(state: AgentState) -> dict:
-    """Financial summary without the transaction ledger, which only feeds the evidence."""
-    return {k: v for k, v in state.get("financial_summary", {}).items() if k != "transactions"}
+    """Financial summary without the ledgers (transactions, per-client totals), which only feed the metrics."""
+    return {k: v for k, v in state.get("financial_summary", {}).items() if k not in ("transactions", "client_revenue")}
 
 
 QUANT_GROUNDING = """

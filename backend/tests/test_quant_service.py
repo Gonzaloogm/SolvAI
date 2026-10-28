@@ -213,3 +213,51 @@ def test_mortgage_capacity_is_arithmetic_on_verified_income():
     assert m["debt_to_income_ratio"] == "33%"
     assert m["downpayment_amount"] == 64800.0
     assert m["downpayment_recommendation"] == "20% (€64,800.00)"
+
+
+def _what_if_summary():
+    revenue = [5000, 7000, 4000, 8000, 6000, 6000]
+    return {
+        "monthly_revenue_series": [{"month": f"2026-0{i + 1}", "total": v} for i, v in enumerate(revenue)],
+        "client_revenue": [6000, 3000, 1000],
+        "client_concentration": {"hhi": 4600, "top_client_percent": 60.0, "top_3_clients_percent": 100.0,
+                                 "distinct_clients": 3},
+    }
+
+
+def test_what_if_with_no_changes_matches_the_baseline():
+    from datetime import date
+    from app.services.quant_service import simulate_scenario
+
+    r = simulate_scenario(_what_if_summary(), today=date(2026, 8, 15))
+    assert r["scenario"] == r["baseline"]
+
+
+def test_what_if_levers_move_only_what_they_should():
+    from datetime import date
+    from app.services.quant_service import simulate_scenario
+
+    today = date(2026, 8, 15)
+    grow = simulate_scenario(_what_if_summary(), revenue_change_percent=10, today=today)
+    assert grow["scenario"]["average_monthly_revenue"] == round(grow["baseline"]["average_monthly_revenue"] * 1.1, 2)
+    assert grow["scenario"]["volatility"]["cov_percent"] == grow["baseline"]["volatility"]["cov_percent"]
+
+    smooth = simulate_scenario(_what_if_summary(), smoothing_percent=100, today=today)
+    assert smooth["scenario"]["volatility"]["cov_percent"] < smooth["baseline"]["volatility"]["cov_percent"]
+    assert smooth["scenario"]["average_monthly_revenue"] == smooth["baseline"]["average_monthly_revenue"]
+    # Steadier income keeps its growth: the slope is unchanged, only the fit improves
+    assert smooth["scenario"]["trend"]["slope_percent_per_month"] == smooth["baseline"]["trend"]["slope_percent_per_month"]
+    assert smooth["scenario"]["trend"]["r_squared"] == 1.0
+
+    spread = simulate_scenario(_what_if_summary(), top_client_percent=40, today=today)
+    conc = spread["scenario"]["client_concentration"]
+    assert conc["top_client_percent"] == 40.0
+    assert conc["hhi"] < spread["baseline"]["client_concentration"]["hhi"]
+
+
+def test_what_if_top_client_never_overtaken_and_floored_at_even_split():
+    from datetime import date
+    from app.services.quant_service import simulate_scenario
+
+    floor = simulate_scenario(_what_if_summary(), top_client_percent=10, today=date(2026, 8, 15))
+    assert floor["scenario"]["client_concentration"]["top_client_percent"] == 33.3

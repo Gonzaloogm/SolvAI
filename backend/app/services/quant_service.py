@@ -354,6 +354,90 @@ def mortgage_capacity(metrics: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _scenario_view(metrics: dict[str, Any]) -> dict[str, Any]:
+    """The metrics a what-if compares, without evidence or explanations."""
+    vol, trend, weak, conc = (metrics.get(k) or {} for k in
+                              ("volatility", "trend", "weak_months", "client_concentration"))
+    capacity = mortgage_capacity(metrics)
+    return {
+        "months_analyzed": metrics["months_analyzed"],
+        "average_monthly_revenue": metrics["average_monthly_revenue"],
+        "volatility": {"cov_percent": vol.get("cov_percent"), "level": vol.get("level")},
+        "trend": {k: trend.get(k) for k in ("direction", "slope_percent_per_month", "r_squared")},
+        "weak_months": {k: weak.get(k) for k in ("weak", "below_average", "longest_below_average_streak")},
+        "client_concentration": {k: conc.get(k) for k in
+                                 ("hhi", "level", "top_client_percent", "effective_clients", "distinct_clients")},
+        "mortgage": {k: capacity[k] for k in ("estimated_max_mortgage", "estimated_monthly_payment_capacity")},
+    }
+
+
+def _reshape_clients(client_revenue: list[float], top_percent: float) -> list[float]:
+    """Give the largest client `top_percent` of revenue (never below an even split).
+
+    The others share the rest in proportion to their current revenue, none of
+    them above the new top share; any excess goes to the clients still below it.
+    """
+    amounts = sorted((a for a in client_revenue if a > 0), reverse=True)
+    total = sum(amounts)
+    if len(amounts) < 2 or not total:
+        return amounts
+    top = max(top_percent, 100 / len(amounts))
+    others, fixed, remaining = amounts[1:], {}, 100 - top
+    while True:
+        free = [i for i in range(len(others)) if i not in fixed]
+        weight = sum(others[i] for i in free)
+        over = [i for i in free if others[i] / weight * remaining > top]
+        if not over:
+            break
+        for i in over:
+            fixed[i] = top
+        remaining = 100 - top - top * len(fixed)
+    shares = [fixed.get(i, others[i] / weight * remaining if weight else 0) for i in range(len(others))]
+    return [total * top / 100] + [total * share / 100 for share in shares]
+
+
+def simulate_scenario(
+    summary: dict[str, Any],
+    revenue_change_percent: float = 0.0,
+    smoothing_percent: float = 0.0,
+    top_client_percent: float | None = None,
+    today: date | None = None,
+) -> dict[str, Any]:
+    """Recompute the verified metrics after hypothetical changes to the user's real data.
+
+    - revenue_change_percent scales every month (volatility is unchanged by design);
+    - smoothing_percent pulls each month towards the trend line (100 = exactly on it);
+    - top_client_percent gives the largest client that share, the rest keep their mix.
+    Nothing here is scored: the solvency score only comes from a full report.
+    """
+    baseline = compute_revenue_metrics(summary, today)
+    observed = sorted(summary.get("monthly_revenue_series") or [], key=lambda m: m["month"])
+    complete, _ = complete_months(observed, today)
+    values = [float(m["total"]) for m in complete]
+    # Smoothing pulls each month towards the fitted trend line, so steadier income keeps its growth
+    mean = sum(values) / len(values) if values else 0.0
+    slope = _linear_trend(values)[0] if len(values) >= 2 and len(set(values)) > 1 else 0.0
+
+    def fitted(i: int) -> float:
+        return mean + slope * (i - (len(values) - 1) / 2)
+
+    factor = 1 + revenue_change_percent / 100
+    keep = 1 - smoothing_percent / 100
+    series = [
+        {**m, "total": round((fitted(i) + (float(m["total"]) - fitted(i)) * keep) * factor, 2)}
+        for i, m in enumerate(observed)
+    ]
+    clients = summary.get("client_revenue") or []
+    concentration = summary.get("client_concentration")
+    if top_client_percent is not None and clients:
+        concentration = client_concentration(_reshape_clients(clients, top_client_percent))
+    scenario = compute_revenue_metrics(
+        {**summary, "monthly_revenue_series": series, "client_concentration": concentration, "transactions": []},
+        today,
+    )
+    return {"baseline": _scenario_view(baseline), "scenario": _scenario_view(scenario)}
+
+
 def format_references(evidence: dict[str, Any]) -> list[str]:
     """Unique, human-readable transaction references for the report appendix."""
     seen, refs = set(), []

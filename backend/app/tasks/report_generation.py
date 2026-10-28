@@ -525,6 +525,8 @@ def _build_financial_summary(sources, today: date | None = None) -> dict:
         "monthly_revenue_series": monthly_revenue_series,
         # Sources connected before client-level data existed only have top shares (no HHI)
         "client_concentration": client_concentration(client_revenue) or legacy_concentration,
+        # Per-client totals (pseudonymous amounts only), used by the what-if simulator
+        "client_revenue": client_revenue,
         "source_breakdown": _source_breakdown(per_source, total_revenue),
         "outflow_sources": outflow_sources,
         "payment_integrity": integrity if integrity["sources"] else None,

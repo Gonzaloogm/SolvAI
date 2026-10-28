@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
  LayoutDashboard,
@@ -18,19 +18,22 @@ import { ToastProvider } from './context/ToastContext.jsx';
 import { ReportGenerationProvider } from './context/ReportGenerationContext.jsx';
 
 /* ── Lazy-load pages ───────────────────────────────────────────────────────── */
-import DashboardPage from './pages/DashboardPage.jsx';
-import ReportsPage from './pages/ReportsPage.jsx';
-import DataSourcesPage from './pages/DataSourcesPage.jsx';
-import DemoComparisonPage from './pages/DemoComparisonPage.jsx';
-import AccountPage from './pages/AccountPage.jsx';
-import SettingsPage from './pages/SettingsPage.jsx';
-import Login from './pages/Login.jsx';
-import Register from './pages/Register.jsx';
-import PublicReport from './pages/PublicReport.jsx';
-import ApiDocs from './pages/ApiDocs.jsx';
-import LandingPage from './pages/LandingPage.jsx';
-import Privacy from './pages/Privacy.jsx';
-import Terms from './pages/Terms.jsx';
+// Each page is its own chunk, so the landing page does not download the dashboard's charts
+const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
+const DataSourcesPage = lazy(() => import('./pages/DataSourcesPage.jsx'));
+const WhatIfPage = lazy(() => import('./pages/WhatIfPage.jsx'));
+const AccountPage = lazy(() => import('./pages/AccountPage.jsx'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const PublicReport = lazy(() => import('./pages/PublicReport.jsx'));
+const ApiDocs = lazy(() => import('./pages/ApiDocs.jsx'));
+const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
+const Privacy = lazy(() => import('./pages/Privacy.jsx'));
+const Terms = lazy(() => import('./pages/Terms.jsx'));
+
+const PageFallback = () => <div className="min-h-[40vh]" />;
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 /* ── Utility ───────────────────────────────────────────────────────────────── */
@@ -41,7 +44,7 @@ const NAV_ITEMS = [
  { id: 'dashboard', tKey: 'nav.dashboard', icon: LayoutDashboard },
  { id: 'reports', tKey: 'nav.reports', icon: FileText },
  { id: 'data-sources', tKey: 'nav.dataSources', icon: Database },
- { id: 'demo', tKey: 'nav.demo', icon: BarChart2 },
+ { id: 'simulator', tKey: 'nav.simulator', icon: BarChart2 },
  { id: 'account', tKey: 'nav.account', icon: User },
  { id: 'settings', tKey: 'nav.settings', icon: Settings },
 ];
@@ -51,7 +54,7 @@ const PAGES = {
  dashboard: DashboardPage,
  reports: ReportsPage,
  'data-sources': DataSourcesPage,
- demo: DemoComparisonPage,
+ simulator: WhatIfPage,
  account: AccountPage,
  settings: SettingsPage,
  'api-docs': ApiDocs,
@@ -211,6 +214,7 @@ export default function App() {
     <ThemeProvider>
       <ToastProvider>
         <ReportGenerationProvider>
+          <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -224,6 +228,7 @@ export default function App() {
               </ProtectedRoute>
             } />
           </Routes>
+          </Suspense>
         </ReportGenerationProvider>
       </ToastProvider>
     </ThemeProvider>
@@ -266,7 +271,9 @@ function AppLayout() {
  {/* Page content */}
  <div className="px-6 py-8 lg:px-10 lg:py-8">
  <div className="max-w-[1100px] mx-auto">
+ <Suspense fallback={<PageFallback />}>
  <PageComponent key={activePage} onNavigate={(id) => navigate(`/${id}`)} />
+ </Suspense>
  </div>
  </div>
  </main>

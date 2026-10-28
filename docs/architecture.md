@@ -59,7 +59,7 @@ flowchart LR
      | Client concentration | Herfindahl-Hirschman Index over per-client revenue from every source | < 1,500 unconcentrated, > 2,500 high (DOJ/FTC thresholds) |
      | Payment integrity (shown as the "reputation" factor) | Refund rate (refunded / gross) and dispute or chargeback rate across Stripe and PayPal, plus history length | Disputes ≥ 1% or refunds ≥ 10% high, any dispute or refunds ≥ 3% moderate |
    - `underwriter`: three parallel Gemini calls at temperature 0.4 (`GEMINI_UNDERWRITER_MODEL`, default `gemini-2.5-flash`). These self-consistency samples are parsed and validated as JSON, then merged.
-   - `auditor`: a temperature-0 review of the draft against the source data (`GEMINI_LIGHT_MODEL`, default `gemini-3.5-flash-lite`, also used by the score simulator). It can send the draft back to the underwriter, up to 3 iterations, or flag it for human review.
+   - `auditor`: a temperature-0 review of the draft against the source data (`GEMINI_LIGHT_MODEL`, default `gemini-3.5-flash-lite`). It can send the draft back to the underwriter, up to 3 iterations, or flag it for human review.
    Each step publishes progress to Redis (`solvai:telemetry:{report_id}`), which the WebSocket streams to the "Intelligence Terminal" in the UI.
 5. **Render and store.** WeasyPrint and Jinja2 templates (`app/templates/`) render the PDF with matplotlib charts and a verification QR code. The file is uploaded to Cloud Storage and the report becomes `COMPLETED`.
 

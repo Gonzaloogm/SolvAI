@@ -330,7 +330,7 @@ export default function DashboardPage({ onNavigate }) {
  {liveReportId && (
  <div className="bg-card border border-border rounded-lg p-5 mt-6">
  <div className="flex justify-between items-center mb-3">
- <h2 className="text-base font-semibold text-primary">Live analysis</h2>
+ <h2 className="text-base font-semibold text-primary">{t('dashboard.liveAnalysis')}</h2>
  {!generating && (
  <button onClick={() => setLiveReportId(null)} className="text-sm text-muted hover:text-primary">Close</button>
  )}

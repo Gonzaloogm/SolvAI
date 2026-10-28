@@ -176,42 +176,43 @@ const fmtNum = (value, digits = 0) =>
 
 // Deterministic metrics the AI was grounded on (backend/app/services/quant_service.py)
 const VerifiedMetrics = ({ metrics }) => {
+  const { t } = useTranslation();
   if (!metrics?.volatility) return null;
   const { volatility, trend, weak_months: weak, client_concentration: concentration } = metrics;
 
   const rows = [
     {
-      label: 'Income volatility (CoV)',
+      label: t('metrics.volatility'),
       value: volatility.cov_percent !== null && volatility.cov_percent !== undefined ? `${fmtNum(volatility.cov_percent, 1)}%` : '—',
       level: volatility.level,
       explanation: volatility.explanation,
       evidence: metrics.evidence?.income_stability,
     },
     {
-      label: 'Revenue trend',
-      value: trend.slope_percent_per_month !== undefined ? `${trend.slope_percent_per_month > 0 ? '+' : ''}${fmtNum(trend.slope_percent_per_month, 1)}% / month` : '—',
+      label: t('metrics.trend'),
+      value: trend.slope_percent_per_month !== undefined ? `${trend.slope_percent_per_month > 0 ? '+' : ''}${fmtNum(trend.slope_percent_per_month, 1)}% ${t('metrics.perMonth')}` : '—',
       level: trend.direction,
       explanation: trend.explanation,
       evidence: metrics.evidence?.growth_trend,
     },
     weak && {
-      label: 'Weak months',
-      value: `${weak.weak} of ${metrics.months_analyzed}`,
+      label: t('metrics.weakMonths'),
+      value: t('metrics.weakOf', { weak: weak.weak, months: metrics.months_analyzed }),
       level: weak.weak === 0 ? 'LOW' : weak.weak <= 2 ? 'MODERATE' : 'HIGH',
       explanation: weak.explanation,
       evidence: metrics.evidence?.seasonality,
     },
     {
-      label: 'Client concentration (HHI)',
+      label: t('metrics.concentration'),
       value: concentration.hhi !== null && concentration.hhi !== undefined ? fmtNum(concentration.hhi) : '—',
       level: concentration.level,
       explanation: concentration.explanation,
       evidence: metrics.evidence?.client_concentration,
     },
     metrics.payment_integrity && {
-      label: 'Payment integrity',
+      label: t('metrics.integrity'),
       value: metrics.payment_integrity.refund_rate_percent != null
-        ? `${fmtNum(metrics.payment_integrity.refund_rate_percent, 1)}% refunded · ${metrics.payment_integrity.disputes} disputes`
+        ? t('metrics.integrityValue', { refunded: fmtNum(metrics.payment_integrity.refund_rate_percent, 1), disputes: metrics.payment_integrity.disputes })
         : '—',
       level: metrics.payment_integrity.level,
       explanation: metrics.payment_integrity.explanation,
@@ -220,9 +221,9 @@ const VerifiedMetrics = ({ metrics }) => {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-primary mb-1">Verified metrics</h3>
+      <h3 className="text-sm font-semibold text-primary mb-1">{t('metrics.title')}</h3>
       <p className="text-xs text-muted mb-3">
-        Computed directly from {fmtNum(metrics.months_analyzed)} months of transactions, not by the AI. The scores above are grounded on these figures.
+        {t('metrics.intro', { months: fmtNum(metrics.months_analyzed) })}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {rows.map((row) => (
@@ -253,15 +254,15 @@ const VerifiedMetrics = ({ metrics }) => {
       </div>
       {metrics.source_breakdown?.length > 0 && (
         <div className="mt-4">
-          <h4 className="text-xs font-semibold text-primary mb-2">Revenue by source</h4>
+          <h4 className="text-xs font-semibold text-primary mb-2">{t('metrics.bySource')}</h4>
           <table className="w-full text-xs">
             <thead>
               <tr className="text-muted text-left">
-                <th className="py-1 font-medium">Source</th>
-                <th className="py-1 font-medium text-right">Share</th>
-                <th className="py-1 font-medium text-right">Payments</th>
-                <th className="py-1 font-medium text-right">Coverage</th>
-                <th className="py-1 font-medium text-right">Revenue</th>
+                <th className="py-1 font-medium">{t('metrics.col.source')}</th>
+                <th className="py-1 font-medium text-right">{t('metrics.col.share')}</th>
+                <th className="py-1 font-medium text-right">{t('metrics.col.payments')}</th>
+                <th className="py-1 font-medium text-right">{t('metrics.col.coverage')}</th>
+                <th className="py-1 font-medium text-right">{t('metrics.col.revenue')}</th>
               </tr>
             </thead>
             <tbody>
@@ -270,7 +271,7 @@ const VerifiedMetrics = ({ metrics }) => {
                   <td className="py-1.5">{src.platform === 'PAYPAL' ? 'PayPal' : src.platform.charAt(0) + src.platform.slice(1).toLowerCase()}</td>
                   <td className="py-1.5 text-right">{fmtNum(src.share_percent, 1)}%</td>
                   <td className="py-1.5 text-right">{fmtNum(src.transactions)}</td>
-                  <td className="py-1.5 text-right">{src.days_covered != null ? `${src.days_covered} days` : `${src.months_covered} months`}</td>
+                  <td className="py-1.5 text-right">{src.days_covered != null ? t('metrics.days', { count: src.days_covered }) : t('metrics.months', { count: src.months_covered })}</td>
                   <td className="py-1.5 text-right">€{fmtNum(src.total_revenue, 2)}</td>
                 </tr>
               ))}

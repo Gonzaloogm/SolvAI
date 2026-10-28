@@ -69,27 +69,8 @@ def test_safe_skeleton_is_gone():
     assert not hasattr(agent_orchestrator, "SAFE_REPORT_SKELETON")
 
 
-def test_simulator_returns_model_json(client, fake_gemini):
-    fake_gemini(text='{"overall_score": 81, "rating": "APPROVE"}')
-
-    response = client.post("/simulate/score", json={"monthly_revenue": 5000})
-
-    assert response.status_code == 200
-    assert response.json()["overall_score"] == 81
-
-
-@pytest.mark.parametrize("model_kwargs", [
-    {"error": RuntimeError("model retired")},
-    {"text": "not json"},
-    {"text": '{"rating": "APPROVE"}'},
-])
-def test_simulator_failure_is_an_error_not_a_score(client, fake_gemini, model_kwargs):
-    fake_gemini(**model_kwargs)
-
-    response = client.post("/simulate/score", json={})
-
-    assert response.status_code == 502
-    assert "overall_score" not in response.json()
+def test_old_llm_score_simulator_is_gone(client):
+    assert client.post("/simulate/score", json={}).status_code == 404
 
 
 def test_each_agent_uses_its_configured_model(monkeypatch, client):
@@ -106,6 +87,4 @@ def test_each_agent_uses_its_configured_model(monkeypatch, client):
     monkeypatch.setattr("google.generativeai.GenerativeModel", model_factory)
 
     auditor_node({"draft_report": '{"overall_score": 70}', "iterations": 0, "financial_summary": {}})
-    client.post("/simulate/score", json={})
-
-    assert used == ["light-model", "light-model"]
+    assert used == ["light-model"]

@@ -87,6 +87,10 @@ export default function AccountPage() {
  const [promoCode, setPromoCode] = useState('');
  const [applyingPromo, setApplyingPromo] = useState(false);
 
+ useEffect(() => {
+   if (realPlan?.plan) window.dispatchEvent(new Event('solvai:plan-changed'));
+ }, [realPlan?.plan]);
+
  const handleApplyPromo = async (e) => {
    e.preventDefault();
    if (!promoCode.trim()) return;
@@ -396,7 +400,7 @@ export default function AccountPage() {
  </p>
  {realPlan.current_period_end && (
  <p className={`text-xs ${textSecondary} mt-0.5`}>
- Renews on {new Date(realPlan.current_period_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+ {realPlan.billing_provider ? 'Renews on' : 'Active until'} {new Date(realPlan.current_period_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
  </p>
  )}
  </div>
@@ -421,6 +425,30 @@ export default function AccountPage() {
  <p className={`text-xs ${textSecondary} mt-4`}>
  Receipts are e-mailed by the payment provider (Stripe or PayPal) after every charge.
  </p>
+
+ {realPlan?.plan !== 'business' && (
+ <form onSubmit={handleApplyPromo} className="mt-6 pt-6 border-t border-border">
+ <label htmlFor="promo-code" className={`text-sm font-medium ${textPrimary}`}>Have a promo code?</label>
+ <div className="flex gap-2 mt-2 max-w-md">
+ <input
+ id="promo-code"
+ value={promoCode}
+ onChange={(e) => setPromoCode(e.target.value)}
+ placeholder="e.g. ABCD-2026"
+ className={inputClasses}
+ disabled={applyingPromo}
+ />
+ <button
+ type="submit"
+ disabled={applyingPromo || !promoCode.trim()}
+ className="bg-[var(--brand-blue)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--brand-blue-hover)] flex items-center gap-2 transition-colors disabled:opacity-50 shrink-0"
+ >
+ {applyingPromo && <Loader2 className="w-4 h-4 animate-spin" />}
+ Redeem
+ </button>
+ </div>
+ </form>
+ )}
  </div>
 
  {/* ── 5. PREFERENCES SECTION ── */}

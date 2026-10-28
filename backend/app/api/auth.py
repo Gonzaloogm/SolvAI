@@ -60,22 +60,12 @@ async def validate_promo(
     body: PromoValidateRequest,
     db: AsyncSession = Depends(get_db),
 ) -> PromoValidateResponse:
-    from app.models.promo_code import PromoCode
-    from sqlalchemy import select
-    from datetime import datetime, timezone
+    from app.services.promo_service import get_valid_promo
 
-    result = await db.execute(select(PromoCode).where(PromoCode.code == body.code))
-    promo = result.scalar_one_or_none()
-
-    if not promo:
-        return PromoValidateResponse(valid=False, message="Invalid promo code")
-    if not promo.is_active:
-        return PromoValidateResponse(valid=False, message="Promo code is inactive")
-    if promo.uses_count >= promo.max_uses:
-        return PromoValidateResponse(valid=False, message="Promo code usage limit reached")
-    if promo.expires_at and promo.expires_at < datetime.now(timezone.utc):
-        return PromoValidateResponse(valid=False, message="Promo code has expired")
-
+    try:
+        promo = await get_valid_promo(db, body.code)
+    except ValueError as exc:
+        return PromoValidateResponse(valid=False, message=str(exc))
     return PromoValidateResponse(valid=True, plan=promo.plan, message="Promo code is valid")
 
 

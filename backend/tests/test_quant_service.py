@@ -201,3 +201,15 @@ def test_payment_integrity_unknown_without_data():
     pi = compute_revenue_metrics(_summary([1000.0] * 6), today=date(2026, 10, 26))["payment_integrity"]
 
     assert pi["level"] == "UNKNOWN" and "not available" in pi["explanation"]
+
+
+def test_mortgage_capacity_is_arithmetic_on_verified_income():
+    from app.services.quant_service import mortgage_capacity
+
+    m = mortgage_capacity({"average_monthly_revenue": 6000.0})
+    assert m["avg_annual_income"] == 72000.0
+    assert m["estimated_max_mortgage"] == 324000.0
+    assert m["estimated_monthly_payment_capacity"] == 1980.0
+    assert m["debt_to_income_ratio"] == "33%"
+    assert m["downpayment_amount"] == 64800.0
+    assert m["downpayment_recommendation"] == "20% (€64,800.00)"

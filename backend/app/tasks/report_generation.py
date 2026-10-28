@@ -185,6 +185,10 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
                                 # factor, never IDs written by the model
                                 if quant.get("evidence"):
                                     final_data["data_references"] = format_references(quant["evidence"])
+                                # Mortgage figures are arithmetic on verified income, not the model's
+                                if quant.get("mortgage_capacity"):
+                                    final_data.update({k: v for k, v in quant["mortgage_capacity"].items()
+                                                       if k not in ("rules", "explanation")})
                             # Include score in root for easy access
                             if final_data and "overall_score" in final_data:
                                 final_data["overall_score"] = payload.get("payload", {}).get("overall_score")

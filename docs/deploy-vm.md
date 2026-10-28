@@ -60,7 +60,7 @@ cp deploy/.env.prod.example deploy/.env.prod
 nano deploy/.env.prod
 ```
 
-Fill in at least `DOMAIN`, `POSTGRES_PASSWORD`, `JWT_SECRET`, `ENCRYPTION_KEY` and `GEMINI_API_KEY`; the file explains how to generate each secret. For PayPal billing, also set the `PAYPAL_BILLING_*`, `PAYPAL_*_PLAN_ID` and `PAYPAL_WEBHOOK_ID` values. `deploy/.env.prod` is git-ignored: keep it only on the VM.
+Fill in at least `DOMAIN`, `POSTGRES_PASSWORD`, `JWT_SECRET`, `ENCRYPTION_KEY` and `GEMINI_API_KEY`; the file explains how to generate each secret. For PayPal billing, also set the `PAYPAL_BILLING_*`, `PAYPAL_*_PLAN_ID` and `PAYPAL_WEBHOOK_ID` values. To offer judges the **Try with demo data** button, set `DEMO_STRIPE_TEST_KEY`, `DEMO_PAYPAL_CLIENT_ID` and `DEMO_PAYPAL_SECRET` (the values from `.env.demo`). `deploy/.env.prod` is git-ignored: keep it only on the VM.
 
 ## 5. Deploy
 
@@ -84,7 +84,6 @@ To update to the latest `main`, run the same command again: it pulls and rebuild
     api python scripts/create_demo_account.py
   ```
   It is safe to run again later to refresh the data.
-- **Lender matching data** (optional): `docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod exec api python scripts/seed_lenders.py`.
 
 ## Operating it
 

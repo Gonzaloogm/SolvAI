@@ -88,6 +88,12 @@ export const dataSources = {
   getAvailableIntegrations: () => apiClient.get('/data-sources/available-integrations'),
 
   /**
+   * Connect SolvAI's demo Stripe test account and PayPal sandbox.
+   * POST /data-sources/connect/demo
+   */
+  connectDemo: () => apiClient.post('/data-sources/connect/demo'),
+
+  /**
    * Connect a new data source.
    * POST /data-sources/connect/{type}
    */
@@ -185,15 +191,6 @@ export const solvencyReports = {
    * Disable share link for a report.
    */
   deleteShare: (id) => apiClient.delete(`/solvency-reports/${id}/share`),
-};
-
-// ─── Lender Matching ──────────────────────────────────────────────────────────
-export const lenderMatching = {
-  /**
-   * Fetch lender matches for a report.
-   * GET /lender-matching/{reportId}
-   */
-  get: (reportId) => apiClient.get(`/lender-matching/${reportId}`),
 };
 
 // ─── Billing ────────────────────────────────────────────────────────────────

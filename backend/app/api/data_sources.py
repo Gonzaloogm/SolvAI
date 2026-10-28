@@ -81,6 +81,49 @@ async def get_available_integrations():
         "xero": bool(settings.XERO_CLIENT_ID and settings.XERO_CLIENT_SECRET),
         "paypal": True,
         "bank_account": bool(settings.BELVO_SECRET_ID and settings.BELVO_SECRET_PASSWORD),
+        "demo": _demo_available(),
+    }
+
+
+def _demo_available() -> bool:
+    return settings.DEMO_STRIPE_TEST_KEY.startswith("sk_test_")
+
+
+@router.post("/connect/demo", summary="Connect SolvAI's demo Stripe test account and PayPal sandbox")
+async def connect_demo(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """One-click demo data for people trying SolvAI without their own accounts.
+
+    The credentials stay on the server: the user only gets the resulting sources,
+    flagged as demo so the UI can label them. PayPal is best effort, so a slow
+    sandbox never blocks the demo.
+    """
+    if not _demo_available():
+        raise HTTPException(status_code=404, detail="Demo data is not available on this server")
+
+    connected, warnings = [], []
+    stripe_source = await connect_stripe({"api_key": settings.DEMO_STRIPE_TEST_KEY}, current_user, db)
+    connected.append(stripe_source)
+    if settings.DEMO_PAYPAL_CLIENT_ID and settings.DEMO_PAYPAL_SECRET:
+        try:
+            connected.append(await connect_paypal(
+                {"client_id": settings.DEMO_PAYPAL_CLIENT_ID, "client_secret": settings.DEMO_PAYPAL_SECRET},
+                current_user, db,
+            ))
+        except HTTPException as e:
+            logger.warning(f"Demo PayPal connect failed: {e.detail}")
+            warnings.append("The PayPal sandbox did not answer; Stripe demo data was connected on its own.")
+
+    ids = [c.id for c in connected]
+    result = await db.execute(select(FinancialDataSource).where(FinancialDataSource.id.in_(ids)))
+    for source in result.scalars():
+        source.connection_details = {**source.connection_details, "demo": True}
+    await db.commit()
+    return {
+        "connected": [{"type": c.type, "records_count": c.records_count} for c in connected],
+        "warnings": warnings,
     }
 
 

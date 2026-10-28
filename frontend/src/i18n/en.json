@@ -177,5 +177,11 @@
   "score.stable": "Stable",
   "score.generateNew": "Generate new report to update your score",
   "score.trackEvolution": "Generate monthly reports to track your evolution",
-  "score.noHistory": "No score history yet"
+  "score.noHistory": "No score history yet",
+  "dataSources.demo.title": "No Stripe or PayPal account at hand?",
+  "dataSources.demo.body": "Connect SolvAI's demo accounts: 12 months of Stripe test-mode payments plus PayPal sandbox payments, read through the real APIs. Nothing is generated.",
+  "dataSources.demo.button": "Try with demo data",
+  "dataSources.demo.connecting": "Connecting demo data…",
+  "dataSources.demo.done": "Demo data connected",
+  "dataSources.demo.badge": "Demo data"
 }

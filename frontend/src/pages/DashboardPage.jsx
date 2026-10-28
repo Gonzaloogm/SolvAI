@@ -15,6 +15,7 @@ import {
 import { XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import ReportDetailModal from '../components/ReportDetailModal.jsx';
 import IntelligenceTerminal from '../components/IntelligenceTerminal.jsx';
+import GettingStarted from '../components/GettingStarted.jsx';
 import { solvencyReports, dataSources as dataSourcesApi, users, billing, alerts as alertsApi } from '../api/client.js';
 import { platformLabel } from '../utils/platforms.js';
 
@@ -40,6 +41,8 @@ export default function DashboardPage({ onNavigate }) {
  const [liveReportId, setLiveReportId] = useState(null);
  const [scoreHistory, setScoreHistory] = useState([]);
  const [activeAlerts, setActiveAlerts] = useState([]);
+ // Shown for the whole visit if the user had no completed report when the page loaded
+ const [showGuide, setShowGuide] = useState(false);
 
  const dismissAlert = async (id) => {
    try {
@@ -65,6 +68,7 @@ export default function DashboardPage({ onNavigate }) {
        const reps = Array.isArray(reportsRes.data) ? reportsRes.data : (reportsRes.data?.items ?? []);
        reps.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
        setRealReports(reps);
+       setShowGuide(!reps.some(r => r.status === 'COMPLETED'));
        const srcs = Array.isArray(sourcesRes.data) ? sourcesRes.data : (sourcesRes.data?.items ?? []);
        setRealSources(srcs);
        setUserInfo(userRes.data);
@@ -82,6 +86,11 @@ export default function DashboardPage({ onNavigate }) {
    };
    fetchData();
  }, []);
+
+ const reloadSources = async () => {
+   const res = await dataSourcesApi.list().catch(() => ({ data: [] }));
+   setRealSources(Array.isArray(res.data) ? res.data : (res.data?.items ?? []));
+ };
 
  const handleGenerate = async () => {
    setGenerating(true);
@@ -256,6 +265,17 @@ export default function DashboardPage({ onNavigate }) {
        </div>
      ))}
    </div>
+ )}
+
+ {showGuide && (
+   <GettingStarted
+     hasSources={realSources.length > 0}
+     hasReport={realReports.length > 0 || generating}
+     reportReady={realReports.some(r => r.status === 'COMPLETED')}
+     generating={generating}
+     onGenerate={handleGenerate}
+     onSourcesChanged={reloadSources}
+   />
  )}
 
  {/* Stat Cards Row */}

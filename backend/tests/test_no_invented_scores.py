@@ -18,7 +18,9 @@ class _FakeModel:
     def generate_content(self, *args, **kwargs):
         if self.error:
             raise self.error
-        return SimpleNamespace(text=self.text)
+        # Same shape as a google.generativeai response: candidates -> content -> parts
+        part = SimpleNamespace(text=self.text)
+        return SimpleNamespace(candidates=[SimpleNamespace(content=SimpleNamespace(parts=[part]), finish_reason="STOP")])
 
     async def generate_content_async(self, *args, **kwargs):
         return self.generate_content()

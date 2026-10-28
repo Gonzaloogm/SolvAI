@@ -183,5 +183,15 @@
   "dataSources.demo.button": "Probar con datos de demo",
   "dataSources.demo.connecting": "Conectando datos de demo…",
   "dataSources.demo.done": "Datos de demo conectados",
-  "dataSources.demo.badge": "Datos de demo"
+  "dataSources.demo.badge": "Datos de demo",
+  "onboarding.title": "Consigue tu primer informe de solvencia",
+  "onboarding.subtitle": "Tres pasos, alrededor de un minuto. Cada cifra sale de transacciones reales.",
+  "onboarding.step1.title": "Conecta una fuente de datos",
+  "onboarding.step1.body": "Stripe, PayPal o un CSV de extracto bancario. ¿No tienes una cuenta a mano? Usa las cuentas de demo de SolvAI.",
+  "onboarding.step1.own": "Conectar la mía",
+  "onboarding.step2.title": "Genera el informe",
+  "onboarding.step2.body": "Mira a los agentes trabajar en directo: métricas deterministas, un analista Gemini y un auditor que revisa cada cifra.",
+  "onboarding.step3.title": "Léelo y compártelo",
+  "onboarding.step3.body": "Ve cada puntuación con su umbral y las transacciones que la respaldan, y después descarga el PDF o comparte un enlace.",
+  "onboarding.step3.open": "Abrir mi informe"
 }

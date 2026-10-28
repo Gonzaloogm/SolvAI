@@ -183,5 +183,15 @@
   "dataSources.demo.button": "Mit Demodaten testen",
   "dataSources.demo.connecting": "Demodaten werden verbunden…",
   "dataSources.demo.done": "Demodaten verbunden",
-  "dataSources.demo.badge": "Demodaten"
+  "dataSources.demo.badge": "Demodaten",
+  "onboarding.title": "Hol dir deinen ersten Bonitätsbericht",
+  "onboarding.subtitle": "Drei Schritte, etwa eine Minute. Jede Zahl stammt aus echten Transaktionen.",
+  "onboarding.step1.title": "Datenquelle verbinden",
+  "onboarding.step1.body": "Stripe, PayPal oder ein Kontoauszug als CSV. Kein Konto zur Hand? Nutze die Demo-Konten von SolvAI.",
+  "onboarding.step1.own": "Eigene verbinden",
+  "onboarding.step2.title": "Bericht erstellen",
+  "onboarding.step2.body": "Sieh den Agenten live zu: deterministische Kennzahlen, ein Gemini-Underwriter und ein Prüfer, der jede Zahl kontrolliert.",
+  "onboarding.step3.title": "Lesen und teilen",
+  "onboarding.step3.body": "Jede Bewertung mit Schwellenwert und den zugrunde liegenden Transaktionen, dann PDF herunterladen oder Link teilen.",
+  "onboarding.step3.open": "Meinen Bericht öffnen"
 }

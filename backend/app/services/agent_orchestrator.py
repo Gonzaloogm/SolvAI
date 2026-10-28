@@ -6,6 +6,7 @@ import google.generativeai as genai
 
 from app.core.config import settings
 from app.services.quant_service import compute_revenue_metrics, mortgage_capacity
+from app.utils.gemini import response_json
 
 class AgentState(TypedDict):
     transactions: List[Dict[str, Any]]
@@ -176,9 +177,8 @@ CRITICAL REQUIREMENTS:
             parsed_reports = []
             parse_errors = []
             for r in responses:
-                clean_resp = r.text.replace('```json', '').replace('```', '').strip()
                 try:
-                    doc = json.loads(clean_resp)
+                    doc = response_json(r)
                     # Validate the minimum required field exists and is numeric
                     if not isinstance(doc.get("overall_score"), (int, float)):
                         raise ValueError(
@@ -278,8 +278,7 @@ Respond ONLY with a JSON object: {{"is_approved": true/false, "critique": "your 
     try:
         # Use temp=0.0 for deterministic auditing
         response = model.generate_content(prompt, generation_config={"temperature": 0.0})
-        clean_resp = response.text.replace('```json', '').replace('```', '').strip()
-        result = json.loads(clean_resp)
+        result = response_json(response)
 
         is_approved = result.get("is_approved", False)
 

@@ -1,4 +1,3 @@
-import json
 
 import google.generativeai as genai
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,6 +6,7 @@ from loguru import logger
 from app.core.config import settings
 from app.core.security import get_current_user
 from app.models.user import User
+from app.utils.gemini import response_json
 
 router = APIRouter()
 
@@ -54,7 +54,7 @@ async def simulate_score(
             prompt,
             generation_config={"response_mime_type": "application/json"},
         )
-        result = json.loads(response.text)
+        result = response_json(response)
         if not isinstance(result.get("overall_score"), (int, float)):
             raise ValueError(f"overall_score missing or non-numeric: {result.get('overall_score')!r}")
         return result

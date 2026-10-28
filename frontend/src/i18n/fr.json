@@ -183,5 +183,15 @@
   "dataSources.demo.button": "Essayer avec des données de démo",
   "dataSources.demo.connecting": "Connexion des données de démo…",
   "dataSources.demo.done": "Données de démo connectées",
-  "dataSources.demo.badge": "Données de démo"
+  "dataSources.demo.badge": "Données de démo",
+  "onboarding.title": "Obtenez votre premier rapport de solvabilité",
+  "onboarding.subtitle": "Trois étapes, environ une minute. Chaque chiffre provient de transactions réelles.",
+  "onboarding.step1.title": "Connectez une source de données",
+  "onboarding.step1.body": "Stripe, PayPal ou un relevé bancaire CSV. Pas de compte sous la main ? Utilisez les comptes de démo de SolvAI.",
+  "onboarding.step1.own": "Connecter le mien",
+  "onboarding.step2.title": "Générez le rapport",
+  "onboarding.step2.body": "Regardez les agents travailler en direct : métriques déterministes, un analyste Gemini et un auditeur qui vérifie chaque chiffre.",
+  "onboarding.step3.title": "Lisez-le et partagez-le",
+  "onboarding.step3.body": "Chaque score avec son seuil et les transactions qui le justifient, puis téléchargez le PDF ou partagez un lien.",
+  "onboarding.step3.open": "Ouvrir mon rapport"
 }

@@ -12,7 +12,6 @@ from app.models.organization import Organization
 from app.models.user import User
 
 
-from datetime import datetime, timedelta, timezone
 
 async def register_user(
     db: AsyncSession,
@@ -32,7 +31,7 @@ async def register_user(
     Raises:
         ValueError: if the email is already registered or promo code is invalid.
     """
-    from app.models.promo_code import PromoCode
+    from app.services.promo_service import apply_promo, get_valid_promo
 
     # Check for duplicate email
     result = await db.execute(select(User).where(User.email == email))
@@ -40,18 +39,7 @@ async def register_user(
         raise ValueError(f"Email '{email}' is already registered.")
 
     # Validate promo code first if provided
-    promo_record = None
-    if promo_code:
-        promo_result = await db.execute(select(PromoCode).where(PromoCode.code == promo_code))
-        promo_record = promo_result.scalar_one_or_none()
-        if not promo_record:
-            raise ValueError("Invalid promo code.")
-        if not promo_record.is_active:
-            raise ValueError("Promo code is no longer active.")
-        if promo_record.uses_count >= promo_record.max_uses:
-            raise ValueError("Promo code has reached its usage limit.")
-        if promo_record.expires_at and promo_record.expires_at < datetime.now(timezone.utc):
-            raise ValueError("Promo code has expired.")
+    promo_record = await get_valid_promo(db, promo_code) if promo_code and promo_code.strip() else None
 
     # Determine org name
     final_org_name = org_name.strip() if org_name and org_name.strip() else ""
@@ -67,13 +55,7 @@ async def register_user(
     )
     
     if promo_record:
-        org.plan = promo_record.plan
-        org.status = "active"
-        # current_period_end column is timezone-naive — use utcnow() to avoid
-        # asyncpg "can't subtract offset-naive and offset-aware datetimes" error
-        org.current_period_end = datetime.utcnow() + timedelta(days=365)
-        promo_record.uses_count += 1
-        db.add(promo_record)
+        apply_promo(org, promo_record)
 
     db.add(org)
     # Flush so org.id is available for FK

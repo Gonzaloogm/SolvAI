@@ -84,6 +84,13 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }) {
    });
  }, []);
 
+ // The Account page announces plan changes (promo code, PayPal) so the badge stays current
+ useEffect(() => {
+   const refreshPlan = () => usersApi.me().then(res => setUserProfile(res.data)).catch(() => {});
+   window.addEventListener('solvai:plan-changed', refreshPlan);
+   return () => window.removeEventListener('solvai:plan-changed', refreshPlan);
+ }, []);
+
  const handleLogout = () => {
    localStorage.removeItem('solvai_token');
    localStorage.removeItem('solvai_user');

@@ -84,6 +84,11 @@ To update to the latest `main`, run the same command again: it pulls and rebuild
     api python scripts/create_demo_account.py
   ```
   It is safe to run again later to refresh the data.
+- **Promo code for judges:** gives Pro (full report and PDF) to whoever signs up with it, or redeems it later under **Account**. Codes are case-insensitive; re-running updates the limit and expiry. Share it only in Devpost's testing instructions, not in the repository:
+  ```bash
+  docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod exec \
+    api python scripts/create_promo_code.py <CODE> --plan pro --max-uses 300 --expires 2026-12-31
+  ```
 
 ## Operating it
 

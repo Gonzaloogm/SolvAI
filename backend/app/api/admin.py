@@ -12,6 +12,7 @@ from app.schemas.promo_code import PromoCodeCreate, PromoCodeResponse
 from app.services import auth_service
 from app.models.organization import Organization
 from app.models.promo_code import PromoCode
+from app.services.promo_service import normalize_code
 from app.models.solvency_report import SolvencyReport
 
 router = APIRouter()
@@ -101,7 +102,7 @@ async def create_promo(
         )
     
     promo = PromoCode(
-        code=body.code,
+        code=normalize_code(body.code),
         plan=body.plan,
         max_uses=body.max_uses,
         expires_at=body.expires_at,

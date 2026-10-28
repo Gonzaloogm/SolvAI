@@ -229,7 +229,7 @@ export default function Register() {
                     id="reg-promo"
                     className="flex-1 h-10 px-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#242424] text-gray-900 dark:text-white focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-colors uppercase"
                     type="text"
-                    placeholder="e.g. SOLVAI-FOUNDER"
+                    placeholder="e.g. ABCD-2026"
                     value={promoCode}
                     onChange={(e) => {
                       setPromoCode(e.target.value);

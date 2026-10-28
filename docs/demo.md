@@ -72,7 +72,7 @@ launchctl bootout gui/$(id -u)/com.solvai.paypal-seed                           
 2. Go to **Data Sources** and click **Try with demo data**. It connects the Stripe test account and the PayPal sandbox with credentials kept on the server, and labels both sources "Demo data". The button only shows when the server has `DEMO_STRIPE_TEST_KEY` (a `sk_test_` key) and, optionally, `DEMO_PAYPAL_CLIENT_ID` / `DEMO_PAYPAL_SECRET`. You can also connect **Stripe** and **PayPal** by hand with the same keys.
 3. On the **Dashboard**, click **Generate New Report** and watch the Intelligence Terminal stream the pipeline steps.
 4. Open the report: the score, explainable factors, risk flags and data references, each traceable to transactions.
-5. Download the PDF (Pro/Business, or unlock per report) and scan the QR code to verify it.
+5. Download the PDF (Pro/Business, or unlock per report) and scan the QR code to verify it. A fresh account gets Pro with the judges' promo code, at sign-up or under **Account** (see [deploy-vm.md](deploy-vm.md)).
 
 ## Smoke test
 

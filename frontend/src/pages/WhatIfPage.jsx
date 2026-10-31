@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ArrowDownRight, ArrowUpRight, Loader2, RotateCcw } from 'lucide-react';
 import { simulate } from '../api/client.js';
+import { platformLabel } from '../utils/platforms.js';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 const NO_CHANGE = { revenue_change_percent: 0, smoothing_percent: 0, top_client_percent: null };
@@ -172,7 +173,7 @@ export default function WhatIfPage() {
             </table>
           )}
           <p className="text-xs text-muted mt-4">
-            {t('simulator.note', { months: result?.baseline.months_analyzed ?? '—', platforms: (result?.platforms || []).join(' + ') })}
+            {t('simulator.note', { months: result?.baseline.months_analyzed ?? '—', platforms: (result?.platforms || []).map(platformLabel).join(' + ') })}
           </p>
         </div>
       </div>

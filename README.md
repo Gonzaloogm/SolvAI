@@ -12,7 +12,8 @@
   <a href="docs/architecture.md">Architecture</a> ·
   <a href="docs/deploy-vm.md">Deploy (single VM)</a> ·
   <a href="docs/deployment.md">Deploy (Cloud Run)</a> ·
-  <a href="docs/demo.md">Demo data</a>
+  <a href="docs/demo.md">Demo data</a> ·
+  <a href="docs/judges-testing.md">Testing guide</a>
 </p>
 
 <p align="center">
@@ -30,6 +31,7 @@ Banks score borrowers with explainable credit models that the borrower never get
 
 ## Features
 
+- **One-click demo data.** Anyone can try SolvAI without their own accounts: **Try with demo data** connects a Stripe test account and a PayPal sandbox, with credentials kept on the server.
 - **Real data, no guesses.** Connects Stripe (secret key), PayPal (REST credentials, Transaction Search), CSV bank statements, Xero and open banking (Belvo). If there is no data, the report fails with a clear reason. It never fabricates figures.
 - **Explainable scoring.** Each report covers income stability, growth trend, seasonality, client concentration and reputation signals. The AI scores are grounded on deterministic metrics shown alongside them, each with its value, threshold and plain-language explanation. For each factor it gives a score, a plain-language explanation, what it means to a lender, and references to the transactions behind it.
 - **Multi-agent pipeline.** A [LangGraph](https://github.com/langchain-ai/langgraph) graph runs three steps. A deterministic quant step computes the verified metrics: income volatility (coefficient of variation), revenue trend (least-squares regression with R²), weak months and client concentration (Herfindahl-Hirschman Index). A Gemini underwriter runs as three parallel self-consistency samples. A temperature-0 auditor sends weak drafts back for revision.
@@ -49,7 +51,8 @@ The demo account below is the same one judges use: 12 months of Stripe test data
 | ![Landing page](docs/images/landing.png) **Landing:** the solvency report a lender would build, for freelancers | ![Live analysis](docs/images/live-terminal.png) **Live analysis:** the agent pipeline streamed over WebSockets, including an auditor revision round |
 | ![Report detail](docs/images/report-detail.png) **Report:** a narrative that quotes the verified metrics | ![Verified metrics](docs/images/verified-metrics.png) **Verified metrics:** each factor with its threshold, explanation and real transaction IDs |
 | ![Data sources](docs/images/data-sources.png) **Data sources:** Stripe and PayPal connected, CSV bank statements | ![PayPal billing](docs/images/billing-paypal.png) **Billing:** Pro and Business paid with PayPal Subscriptions |
-| ![PDF report](docs/images/pdf-report.png) **PDF:** deterministic analytics and an appendix of cited payments | |
+| ![PDF report](docs/images/pdf-report.png) **PDF:** deterministic analytics and an appendix of cited payments | ![What-if simulator](docs/images/what-if.png) **What-if simulator:** verified metrics recomputed from real data, with no invented score |
+| ![First-run guide](docs/images/onboarding.png) **First run:** three guided steps, with one-click demo data | |
 
 ## Tech stack
 
@@ -152,7 +155,6 @@ CI runs the same checks on every push. It also applies every Alembic migration t
 ## Roadmap
 
 - Historical comparison between a user's reports
-- Guided onboarding for first-time users
 - Expense-side data (bank outflows) for a full cash-flow view
 - Migration to the new `google-genai` SDK
 

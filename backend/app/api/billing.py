@@ -90,6 +90,7 @@ async def get_subscription(
         'current_period_end': org.current_period_end,
         'billing_provider': org.billing_provider,
         'paypal_available': paypal_billing.is_configured(),
+        'stripe_available': bool(settings.STRIPE_SECRET_KEY and all(PRICE_IDS.values())),
     }
 
 @router.post('/webhook')

@@ -243,5 +243,6 @@
   "dashboard.liveAnalysis": "Análisis en directo",
   "dataSources.lastSync": "Última sincronización",
   "dataSources.records": "Registros",
-  "account.payWithPayPal": "Pagar con PayPal"
+  "account.payWithPayPal": "Pagar con PayPal",
+  "account.included": "Incluido en tu plan"
 }

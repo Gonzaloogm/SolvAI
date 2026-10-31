@@ -9,14 +9,14 @@ export default function IntelligenceTerminal({ reportId }) {
  const [finalScore, setFinalScore] = useState(null);
  const [error, setError] = useState(null);
  const wsRef = useRef(null);
- const terminalEndRef = useRef(null);
+ const terminalBodyRef = useRef(null);
 
- // Auto-scroll to bottom
+ // Auto-scroll the log only: scrolling the page would push the terminal out of view
  useEffect(() => {
- if (terminalEndRef.current) {
- terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+ if (terminalBodyRef.current) {
+ terminalBodyRef.current.scrollTop = terminalBodyRef.current.scrollHeight;
  }
- }, [logs]);
+ }, [logs, finalScore]);
 
  useEffect(() => {
  let isMounted = true;
@@ -107,7 +107,7 @@ export default function IntelligenceTerminal({ reportId }) {
  </div>
  </div>
  
- <div className="terminal-body">
+ <div className="terminal-body" ref={terminalBodyRef}>
  {error && <div className="terminal-error">{error}</div>}
  
  {logs.map((log, index) => (
@@ -135,7 +135,6 @@ export default function IntelligenceTerminal({ reportId }) {
  </div>
  )}
  
- <div ref={terminalEndRef} />
  </div>
 
  <style>{`

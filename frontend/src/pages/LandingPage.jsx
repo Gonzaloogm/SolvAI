@@ -198,7 +198,7 @@ export default function LandingPage() {
               </div>
               <div className="hidden md:block absolute top-8 left-1/2 w-full h-[2px] bg-gradient-to-r from-[#0570de]/20 to-transparent"></div>
               <h3 className="text-xl font-bold mb-3">Connect Accounts</h3>
-              <p className="text-[#0a2540]/70">Users securely link their bank accounts through our branded or white-label portal.</p>
+              <p className="text-[#0a2540]/70">Connect PayPal or Stripe with your own credentials, or upload a bank statement.</p>
             </div>
             <div className="text-center relative">
               <div className="w-16 h-16 mx-auto bg-[#0570de]/10 text-[#0570de] rounded-2xl flex items-center justify-center mb-6 z-10 relative">
@@ -206,7 +206,7 @@ export default function LandingPage() {
               </div>
               <div className="hidden md:block absolute top-8 left-1/2 w-full h-[2px] bg-gradient-to-r from-[#0570de]/20 to-transparent"></div>
               <h3 className="text-xl font-bold mb-3">AI Analysis</h3>
-              <p className="text-[#0a2540]/70">Our engine categorizes transactions, verifies income, and identifies spending patterns.</p>
+              <p className="text-[#0a2540]/70">Deterministic metrics, a Gemini underwriter and an auditor analyse your real transactions.</p>
             </div>
             <div className="text-center relative">
               <div className="w-16 h-16 mx-auto bg-[#0570de]/10 text-[#0570de] rounded-2xl flex items-center justify-center mb-6 z-10 relative">
@@ -223,16 +223,16 @@ export default function LandingPage() {
       <section id="features" className="py-24 bg-[#f6f8fa] border-y border-[#e3e8ef]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything you need to underwrite</h2>
-            <p className="text-lg text-[#0a2540]/70 max-w-2xl mx-auto">Powerful features designed to automate manual reviews and reduce fraud.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything a lender would look at</h2>
+            <p className="text-lg text-[#0a2540]/70 max-w-2xl mx-auto">The metrics behind your score, with the evidence to back them.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               { icon: Database, title: 'Real Payment Data', desc: 'Connect Stripe or PayPal, or upload a bank statement. No manual forms.' },
-              { icon: Zap, title: 'Instant Verification', desc: 'Verify identity, account ownership, and balances in seconds.' },
-              { icon: BarChart, title: 'Income Insights', desc: 'Identify multiple income streams, gig work, and frequency.' },
-              { icon: Shield, title: 'Fraud Detection', desc: 'Detect anomalies and altered bank statements automatically.' },
-              { icon: Users, title: 'White-label Portal', desc: 'Embed the verification flow directly in your application.' },
+              { icon: Zap, title: 'Explainable Score', desc: 'Every factor shows its value, the threshold a lender would use and what it means.' },
+              { icon: BarChart, title: 'Transaction Evidence', desc: 'Figures are traced back to real PayPal and Stripe transaction IDs.' },
+              { icon: Shield, title: 'AI With an Auditor', desc: 'A second agent checks each draft against the verified metrics and can send it back.' },
+              { icon: Users, title: 'What-if Simulator', desc: 'See how your metrics would change, recomputed from your own data.' },
               { icon: CheckCircle2, title: 'PDF & API Exports', desc: 'Get clean PDF reports for manual review or API data for automated decisions.' },
             ].map((feature, i) => (
               <div key={i} className="bg-white p-6 rounded-xl border border-[#e3e8ef] hover:shadow-lg transition-shadow">
@@ -252,9 +252,9 @@ export default function LandingPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0570de]/10 text-sm font-medium text-[#0570de] mb-6">
               Use Case
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 leading-tight">Built for modern lenders and property managers</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 leading-tight">Hand lenders and landlords the full picture</h2>
             <p className="text-lg text-[#0a2540]/70 mb-8">
-              Stop waiting days for bank statements and manual reviews. Send a verification link and get a full financial profile in minutes. Perfect for personal loans, auto financing, and tenant screening.
+              Share a lender-ready PDF or an expiring link. Each figure comes from real transactions, and the QR code lets a lender compare the PDF with the copy SolvAI holds.
             </p>
             <ul className="space-y-4 mb-8 text-left max-w-md mx-auto lg:mx-0">
               {['Income verified against real transactions', 'Every factor cites the payments behind it', 'Verifiable PDF with a QR code'].map((item, i) => (
@@ -265,7 +265,7 @@ export default function LandingPage() {
               ))}
             </ul>
             <Link to="/register" className="inline-flex items-center gap-2 text-[#0570de] font-bold hover:underline">
-              See how it helps your business <ArrowUpRight className="w-4 h-4" />
+              Get your report <ArrowUpRight className="w-4 h-4" />
             </Link>
           </div>
           <div className="flex-1 w-full relative">
@@ -275,20 +275,20 @@ export default function LandingPage() {
                 <div className="w-12 h-12 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
                   <Shield className="w-6 h-6 text-gray-400" />
                 </div>
-                <h3 className="font-bold text-lg">Verify your income</h3>
-                <p className="text-sm text-gray-500">Securely connect your bank</p>
+                <h3 className="font-bold text-lg">Connect your income</h3>
+                <p className="text-sm text-gray-500">Choose where you get paid</p>
               </div>
               <div className="space-y-3">
                 <button className="w-full bg-[#f6f8fa] border border-[#e3e8ef] p-3 rounded-lg flex items-center justify-between hover:border-[#0570de] transition-colors">
-                  <span className="font-medium">Chase Bank</span>
+                  <span className="font-medium">PayPal</span>
                   <ArrowRight className="w-4 h-4 text-gray-400" />
                 </button>
                 <button className="w-full bg-[#f6f8fa] border border-[#e3e8ef] p-3 rounded-lg flex items-center justify-between hover:border-[#0570de] transition-colors">
-                  <span className="font-medium">Bank of America</span>
+                  <span className="font-medium">Stripe</span>
                   <ArrowRight className="w-4 h-4 text-gray-400" />
                 </button>
                 <button className="w-full bg-[#f6f8fa] border border-[#e3e8ef] p-3 rounded-lg flex items-center justify-between hover:border-[#0570de] transition-colors">
-                  <span className="font-medium">Wells Fargo</span>
+                  <span className="font-medium">Bank statement (CSV)</span>
                   <ArrowRight className="w-4 h-4 text-gray-400" />
                 </button>
               </div>
@@ -368,7 +368,7 @@ export default function LandingPage() {
       {/* SECTION 9: Final CTA */}
       <section className="py-24 bg-[#0570de] text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to streamline your verifications?</h2>
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to see what a lender sees?</h2>
           <p className="text-xl text-white/80 mb-10">Generate your first explainable solvency report from your own payment history in minutes.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link to="/register" className="bg-white text-[#0570de] hover:bg-gray-100 px-8 py-4 rounded-lg text-lg font-bold transition-colors shadow-lg">

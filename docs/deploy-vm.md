@@ -11,13 +11,18 @@ Internet ──443──▶ Caddy ──┬── /api/*  ──▶ api (FastAPI
 - Caddy obtains and renews the Let's Encrypt certificate by itself.
 - Migrations run automatically (`migrate` service) before the API starts.
 - Postgres data and TLS certificates live in Docker volumes and survive restarts.
-- Idle memory is about 650 MB; report generation needs headroom. Use a VM with **at least 2 GB RAM** (4 GB or more is comfortable).
+- Idle memory is about 650 MB. Three reports generated at once peaked at about 1 GB in total. Use a VM with **at least 2 GB RAM** (4 GB or more is comfortable).
 
 The Cloud Run pipeline (`cloudbuild.yaml`, [deployment.md](deployment.md)) remains the scalable production path. This setup is the cheapest way to keep a demo online.
 
 ## 1. Create the VM
 
 Any provider works. Use Ubuntu 22.04 or 24.04, x86-64 or ARM64, at least 2 GB of RAM and a public IPv4 address.
+
+**Hetzner Cloud** (CX23 x86 or CAX11 ARM, both 4 GB, a few euros a month):
+
+1. Create a server with Ubuntu 24.04 and add your SSH public key. Note its **public IP**.
+2. Log in as `root`: the commands below use `ubuntu@`, so replace it. Hetzner has no firewall by default; if you attach one, allow inbound TCP 22, 80 and 443.
 
 **Oracle Cloud Always Free** (€0, needs a card for verification):
 
@@ -89,6 +94,17 @@ To update to the latest `main`, run the same command again: it pulls and rebuild
   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod exec \
     api python scripts/create_promo_code.py <CODE> --plan pro --max-uses 300 --expires 2026-12-31
   ```
+
+## Go-live checklist
+
+Rehearsed from empty volumes: the stack builds and passes its health check, migrations apply, and the post-deploy steps take under a minute.
+
+1. Create the VM and install Docker (steps 1 and 2).
+2. Clone the repository and fill in `deploy/.env.prod` (steps 3 and 4), including the `DEMO_*` values. For public use, take `GEMINI_API_KEY` from a billing-enabled project with a low spending limit.
+3. Run `./deploy/deploy.sh` and open `https://$DOMAIN`.
+4. Top up the demo data, create the demo account and create the judges' promo code (step 6).
+5. Add the PayPal webhook, set `PAYPAL_WEBHOOK_ID` and run `./deploy/deploy.sh` again (step 6).
+6. In a private window, follow [judges-testing.md](judges-testing.md) from start to finish, and scan the PDF's QR code with a phone.
 
 ## Operating it
 

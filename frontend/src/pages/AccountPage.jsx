@@ -230,12 +230,14 @@ export default function AccountPage() {
  </div>
 
  <div className={`flex items-center gap-0 text-sm ${textMuted}`}>
- {currentPlan === 'Pro' 
+ {currentPlan === 'Business'
+ ? 'Everything in Pro · Public API access with API keys · Shareable verification links'
+ : currentPlan === 'Pro'
  ? 'Full AI narrative · PDF reports with QR verification · Unlimited rental certificates'
  : 'Score and verified metrics · PDF unlock per report · 1 rental certificate'}
  </div>
 
- {currentPlan !== 'Pro' && (
+ {currentPlan === 'Free' && realPlan?.stripe_available && (
  <button 
  onClick={() => handleUpgrade('pro')}
  disabled={upgrading === 'pro'}
@@ -297,7 +299,7 @@ export default function AccountPage() {
  </ul>
 
  <div className={`mt-6 w-full ${currentPlan === 'Free' ? 'bg-[#f0f2f5] text-muted cursor-not-allowed' : 'bg-card border border-border text-primary hover:bg-page cursor-pointer'} rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors`}>
- {currentPlan === 'Free' ? t('account.currentPlan') : 'Downgrade to Free'}
+ {currentPlan === 'Free' ? t('account.currentPlan') : t('account.included')}
  </div>
  </div>
 
@@ -331,11 +333,11 @@ export default function AccountPage() {
  </li>
  </ul>
 
- {currentPlan === 'Pro' ? (
+ {currentPlan !== 'Free' ? (
  <div className="mt-6 w-full bg-[#f0f2f5] text-muted cursor-not-allowed rounded-lg px-4 py-2.5 text-sm font-medium text-center transition-colors">
- {t('account.currentPlan')}
+ {currentPlan === 'Pro' ? t('account.currentPlan') : t('account.included')}
  </div>
- ) : (
+ ) : realPlan?.stripe_available && (
  <button 
  onClick={() => handleUpgrade('pro')}
  disabled={upgrading === 'pro'}
@@ -345,7 +347,7 @@ export default function AccountPage() {
  Upgrade to Pro
  </button>
  )}
- {currentPlan !== 'Pro' && <PayPalButton plan="pro" />}
+ {currentPlan === 'Free' && <PayPalButton plan="pro" />}
  </div>
  </div>
 
@@ -371,6 +373,11 @@ export default function AccountPage() {
  </li>
  </ul>
 
+ {currentPlan === 'Business' ? (
+ <div className="mt-6 w-full bg-[#f0f2f5] text-muted cursor-not-allowed rounded-lg px-4 py-2.5 text-sm font-medium text-center">
+ {t('account.currentPlan')}
+ </div>
+ ) : realPlan?.stripe_available && (
  <button 
  onClick={() => handleUpgrade('business')}
  disabled={upgrading === 'business'}
@@ -379,6 +386,7 @@ export default function AccountPage() {
  {upgrading === 'business' && <Loader2 className="w-4 h-4 animate-spin" />}
  Upgrade to Business
  </button>
+ )}
  {currentPlan !== 'Business' && <PayPalButton plan="business" />}
  </div>
  </div>
@@ -418,7 +426,7 @@ export default function AccountPage() {
  <div className="flex flex-col items-center py-8">
  <CreditCard className="w-10 h-10 text-[#d0d5dd]" />
  <p className={`text-sm font-medium ${textPrimary} mt-3`}>No active subscription</p>
- <p className={`text-xs ${textSecondary} mt-1`}>Upgrade with a card (Stripe) or with PayPal above.</p>
+ <p className={`text-xs ${textSecondary} mt-1`}>{realPlan?.stripe_available ? 'Upgrade with a card (Stripe) or with PayPal above.' : 'Upgrade with PayPal above.'}</p>
  </div>
  )}
 

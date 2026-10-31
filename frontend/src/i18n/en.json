@@ -243,5 +243,6 @@
   "dashboard.liveAnalysis": "Live analysis",
   "dataSources.lastSync": "Last sync",
   "dataSources.records": "Records",
-  "account.payWithPayPal": "Pay with PayPal"
+  "account.payWithPayPal": "Pay with PayPal",
+  "account.included": "Included in your plan"
 }

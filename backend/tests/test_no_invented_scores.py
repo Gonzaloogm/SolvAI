@@ -112,3 +112,24 @@ async def test_underwriter_keeps_the_median_of_its_three_samples(monkeypatch):
     result = await underwriter_node({"financial_summary": {}, "quant_metrics": {}})
 
     assert json.loads(result["draft_report"])["overall_score"] == 85
+
+
+@pytest.mark.parametrize("error, status", [
+    (RuntimeError("boom"), "retrying"),
+    (ReportGenerationError("No data."), "error"),
+])
+async def test_terminal_only_reports_failure_when_the_run_is_over(monkeypatch, error, status):
+    class Graph:
+        async def astream(self, *args, **kwargs):
+            raise error
+            yield  # pragma: no cover
+
+    monkeypatch.setattr(agent_orchestrator, "orchestrator", Graph(), raising=False)
+    monkeypatch.setattr(agent_orchestrator, "build_orchestrator", Graph, raising=False)
+
+    events = []
+    with pytest.raises(type(error)):
+        async for event in agent_orchestrator.run_orchestrator_stream({}):
+            events.append(event)
+
+    assert events[-1]["status"] == status

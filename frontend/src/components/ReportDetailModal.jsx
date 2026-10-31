@@ -677,7 +677,7 @@ export default function ReportDetailModal({ report, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-card rounded-xl w-full max-w-[800px] max-h-[90vh] shadow-2xl overflow-y-auto border border-border" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-start p-6 border-b border-border bg-card sticky top-0 z-10">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 p-6 border-b border-border bg-card sm:sticky top-0 z-10">
           <div>
             <h1 className="text-2xl font-bold text-primary mb-3">{title}</h1>
             <div className="flex items-center gap-2">
@@ -695,7 +695,7 @@ export default function ReportDetailModal({ report, onClose }) {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap sm:justify-end">
             <button onClick={handleCopyMD} className="px-2 py-1 text-xs font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Copy MD</button>
             <button onClick={handleDownloadMD} className="px-2 py-1 text-xs font-medium border border-border rounded-md hover:bg-page transition-colors text-secondary">Download MD</button>
             {(report._raw?.status === 'COMPLETED' || report.status === 'Complete' || report.status === 'COMPLETED') && (

@@ -280,7 +280,7 @@ export default function DashboardPage({ onNavigate }) {
 
  {/* Stat Cards Row */}
 
- <div className="grid grid-cols-4 gap-4 mt-6">
+ <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
  {statCards.map((card) => {
  const Icon = card.icon;
  return (
@@ -342,9 +342,9 @@ export default function DashboardPage({ onNavigate }) {
  <ScoreEvolutionCard history={scoreHistory} onGenerateReport={handleGenerate} />
 
  {/* Main Grid */}
- <div className="grid grid-cols-5 gap-6 mt-6">
+ <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6">
  {/* Left: Recent Reports */}
- <div className="col-span-3 bg-card border border-border rounded-lg p-5 px-6">
+ <div className="min-w-0 lg:col-span-3 bg-card border border-border rounded-lg p-5 px-6">
  <div className="flex justify-between items-center mb-4">
  <h2 className="text-base font-semibold text-primary">
  {t('dashboard.recentReports')}
@@ -460,7 +460,7 @@ export default function DashboardPage({ onNavigate }) {
  </div>
 
  {/* Right: Two stacked cards */}
- <div className="col-span-2 flex flex-col gap-6">
+ <div className="min-w-0 lg:col-span-2 flex flex-col gap-6">
  {/* Data Sources Card */}
  <div className="bg-card border border-border rounded-lg p-5 px-6">
  <h2 className="text-base font-semibold text-primary mb-4">

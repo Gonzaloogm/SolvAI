@@ -29,12 +29,12 @@ const SectionHeader = ({ title, description, isDanger }) => (
 );
 
 const Row = ({ label, subtext, children, noBorder }) => (
- <div className={cn("py-4 flex items-center justify-between", !noBorder && "border-b border-border")}>
+ <div className={cn("py-4 flex flex-wrap items-center justify-between gap-y-2", !noBorder && "border-b border-border")}>
  <div className="pr-4">
  <div className="text-sm font-medium text-primary">{label}</div>
  {subtext && <div className="text-sm text-muted mt-0.5">{subtext}</div>}
  </div>
- <div className="flex-shrink-0">
+ <div className="max-w-full">
  {children}
  </div>
  </div>
@@ -415,7 +415,7 @@ export default function SettingsPage() {
  </div>
  </div>
  <Row label={t('settings.webhookEndpoint')} subtext={t('settings.webhookDesc')}>
- <div className="flex gap-2">
+ <div className="flex flex-wrap gap-2">
  <input 
  type="url" 
  value={webhook}

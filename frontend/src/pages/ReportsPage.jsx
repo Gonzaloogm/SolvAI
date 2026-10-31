@@ -407,14 +407,14 @@ const getAccuracyColor = (val) => {
  return (
   <div className="page-enter">
   {/* ── 1. PAGE HEADER ─────────────────────────────────────────────────── */}
-  <div className="flex justify-between items-start">
+  <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
     <div>
       <h1 className="text-xl font-semibold text-primary">{t('reports.title')}</h1>
       <p className="text-sm text-muted mt-1">
         {t('reports.subtitle')}
       </p>
     </div>
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <button 
         onClick={() => {
           setGeneratingType("FULL");
@@ -608,7 +608,7 @@ const getAccuracyColor = (val) => {
  </div>
 
  {/* Table */}
- <div className="overflow-x-auto w-full min-h-[300px]">
+ <div className="relative overflow-x-auto w-full min-h-[300px]">
  <table className="w-full text-left border-collapse" style={{ minWidth: '950px' }}>
  <thead className="bg-page">
  <tr>

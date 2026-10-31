@@ -338,7 +338,7 @@ export default function DataSourcesPage() {
 
  {/* DEMO DATA */}
  {demoAvailable && !connected.some(c => c.isDemo || c.name === 'Stripe' || c.name === 'PayPal') && (
- <div className="mb-6 bg-card border border-border rounded-lg p-5 flex items-center gap-4">
+ <div className="mb-6 bg-card border border-border rounded-lg p-5 flex flex-col sm:flex-row sm:items-center gap-4">
  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[var(--brand-blue)] text-white shrink-0">
  <Sparkles className="w-5 h-5" />
  </div>
@@ -358,7 +358,7 @@ export default function DataSourcesPage() {
  )}
 
  {/* CONNECTED SOURCES */}
- <div className="grid grid-cols-2 gap-4">
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  {connected.map((source) => {
  const SourceIcon = source.Icon;
  const isSyncing = source.isSyncing;
@@ -493,7 +493,7 @@ export default function DataSourcesPage() {
  Connect a new data source to start generating reports
  </p>
 
- <div className="grid grid-cols-4 gap-3 mt-4">
+ <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
  {available.map((integration) => {
  const IntIcon = integration.Icon;
  return (

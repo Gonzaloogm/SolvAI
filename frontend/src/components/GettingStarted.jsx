@@ -87,7 +87,7 @@ export default function GettingStarted({ hasSources, hasReport, reportReady, gen
     <div className="bg-card border border-border rounded-lg p-5 px-6 mt-6">
       <h2 className="text-base font-semibold text-primary">{t('onboarding.title')}</h2>
       <p className="text-sm text-muted mt-1">{t('onboarding.subtitle')}</p>
-      <ol className="grid grid-cols-3 gap-4 mt-4">
+      <ol className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         {steps.map((step, i) => (
           <li
             key={step.title}

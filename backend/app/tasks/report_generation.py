@@ -329,12 +329,31 @@ def generate_solvency_report_task(self, report_id: str, user_id: str) -> dict:
 
             # If it's a quota issue or we hit max retries, fail the report immediately
             if "temporarily unavailable" in str(exc) or self.request.retries >= 3:
-                _mark_failed(db, report_id, "AI analysis temporarily unavailable, please try again later.")
+                message = "AI analysis temporarily unavailable, please try again later."
+                _mark_failed(db, report_id, message)
+                _publish_final_error(report_id, message)
                 return {"status": "failed", "error": str(exc)}
 
             # Exponential back-off retry: 60s, 120s, 240s
             countdown = 60 * (2 ** self.request.retries)
             raise self.retry(exc=exc, countdown=countdown)
+
+
+def _publish_final_error(report_id: str, message: str) -> None:
+    """Tell the live terminal that the retries are over."""
+    import json
+
+    import redis
+
+    try:
+        client = redis.Redis.from_url(settings.REDIS_URL)
+        client.publish(
+            f"solvai:telemetry:{report_id}",
+            json.dumps({"agent": "system", "status": "error", "message": message, "payload": {}}),
+        )
+        client.close()
+    except Exception as exc:
+        logger.warning(f"Could not publish the final error for {report_id}: {exc}")
 
 
 def _mark_failed(db, report_id: str, message: str) -> None:

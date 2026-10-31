@@ -20,6 +20,9 @@ class AgentState(TypedDict):
     requires_human_review: bool
     report_type: str
 
+RETRY_MESSAGE = "The AI service hit a temporary problem. Retrying automatically shortly..."
+
+
 class ReportGenerationError(Exception):
     """A report cannot be produced honestly. The message is shown to the user; the task does not retry."""
 
@@ -417,11 +420,13 @@ async def run_orchestrator_stream(initial_state: AgentState):
                 }
     except Exception as e:
         logger.exception("Orchestrator failed")
-        # Tracebacks stay in the logs; the terminal only shows a user-safe message
+        # Tracebacks stay in the logs; the terminal only shows a user-safe message.
+        # Unexpected errors are retried by the task, so the run is not over yet.
+        final = isinstance(e, ReportGenerationError)
         yield {
             "agent": "system",
-            "status": "error",
-            "message": str(e) if isinstance(e, ReportGenerationError) else "Report generation failed.",
+            "status": "error" if final else "retrying",
+            "message": str(e) if final else RETRY_MESSAGE,
             "payload": {}
         }
         raise

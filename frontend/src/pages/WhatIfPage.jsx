@@ -109,8 +109,8 @@ export default function WhatIfPage() {
         {loading && <Loader2 className="w-5 h-5 animate-spin text-[var(--brand-blue)]" />}
       </div>
 
-      <div className="grid grid-cols-5 gap-6 mt-6">
-        <div className="col-span-2 bg-card border border-border rounded-lg p-5 flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6">
+        <div className="min-w-0 lg:col-span-2 bg-card border border-border rounded-lg p-5 flex flex-col gap-6">
           <div className="flex justify-between items-center">
             <h2 className="text-base font-semibold text-primary">{t('simulator.levers')}</h2>
             <button
@@ -138,7 +138,7 @@ export default function WhatIfPage() {
           />
         </div>
 
-        <div className="col-span-3 bg-card border border-border rounded-lg p-5">
+        <div className="min-w-0 lg:col-span-3 bg-card border border-border rounded-lg p-5">
           <h2 className="text-base font-semibold text-primary">{t('simulator.metrics')}</h2>
           {result && (
             <table className="w-full mt-4 text-sm">

@@ -248,7 +248,7 @@ export default function AccountPage() {
  </div>
 
  <div className="mt-5 pt-5 border-t border-border">
- <div className="grid grid-cols-2 gap-6">
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div className="flex justify-between text-sm">
  <span className={textMuted}>Reports this month</span>
  <span className={textPrimary}>{usage.reportsThisMonth ?? '—'}</span>
@@ -265,7 +265,7 @@ export default function AccountPage() {
  <div className="mt-8">
  <h2 className={`text-base font-semibold ${textPrimary} mb-4`}>{t('account.choosePlan')}</h2>
 
- <div className="grid grid-cols-3 gap-6">
+ <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
  <div className="bg-card border border-border rounded-lg p-6 flex flex-col">
  <p className={`text-lg font-semibold ${textPrimary}`}>{t('account.free')}</p>
  <div className="mt-2">

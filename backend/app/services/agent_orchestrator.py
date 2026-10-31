@@ -48,6 +48,15 @@ Quant Metrics are computed deterministically from the user's transactions. They 
 """
 
 
+def median_draft(drafts: list[dict]) -> dict:
+    """The draft with the median score: one outlying sample cannot set the result.
+
+    With two valid drafts this is the lower one, the cautious choice for a lender.
+    """
+    ranked = sorted(drafts, key=lambda d: d["overall_score"])
+    return ranked[(len(ranked) - 1) // 2]
+
+
 def data_quant_node(state: AgentState) -> AgentState:
     logger.info("Executing Data Quant Agent...")
     metrics = compute_revenue_metrics(state.get("financial_summary", {}))
@@ -203,7 +212,7 @@ CRITICAL REQUIREMENTS:
                 )
                 continue  # next retry iteration
 
-            # ── Success: choose best draft by self-consistency ────────────────
+            # ── Success: keep the median draft and flag any disagreement ──────
             recommendations = [r.get("recommendation", "Unknown") for r in parsed_reports]
             scores = [r.get("overall_score", 0) for r in parsed_reports]
 
@@ -216,7 +225,7 @@ CRITICAL REQUIREMENTS:
                 if max_score > 0 and ((max_score - min_score) / max_score) > 0.05:
                     req_human_review = True
 
-            chosen_draft = parsed_reports[0]
+            chosen_draft = median_draft(parsed_reports)
             logger.info(
                 f"[Underwriter attempt {attempt}] Success — "
                 f"{len(parsed_reports)}/3 valid drafts. "

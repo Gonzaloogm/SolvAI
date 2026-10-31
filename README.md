@@ -42,6 +42,28 @@ Banks score borrowers with explainable credit models that the borrower never get
 - **What-if simulator.** Starting from the connected data, sliders for revenue, income smoothness and top-client share recompute the verified metrics (volatility, trend, weak months, HHI, mortgage capacity) with the same rules as a report. Pure arithmetic: it never invents a score.
 - **SaaS foundations.** Freemium plans paid with Stripe or **PayPal Subscriptions**, per-report PDF unlocks, signed webhooks, API keys with a public `/v1` API, alerts, six languages and dark mode.
 
+## How SolvAI uses PayPal and AI
+
+**PayPal** (developer platform, sandbox):
+
+| Tool | What it does in SolvAI |
+|---|---|
+| Transaction Search API | The main data source: payment history, refunds and chargebacks become the metrics and the transaction IDs cited in each report |
+| OAuth 2.0 client credentials | Authenticates each user's connection with their own REST app credentials, stored encrypted |
+| Subscriptions API | Bills the Pro and Business plans |
+| Webhooks with signature verification | Keep the plan in sync with the subscription |
+| Orders v2 | Only used by a seed script that creates real sandbox payments for the demo |
+
+**AI:**
+
+| Tool | What it does in SolvAI |
+|---|---|
+| Google Gemini (underwriter, default `gemini-2.5-flash`) | Writes the report from the verified metrics; of three parallel samples, the median is kept |
+| Google Gemini (auditor, default `gemini-3.5-flash-lite`) | Checks the draft against the metrics at temperature 0 and can send it back |
+| LangGraph | Orchestrates the quant, underwriter and auditor steps |
+
+The financial metrics are computed by deterministic code, not by AI. Stripe, CSV bank statements, Xero and Belvo are additional data sources.
+
 ## Screenshots
 
 The demo account below is the same one judges use: 12 months of Stripe test data plus PayPal sandbox payments.

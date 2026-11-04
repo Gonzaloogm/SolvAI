@@ -18,6 +18,8 @@ pgvector==0.2.5
 
 # ── Async jobs ───────────────────────────────────────────────
 celery==5.3.6
+# Pinned: kombu 5.7 requires redis-py >= 6.1 and breaks report generation with redis 5.0.4
+kombu==5.6.2
 redis==5.0.4
 
 # ── Auth & security ──────────────────────────────────────────
